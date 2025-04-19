@@ -36,6 +36,9 @@ export class ReferenceCountingPolicy {
             case "base-name":
                 this.activePolicy = WIKILINK_EQUIVALENCE_POLICIES.BASE_NAME;
                 break;
+            case "unique-files":
+                this.activePolicy = WIKILINK_EQUIVALENCE_POLICIES.UNIQUE_FILES;
+                break;
             default:
                 this.activePolicy = WIKILINK_EQUIVALENCE_POLICIES.CASE_INSENSITIVE;
         }
@@ -192,36 +195,47 @@ export class ReferenceCountingPolicy {
     }
 
     /**
-     * Counts references based on the current settings
+     * Counts references based on the current policy
      * @param references Array of Link objects to count
      * @returns The number of references according to the current policy
      */
     countReferences(references: Link[] | undefined): number {
         if (!references) return 0;
 
-        if (this.plugin.settings.countUniqueFilesOnly) {
-            const uniqueSourceFiles = new Set(references.map(link => link.sourceFile?.path).filter(Boolean));
+        // For the unique files policy, count each source file only once
+        if (this.activePolicy === WIKILINK_EQUIVALENCE_POLICIES.UNIQUE_FILES) {
+            const uniqueSourceFiles = new Set<string>();
+            for (const ref of references) {
+                if (ref.sourceFile?.path) {
+                    uniqueSourceFiles.add(ref.sourceFile.path);
+                }
+            }
             return uniqueSourceFiles.size;
         }
-
+        
         return references.length;
     }
 
     /**
-     * Filters references based on the current settings
+     * Filters references based on the current policy
      * @param references Array of Link objects to filter
      * @returns Filtered array of references according to the current policy
      */
     filterReferences(references: Link[] | undefined): Link[] {
         if (!references) return [];
 
-        if (this.plugin.settings.countUniqueFilesOnly) {
-            const seenFiles = new Set<string>();
-            return references.filter(link => {
-                const path = link.sourceFile?.path;
-                if (!path) return false;
-                if (seenFiles.has(path)) return false;
-                seenFiles.add(path);
+        // For the unique files policy, keep only one reference per source file
+        if (this.activePolicy === WIKILINK_EQUIVALENCE_POLICIES.UNIQUE_FILES) {
+            const seenSourceFiles = new Set<string>();
+            return references.filter(ref => {
+                const sourcePath = ref.sourceFile?.path;
+                if (!sourcePath) return false;
+                
+                // If we've already seen this source file, filter it out
+                if (seenSourceFiles.has(sourcePath)) return false;
+                
+                // Otherwise, add it to the seen set and keep it
+                seenSourceFiles.add(sourcePath);
                 return true;
             });
         }

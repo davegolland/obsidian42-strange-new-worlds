@@ -109,11 +109,21 @@ export class SameFilePolicy extends AbstractWikilinkEquivalencePolicy {
     name = "Same File Unification";
     
     generateKey(link: Link): string {
+        // Extract the base key from resolved file or normalized real link
         const baseKey = link.resolvedFile ? 
             link.resolvedFile.path.toLocaleUpperCase() : 
             this.normalizeFileName(link.realLink);
+        
+        // Handle section links
+        const subpath = this.extractSubpath(link);
+        const fullBaseKey = subpath ? `${baseKey}${subpath.toLocaleUpperCase()}` : baseKey;
+        
+        // Use source file as prefix if available, otherwise use a placeholder
+        const sourcePrefix = link.sourceFile ? 
+            link.sourceFile.path.toLocaleUpperCase() : 
+            "UNLINKED";
             
-        return `${link.sourceFile?.path.toLocaleUpperCase()}:${baseKey}`;
+        return `${sourcePrefix}:${fullBaseKey}`;
     }
 }
 
@@ -167,11 +177,35 @@ export class BaseNamePolicy extends AbstractWikilinkEquivalencePolicy {
 }
 
 /**
+ * Policy that only counts each source file once per target, even if it contains multiple references
+ */
+export class UniqueFilesPolicy extends AbstractWikilinkEquivalencePolicy {
+    name = "Unique Files Only";
+    
+    generateKey(link: Link): string {
+        // Use the same key approach as CaseInsensitivePolicy
+        // This ensures compatibility with the reference counting logic
+        if (link.resolvedFile) {
+            // For links to sections within files, maintain the section information
+            const subpath = this.extractSubpath(link);
+            if (subpath) {
+                return (link.resolvedFile.path + subpath).toLocaleUpperCase();
+            }
+            return link.resolvedFile.path.toLocaleUpperCase();
+        }
+        
+        // For unresolved links, normalize the file name
+        return this.normalizeFileName(link.realLink);
+    }
+}
+
+/**
  * Collection of all available policies
  */
 export const WIKILINK_EQUIVALENCE_POLICIES = {
     CASE_INSENSITIVE: new CaseInsensitivePolicy(),
     SAME_FILE: new SameFilePolicy(),
     WORD_FORM: new WordFormPolicy(),
-    BASE_NAME: new BaseNamePolicy()
+    BASE_NAME: new BaseNamePolicy(),
+    UNIQUE_FILES: new UniqueFilesPolicy()
 }; 

@@ -7,6 +7,7 @@ import { UPDATE_DEBOUNCE } from "../main";
 import { processHtmlDecorationReferenceEvent } from "../view-extensions/htmlDecorations";
 import "tippy.js/dist/tippy.css";
 import { getUIC_Hoverview } from "./components/uic-ref--parent";
+import { type Link } from "../types";
 
 let plugin: SNWPlugin;
 
@@ -38,20 +39,14 @@ function processHeader(mdView: MarkdownView) {
 
 	let incomingLinksCount = 0;
 	const uniqueSourceFiles = new Set<string>();
+	
+	// Calculate the incoming links count
 	for (const items of allLinks.values()) {
 		for (const item of items) {
 			if (item?.resolvedFile && item?.resolvedFile?.path === mdViewFile.path) {
-				if (plugin.settings.countUniqueFilesOnly) {
-					uniqueSourceFiles.add(item.sourceFile?.path);
-				} else {
-					incomingLinksCount++;
-				}
+				incomingLinksCount++;
 			}
 		}
-	}
-
-	if (plugin.settings.countUniqueFilesOnly) {
-		incomingLinksCount = uniqueSourceFiles.size;
 	}
 
 	// check if the page is to be ignored

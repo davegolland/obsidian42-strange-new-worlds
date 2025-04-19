@@ -1,5 +1,5 @@
 export type SortOption = "name-asc" | "name-desc" | "mtime-asc" | "mtime-desc";
-export type WikilinkEquivalencePolicyType = "case-insensitive" | "same-file" | "word-form" | "base-name";
+export type WikilinkEquivalencePolicyType = "case-insensitive" | "same-file" | "word-form" | "base-name" | "unique-files";
 
 export interface Settings {
 	enableOnStartupDesktop: boolean;
@@ -28,7 +28,6 @@ export interface Settings {
 	sortOptionDefault: SortOption;
 	displayCustomPropertyList: string; //list of custom properties to display when showing references
 	pluginSupportKanban: boolean;
-	countUniqueFilesOnly: boolean; //if true, only count each file once even if it has multiple links
 	wikilinkEquivalencePolicy: WikilinkEquivalencePolicyType; //policy for determining when wikilinks are equivalent
 }
 
@@ -59,6 +58,5 @@ export const DEFAULT_SETTINGS: Settings = {
 	sortOptionDefault: "name-asc",
 	displayCustomPropertyList: "",
 	pluginSupportKanban: false,
-	countUniqueFilesOnly: false,
 	wikilinkEquivalencePolicy: "case-insensitive",
 };

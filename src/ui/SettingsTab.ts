@@ -346,19 +346,6 @@ export class SettingsTab extends PluginSettingTab {
 		new Setting(containerEl).setHeading().setName("Reference Counting");
 
 		new Setting(containerEl)
-			.setName("Count unique files only")
-			.setDesc(
-				"If enabled, each source file will be counted only once, even if it references the same target multiple times."
-			)
-			.addToggle((cb: ToggleComponent) => {
-				cb.setValue(this.plugin.settings.countUniqueFilesOnly);
-				cb.onChange(async (value: boolean) => {
-					this.plugin.settings.countUniqueFilesOnly = value;
-					await this.plugin.saveSettings();
-				});
-			});
-
-		new Setting(containerEl)
 			.setName("Wikilink equivalence policy")
 			.setDesc(
 				"Choose how wikilinks are grouped when counting references. This determines when different links are considered equivalent."
@@ -369,6 +356,7 @@ export class SettingsTab extends PluginSettingTab {
 					.addOption("same-file", "Same File Unification")
 					.addOption("word-form", "Word Form Unification")
 					.addOption("base-name", "Base Name Only")
+					.addOption("unique-files", "Unique Files Only")
 					.setValue(this.plugin.settings.wikilinkEquivalencePolicy)
 					.onChange(async (value) => {
 						this.plugin.settings.wikilinkEquivalencePolicy = value as any;
