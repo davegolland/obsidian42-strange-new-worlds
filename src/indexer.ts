@@ -4,8 +4,6 @@ import { type CachedMetadata, type HeadingCache, type Pos, type TFile, parseLink
 import type SNWPlugin from "./main";
 import type { TransformedCache } from "./types";
 
-let indexedReferences = new Map();
-let lastUpdateToReferences = 0;
 let plugin: SNWPlugin;
 
 export function setPluginVariableForIndexer(snwPlugin: SNWPlugin) {
@@ -13,72 +11,18 @@ export function setPluginVariableForIndexer(snwPlugin: SNWPlugin) {
 }
 
 export function getIndexedReferences() {
-	return indexedReferences;
+	return plugin.referenceCountingPolicy.getIndexedReferences();
 }
 
-// Primary Indexing function. Adss to the indexedReferences map all outgoing links from a given file
+// Primary Indexing function. Adds to the indexedReferences map all outgoing links from a given file
 // The Database is primarily a key which is the link, and the value is an array of references that use that link
 export const getLinkReferencesForFile = (file: TFile, cache: CachedMetadata) => {
-	if (plugin.settings.enableIgnoreObsExcludeFoldersLinksFrom && file?.path && plugin.app.metadataCache.isUserIgnored(file?.path)) {
-		return;
-	}
-	for (const item of [cache?.links, cache?.embeds, cache?.frontmatterLinks]) {
-		if (!item) continue;
-		for (const ref of item) {
-			const { path, subpath } = ref.link.startsWith("#") // if link is pointing to itself, create a full path
-				? parseLinktext(file.path.replace(`.${file.extension}`, "") + ref.link)
-				: parseLinktext(ref.link);
-			const tfileDestination = plugin.app.metadataCache.getFirstLinkpathDest(path, "/");
-			if (tfileDestination) {
-				if (
-					plugin.settings.enableIgnoreObsExcludeFoldersLinksTo &&
-					tfileDestination?.path &&
-					plugin.app.metadataCache.isUserIgnored(tfileDestination.path)
-				) {
-					continue;
-				}
-				// if the file has a property snw-index-exclude set to true, exclude it from the index
-				if (plugin.app.metadataCache.getFileCache(tfileDestination)?.frontmatter?.["snw-index-exclude"] === true) continue;
-
-				const linkWithFullPath = (tfileDestination ? tfileDestination.path + subpath : path).toLocaleUpperCase();
-				indexedReferences.set(linkWithFullPath, [
-					...(indexedReferences.get(linkWithFullPath) || []),
-					{
-						realLink: ref.link,
-						reference: ref,
-						resolvedFile: tfileDestination,
-						sourceFile: file,
-					},
-				]);
-			} else {
-				// Null if it is a ghost file link, Create Ghost link
-				const link = ref.link.toLocaleUpperCase();
-				indexedReferences.set(link, [
-					...(indexedReferences.get(link) || []),
-					{
-						realLink: ref.link,
-						reference: ref,
-						// mock up ghost file for linking
-						resolvedFile: {
-							path: `${path}.md`,
-							name: `${path}.md`,
-							basename: path,
-							extension: "md",
-						} as TFile,
-						sourceFile: file,
-					},
-				]);
-			}
-		}
-	}
+	plugin.referenceCountingPolicy.getLinkReferencesForFile(file, cache);
 };
 
 // removes existing references from the map, used with getLinkReferencesForFile to rebuild the refeences
 export const removeLinkReferencesForFile = async (file: TFile) => {
-	for (const [key, items] of indexedReferences.entries()) {
-		const filtered = items.filter((item: { sourceFile?: TFile }) => item?.sourceFile?.path !== file.path);
-		filtered.length === 0 ? indexedReferences.delete(key) : indexedReferences.set(key, filtered);
-	}
+	plugin.referenceCountingPolicy.removeLinkReferencesForFile(file);
 };
 
 /**
@@ -87,177 +31,22 @@ export const removeLinkReferencesForFile = async (file: TFile) => {
  * trigger in main.ts
  */
 export function buildLinksAndReferences(): void {
-	if (plugin.showCountsActive !== true) return;
-
-	indexedReferences = new Map();
-	for (const file of plugin.app.vault.getMarkdownFiles()) {
-		const fileCache = plugin.app.metadataCache.getFileCache(file);
-		if (fileCache) getLinkReferencesForFile(file, fileCache);
-	}
-
-	if (window.snwAPI) window.snwAPI.references = indexedReferences;
-	lastUpdateToReferences = Date.now();
+	plugin.referenceCountingPolicy.buildLinksAndReferences();
 }
-
-// following MAP works as a cache for the getCurrentPage call. Based on time elapsed since last update, it just returns a cached transformedCache object
-const cacheCurrentPages = new Map<string, TransformedCache>();
 
 // Provides an optimized view of the cache for determining the block count for references in a given page
 export function getSNWCacheByFile(file: TFile): TransformedCache {
-	if (plugin.showCountsActive !== true) return {};
-
-	// Check if references have been updated since last cache update, and if cache is old
-	const cachedPage = cacheCurrentPages.get(file.path.toLocaleUpperCase());
-	if (cachedPage) {
-		const cachedPageCreateDate = cachedPage.createDate ?? 0;
-		if (lastUpdateToReferences < cachedPageCreateDate && cachedPageCreateDate + 1000 > Date.now()) {
-			return cachedPage;
-		}
-	}
-
-	const transformedCache: TransformedCache = {};
-	const cachedMetaData = plugin.app.metadataCache.getFileCache(file);
-	if (!cachedMetaData) return transformedCache;
-	const filePathInUppercase = file.path.toLocaleUpperCase();
-
-	if (!indexedReferences) buildLinksAndReferences();
-
-	if (cachedMetaData?.headings) {
-		// filter - fFirst confirm there are references
-		// map - map to the transformed cache
-		const baseFilePath = `${filePathInUppercase}#`;
-		const tempCacheHeadings = cachedMetaData.headings
-			.filter((header) => {
-				return indexedReferences.has(baseFilePath + stripHeading(header.heading).toLocaleUpperCase());
-			})
-			.map((header) => {
-				const key = baseFilePath + stripHeading(header.heading).toLocaleUpperCase();
-				return {
-					original: "#".repeat(header.level) + header.heading,
-					key,
-					headerMatch: header.heading.replace(/\[|\]/g, ""),
-					pos: header.position,
-					page: file.basename,
-					type: "heading" as const,
-					references: indexedReferences.get(key),
-				};
-			});
-		if (tempCacheHeadings.length > 0) transformedCache.headings = tempCacheHeadings;
-	}
-	if (cachedMetaData?.blocks) {
-		// First confirm there are references to the block
-		// then map the block to the transformed cache
-		const tempCacheBlocks = Object.values(cachedMetaData.blocks)
-			.filter((block) => (indexedReferences.get(`${filePathInUppercase}#^${block.id.toUpperCase()}`)?.length || 0) > 0)
-			.map((block) => {
-				const key = `${filePathInUppercase}#^${block.id.toLocaleUpperCase()}`;
-				return {
-					key,
-					pos: block.position,
-					page: file.basename,
-					type: "block" as const,
-					references: indexedReferences.get(key),
-				};
-			});
-		if (tempCacheBlocks.length > 0) transformedCache.blocks = tempCacheBlocks;
-	}
-
-	if (cachedMetaData?.links) {
-		const tempCacheLinks = cachedMetaData.links
-			.filter((link) => {
-				const linkPath =
-					parseLinkTextToFullPath(link.link.startsWith("#") ? filePathInUppercase + link.link : link.link).toLocaleUpperCase() ||
-					link.link.toLocaleUpperCase();
-				const refs = indexedReferences.get(linkPath);
-				return refs?.length > 0;
-			})
-			.map((link) => {
-				const linkPath =
-					parseLinkTextToFullPath(link.link.startsWith("#") ? filePathInUppercase + link.link : link.link).toLocaleUpperCase() ||
-					link.link.toLocaleUpperCase();
-
-				const result = {
-					key: linkPath,
-					original: link.original,
-					type: "link" as const,
-					pos: link.position,
-					page: file.basename,
-					references: indexedReferences.get(linkPath) || [],
-				};
-
-				// Handle heading references in one pass
-				if (linkPath.includes("#") && !linkPath.includes("#^")) {
-					result.original = linkPath.split("#")[1];
-				}
-
-				return result;
-			});
-		if (tempCacheLinks.length > 0) transformedCache.links = tempCacheLinks;
-	}
-
-	if (cachedMetaData?.embeds) {
-		const tempCacheEmbeds = cachedMetaData.embeds
-			.filter((embed) => {
-				const embedPath =
-					(embed.link.startsWith("#")
-						? parseLinkTextToFullPath(filePathInUppercase + embed.link)
-						: parseLinkTextToFullPath(embed.link)
-					).toLocaleUpperCase() || embed.link.toLocaleUpperCase();
-				const key = embedPath.startsWith("#") ? `${file.basename}${embedPath}` : embedPath;
-				return indexedReferences.get(key)?.length > 0;
-			})
-			.map((embed) => {
-				const getEmbedPath = () => {
-					const rawPath = embed.link.startsWith("#") ? filePathInUppercase + embed.link : embed.link;
-					return parseLinkTextToFullPath(rawPath).toLocaleUpperCase() || embed.link.toLocaleUpperCase();
-				};
-
-				const embedPath = getEmbedPath();
-				const key = embedPath.startsWith("#") ? `${file.basename}${embedPath}` : embedPath;
-				const [_, original] = key.includes("#") && !key.includes("#^") ? key.split("#") : [];
-
-				return {
-					key,
-					page: file.basename,
-					type: "embed" as const,
-					pos: embed.position,
-					references: indexedReferences.get(key) ?? [],
-					...(original && { original }),
-				};
-			});
-		if (tempCacheEmbeds.length > 0) transformedCache.embeds = tempCacheEmbeds;
-	}
-
-	if (cachedMetaData?.frontmatterLinks) {
-		// filter - fFirst confirm there are references
-		// map - map to the transformed cache
-		const tempCacheFrontmatter = cachedMetaData.frontmatterLinks
-			.filter((link) => indexedReferences.has(parseLinkTextToFullPath(link.link).toLocaleUpperCase() || link.link.toLocaleUpperCase()))
-			.map((link) => {
-				const linkPath = parseLinkTextToFullPath(link.link).toLocaleUpperCase() || link.link.toLocaleUpperCase();
-				return {
-					key: linkPath,
-					original: link.original,
-					type: "frontmatterLink" as const,
-					pos: { start: { line: -1, col: -1, offset: -1 }, end: { line: -1, col: -1, offset: -1 } },
-					displayText: link.displayText,
-					page: file.basename,
-					references: indexedReferences.get(linkPath) || [],
-				};
-			});
-		if (tempCacheFrontmatter.length > 0) transformedCache.frontmatterLinks = tempCacheFrontmatter;
-	}
-
-	transformedCache.cacheMetaData = cachedMetaData;
-	transformedCache.createDate = Date.now();
-	cacheCurrentPages.set(file.path, transformedCache);
-
-	return transformedCache;
+	return plugin.referenceCountingPolicy.getSNWCacheByFile(file);
 }
 
+// Utility to convert a link text to a full path for searching in the indexed references
 export function parseLinkTextToFullPath(link: string): string {
 	const resolvedFilePath = parseLinktext(link);
-	const resolvedTFile = plugin.app.metadataCache.getFirstLinkpathDest(resolvedFilePath.path, "/");
-	if (resolvedTFile === null) return "";
-	return resolvedTFile.path + resolvedFilePath.subpath;
+	if (resolvedFilePath && resolvedFilePath.path) {
+		const tfileDestination = plugin.app.metadataCache.getFirstLinkpathDest(resolvedFilePath.path, "/");
+		if (tfileDestination) {
+			return tfileDestination.path + (resolvedFilePath.subpath || "");
+		}
+	}
+	return link;
 }

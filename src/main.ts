@@ -12,6 +12,7 @@ import {
 import { buildLinksAndReferences, getLinkReferencesForFile, removeLinkReferencesForFile, setPluginVariableForIndexer } from "./indexer";
 import { DEFAULT_SETTINGS, type Settings } from "./settings";
 import SnwAPI from "./snwApi";
+import { ReferenceCountingPolicy } from "./policies/reference-counting";
 import PluginCommands from "./ui/PluginCommands";
 import { SettingsTab } from "./ui/SettingsTab";
 import { SideBarPaneView, VIEW_TYPE_SNW } from "./ui/SideBarPaneView";
@@ -42,10 +43,11 @@ export default class SNWPlugin extends Plugin {
 	markdownPostProcessor: MarkdownPostProcessor | null = null;
 	editorExtensions: Extension[] = [];
 	commands: PluginCommands = new PluginCommands(this);
+	referenceCountingPolicy: ReferenceCountingPolicy = new ReferenceCountingPolicy(this);
 
 	async onload(): Promise<void> {
 		console.log(`loading ${this.appName}`);
-
+		
 		setPluginVariableForIndexer(this);
 		setPluginVariableUIC_RefArea(this);
 		setPluginVariableForHtmlDecorations(this);
@@ -101,6 +103,7 @@ export default class SNWPlugin extends Plugin {
 			defaultMod: true,
 		});
 
+		// @ts-ignore
 		this.snwAPI.settings = this.settings;
 
 		this.registerEditorExtension(this.editorExtensions);

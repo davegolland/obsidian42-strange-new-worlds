@@ -9,7 +9,7 @@ import type { TransformedCache } from "./types";
  */
 export default class SnwAPI {
 	plugin: SNWPlugin;
-	references = new Map();
+	references: any;
 
 	constructor(snwPlugin: SNWPlugin) {
 		this.plugin = snwPlugin;
