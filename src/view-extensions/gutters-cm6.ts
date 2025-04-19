@@ -1,7 +1,6 @@
 import { GutterMarker, gutter } from "@codemirror/view";
 import type { BlockInfo, EditorView } from "@codemirror/view";
 import { editorInfoField } from "obsidian";
-import { getSNWCacheByFile, parseLinkTextToFullPath } from "src/indexer";
 import type SNWPlugin from "src/main";
 import { htmlDecorationForReferencesElement } from "src/view-extensions/htmlDecorations";
 import { ReferenceCountingPolicy } from "../policies/reference-counting";
@@ -11,7 +10,7 @@ let referenceCountingPolicy: ReferenceCountingPolicy;
 
 export function setPluginVariableForCM6Gutter(snwPlugin: SNWPlugin) {
 	plugin = snwPlugin;
-	referenceCountingPolicy = new ReferenceCountingPolicy(plugin);
+	referenceCountingPolicy = plugin.referenceCountingPolicy;
 }
 
 const referenceGutterMarker = class extends GutterMarker {
@@ -60,7 +59,7 @@ const ReferenceGutterExtension = gutter({
 		if (mdView.currentMode?.sourceMode === true && plugin.settings.displayInlineReferencesInSourceMode === false) return null;
 
 		if (!mdView.file) return null;
-		const transformedCache = getSNWCacheByFile(mdView.file);
+		const transformedCache = referenceCountingPolicy.getSNWCacheByFile(mdView.file);
 
 		// check if the page is to be ignored
 		if (transformedCache?.cacheMetaData?.frontmatter?.["snw-file-exclude"] === true) return null;
@@ -85,7 +84,7 @@ const ReferenceGutterExtension = gutter({
 							const lineFromFile = (
 								strippedLineToAnalyze.startsWith("#")
 									? mdView.file + strippedLineToAnalyze
-									: parseLinkTextToFullPath(strippedLineToAnalyze) || strippedLineToAnalyze
+									: referenceCountingPolicy.parseLinkTextToFullPath(strippedLineToAnalyze) || strippedLineToAnalyze
 							).toLocaleUpperCase();
 							if (lineFromFile === ref.key) {
 								return new referenceGutterMarker(

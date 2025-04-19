@@ -2,7 +2,6 @@
 
 import { setIcon } from "obsidian";
 import { render } from "preact";
-import { getIndexedReferences } from "src/indexer";
 import type SNWPlugin from "src/main";
 import type { Link } from "src/types";
 import type { SortOption } from "../../settings";
@@ -16,7 +15,7 @@ let referenceCountingPolicy: ReferenceCountingPolicy;
 
 export function setPluginVariableUIC_RefArea(snwPlugin: SNWPlugin) {
 	plugin = snwPlugin;
-	referenceCountingPolicy = new ReferenceCountingPolicy(plugin);
+	referenceCountingPolicy = plugin.referenceCountingPolicy;
 }
 
 //Creates the primarhy "AREA" body for displaying refrences. This is the overall wrapper for the title and individaul references
@@ -83,7 +82,7 @@ const getRefAreaItems = async (refType: string, key: string, filePath: string): 
 	let linksToLoop: Link[] = [];
 
 	if (refType === "File") {
-		const allLinks = getIndexedReferences();
+		const allLinks = referenceCountingPolicy.getIndexedReferences();
 		const incomingLinks: Link[] = [];
 		for (const items of allLinks.values()) {
 			for (const item of items) {
@@ -94,7 +93,7 @@ const getRefAreaItems = async (refType: string, key: string, filePath: string): 
 		}
 		linksToLoop = referenceCountingPolicy.filterReferences(incomingLinks);
 	} else {
-		const refCache = getIndexedReferences().get(key) || [];
+		const refCache = referenceCountingPolicy.getIndexedReferences().get(key) || [];
 		const sortedCache = await sortRefCache(refCache);
 		linksToLoop = referenceCountingPolicy.filterReferences(sortedCache);
 	}

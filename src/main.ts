@@ -9,7 +9,6 @@ import {
 	type WorkspaceLeaf,
 	debounce,
 } from "obsidian";
-import { buildLinksAndReferences, getLinkReferencesForFile, removeLinkReferencesForFile, setPluginVariableForIndexer } from "./indexer";
 import { DEFAULT_SETTINGS, type Settings } from "./settings";
 import SnwAPI from "./snwApi";
 import { ReferenceCountingPolicy } from "./policies/reference-counting";
@@ -48,7 +47,6 @@ export default class SNWPlugin extends Plugin {
 	async onload(): Promise<void> {
 		console.log(`loading ${this.appName}`);
 		
-		setPluginVariableForIndexer(this);
 		setPluginVariableUIC_RefArea(this);
 		setPluginVariableForHtmlDecorations(this);
 		setPluginVariableForCM6Gutter(this);
@@ -59,6 +57,7 @@ export default class SNWPlugin extends Plugin {
 		setPluginVariableForUIC(this);
 
 		window.snwAPI = this.snwAPI; // API access to SNW for Templater, Dataviewjs and the console debugger
+		this.snwAPI.references = this.referenceCountingPolicy.getIndexedReferences();
 
 		await this.loadSettings();
 		this.addSettingTab(new SettingsTab(this.app, this));
@@ -72,7 +71,7 @@ export default class SNWPlugin extends Plugin {
 		//Build the full index of the vault of references
 		const indexFullUpdateDebounce = debounce(
 			() => {
-				buildLinksAndReferences();
+				this.referenceCountingPolicy.buildLinksAndReferences();
 				updateHeadersDebounce();
 				updatePropertiesDebounce();
 				updateAllSnwLiveUpdateReferencesDebounce();
@@ -84,8 +83,8 @@ export default class SNWPlugin extends Plugin {
 		// Updates reference index for a single file by removing and re-adding the references
 		const indexFileUpdateDebounce = debounce(
 			async (file: TFile, data: string, cache: CachedMetadata) => {
-				await removeLinkReferencesForFile(file);
-				getLinkReferencesForFile(file, cache);
+				await this.referenceCountingPolicy.removeLinkReferencesForFile(file);
+				this.referenceCountingPolicy.getLinkReferencesForFile(file, cache);
 				updateHeadersDebounce();
 				updatePropertiesDebounce();
 				updateAllSnwLiveUpdateReferencesDebounce();
@@ -121,7 +120,7 @@ export default class SNWPlugin extends Plugin {
 			if (!this.app.workspace.getLeavesOfType(VIEW_TYPE_SNW)?.length) {
 				await this.app.workspace.getRightLeaf(false)?.setViewState({ type: VIEW_TYPE_SNW, active: false });
 			}
-			buildLinksAndReferences();
+			this.referenceCountingPolicy.buildLinksAndReferences();
 		});
 	}
 

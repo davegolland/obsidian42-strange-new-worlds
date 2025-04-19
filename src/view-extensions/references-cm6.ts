@@ -4,7 +4,6 @@
  */
 import { Decoration, type DecorationSet, type EditorView, MatchDecorator, ViewPlugin, type ViewUpdate, WidgetType } from "@codemirror/view";
 import { editorInfoField, parseLinktext, stripHeading, TFile } from "obsidian";
-import { getSNWCacheByFile, parseLinkTextToFullPath } from "src/indexer";
 import type SNWPlugin from "src/main";
 import type { TransformedCachedItem } from "../types";
 import { htmlDecorationForReferencesElement } from "./htmlDecorations";
@@ -56,7 +55,7 @@ export const InlineReferenceExtension = ViewPlugin.fromClass(
 					// there is no file, likely a canvas file, look for links and embeds, process it with snwApi.references
 					if (!mdView.file && (plugin.settings.enableRenderingEmbedsInLivePreview || plugin.settings.enableRenderingLinksInLivePreview)) {
 						const ref = match[0].replace(/^\[\[|\]\]$|^!\[\[|\]\]$/g, "");
-						const key = parseLinkTextToFullPath(ref).toLocaleUpperCase();
+						const key = referenceCountingPolicy.parseLinkTextToFullPath(ref).toLocaleUpperCase();
 						if (key) {
 							const refType = match.input.startsWith("!") ? "embed" : "link";
 							mdViewFile = plugin.app.metadataCache.getFirstLinkpathDest(parseLinktext(ref).path, "/") as TFile;
@@ -88,7 +87,7 @@ export const InlineReferenceExtension = ViewPlugin.fromClass(
 
 						mdViewFile = mdView.file as TFile;
 
-						const transformedCache = getSNWCacheByFile(mdViewFile);
+						const transformedCache = referenceCountingPolicy.getSNWCacheByFile(mdViewFile);
 
 						if (
 							(transformedCache.links || transformedCache.headings || transformedCache.embeds || transformedCache.blocks) &&
@@ -222,7 +221,7 @@ const constructWidgetForInlineReference = (
 		if (refType === "embed" || refType === "link") {
 			// check for aliased references
 			if (modifyKey.contains("|")) modifyKey = modifyKey.substring(0, key.search(/\|/));
-			const parsedKey = parseLinkTextToFullPath(modifyKey).toLocaleUpperCase();
+			const parsedKey = referenceCountingPolicy.parseLinkTextToFullPath(modifyKey).toLocaleUpperCase();
 			modifyKey = parsedKey === "" ? modifyKey : parsedKey; //if no results, likely a ghost link
 
 			if (matchKey.startsWith("#")) {

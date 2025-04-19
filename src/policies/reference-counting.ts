@@ -1,6 +1,5 @@
-import type { Link, TransformedCache, TransformedCachedItem } from "../types";
+import type { Link, TransformedCache } from "../types";
 import type SNWPlugin from "../main";
-import { parseLinkTextToFullPath } from "../indexer";
 import { stripHeading, type TFile, parseLinktext } from "obsidian";
 
 export class ReferenceCountingPolicy {
@@ -14,6 +13,22 @@ export class ReferenceCountingPolicy {
         this.cacheCurrentPages = new Map<string, TransformedCache>();
         this.lastUpdateToReferences = 0;
         this.indexedReferences = new Map();
+    }
+
+    /**
+     * Utility to convert a link text to a full path for searching in the indexed references
+     * @param link The link text to convert
+     * @returns The full path
+     */
+    parseLinkTextToFullPath(link: string): string {
+        const resolvedFilePath = parseLinktext(link);
+        if (resolvedFilePath && resolvedFilePath.path) {
+            const tfileDestination = this.plugin.app.metadataCache.getFirstLinkpathDest(resolvedFilePath.path, "/");
+            if (tfileDestination) {
+                return tfileDestination.path + (resolvedFilePath.subpath || "");
+            }
+        }
+        return link;
     }
 
     /**
@@ -234,14 +249,14 @@ export class ReferenceCountingPolicy {
             const tempCacheLinks = cachedMetaData.links
                 .filter((link) => {
                     const linkPath =
-                        parseLinkTextToFullPath(link.link.startsWith("#") ? filePathInUppercase + link.link : link.link).toLocaleUpperCase() ||
+                        this.parseLinkTextToFullPath(link.link.startsWith("#") ? filePathInUppercase + link.link : link.link).toLocaleUpperCase() ||
                         link.link.toLocaleUpperCase();
                     const refs = this.indexedReferences.get(linkPath);
                     return refs && refs.length > 0;
                 })
                 .map((link) => {
                     const linkPath =
-                        parseLinkTextToFullPath(link.link.startsWith("#") ? filePathInUppercase + link.link : link.link).toLocaleUpperCase() ||
+                        this.parseLinkTextToFullPath(link.link.startsWith("#") ? filePathInUppercase + link.link : link.link).toLocaleUpperCase() ||
                         link.link.toLocaleUpperCase();
 
                     const result = {
@@ -268,8 +283,8 @@ export class ReferenceCountingPolicy {
                 .filter((embed) => {
                     const embedPath =
                         (embed.link.startsWith("#")
-                            ? parseLinkTextToFullPath(filePathInUppercase + embed.link)
-                            : parseLinkTextToFullPath(embed.link)
+                            ? this.parseLinkTextToFullPath(filePathInUppercase + embed.link)
+                            : this.parseLinkTextToFullPath(embed.link)
                         ).toLocaleUpperCase() || embed.link.toLocaleUpperCase();
                     const key = embedPath.startsWith("#") ? `${file.basename}${embedPath}` : embedPath;
                     const refs = this.indexedReferences.get(key);
@@ -278,7 +293,7 @@ export class ReferenceCountingPolicy {
                 .map((embed) => {
                     const getEmbedPath = () => {
                         const rawPath = embed.link.startsWith("#") ? filePathInUppercase + embed.link : embed.link;
-                        return parseLinkTextToFullPath(rawPath).toLocaleUpperCase() || embed.link.toLocaleUpperCase();
+                        return this.parseLinkTextToFullPath(rawPath).toLocaleUpperCase() || embed.link.toLocaleUpperCase();
                     };
 
                     const embedPath = getEmbedPath();
@@ -301,9 +316,9 @@ export class ReferenceCountingPolicy {
             // filter - first confirm there are references
             // map - map to the transformed cache
             const tempCacheFrontmatter = cachedMetaData.frontmatterLinks
-                .filter((link) => this.indexedReferences.has(parseLinkTextToFullPath(link.link).toLocaleUpperCase() || link.link.toLocaleUpperCase()))
+                .filter((link) => this.indexedReferences.has(this.parseLinkTextToFullPath(link.link).toLocaleUpperCase() || link.link.toLocaleUpperCase()))
                 .map((link) => {
-                    const linkPath = parseLinkTextToFullPath(link.link).toLocaleUpperCase() || link.link.toLocaleUpperCase();
+                    const linkPath = this.parseLinkTextToFullPath(link.link).toLocaleUpperCase() || link.link.toLocaleUpperCase();
                     return {
                         key: linkPath,
                         original: link.original,

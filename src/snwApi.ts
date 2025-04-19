@@ -1,4 +1,3 @@
-import { getIndexedReferences, getSNWCacheByFile, parseLinkTextToFullPath } from "./indexer";
 import type SNWPlugin from "./main";
 import type { TFile, CachedMetadata } from "obsidian";
 import type { TransformedCache } from "./types";
@@ -28,7 +27,7 @@ export default class SnwAPI {
 	};
 
 	searchReferencesStartingWith = async (searchString: string) => {
-		for (const [key, value] of getIndexedReferences()) {
+		for (const [key, value] of this.plugin.referenceCountingPolicy.getIndexedReferences()) {
 			if (key.startsWith(searchString)) {
 				console.log(key, value);
 			}
@@ -36,7 +35,7 @@ export default class SnwAPI {
 	};
 
 	searchReferencesContains = async (searchString: string) => {
-		for (const [key, value] of getIndexedReferences()) {
+		for (const [key, value] of this.plugin.referenceCountingPolicy.getIndexedReferences()) {
 			if (key.contains(searchString)) {
 				console.log(key, value);
 			}
@@ -49,11 +48,11 @@ export default class SnwAPI {
 		return {
 			TFile: currentFile,
 			metadataCache: currentFile ? this.plugin.app.metadataCache.getFileCache(currentFile) : null,
-			SnwTransformedCache: currentFile ? getSNWCacheByFile(currentFile) : null,
+			SnwTransformedCache: currentFile ? this.plugin.referenceCountingPolicy.getSNWCacheByFile(currentFile) : null,
 		};
 	};
 
 	parseLinkTextToFullPath(linkText: string) {
-		return parseLinkTextToFullPath(linkText);
+		return this.plugin.referenceCountingPolicy.parseLinkTextToFullPath(linkText);
 	}
 }

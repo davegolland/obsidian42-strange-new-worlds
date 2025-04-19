@@ -1,5 +1,4 @@
 import { MarkdownView, Platform, View, type WorkspaceLeaf, debounce } from "obsidian";
-import { getSNWCacheByFile } from "src/indexer";
 import { htmlDecorationForReferencesElement } from "src/view-extensions/htmlDecorations";
 import type SNWPlugin from "../main";
 import { UPDATE_DEBOUNCE } from "../main";
@@ -11,7 +10,7 @@ let referenceCountingPolicy: ReferenceCountingPolicy;
 
 export function setPluginVariableForFrontmatterLinksRefCount(snwPlugin: SNWPlugin) {
 	plugin = snwPlugin;
-	referenceCountingPolicy = new ReferenceCountingPolicy(plugin);
+	referenceCountingPolicy = plugin.referenceCountingPolicy;
 }
 
 // Iterates all open documents to see if they are markdown file, and if so called processHeader
@@ -37,7 +36,7 @@ function processFrontmatterLinks(mdView: View) {
 	const markdownView = mdView as MarkdownView;
 	if (!state || !markdownView?.rawFrontmatter) return;
 
-	const transformedCache = markdownView.file ? getSNWCacheByFile(markdownView.file) : {};
+	const transformedCache = markdownView.file ? referenceCountingPolicy.getSNWCacheByFile(markdownView.file) : {};
 	if (!transformedCache.frontmatterLinks?.length) return;
 
 	for (const item of markdownView.metadataEditor.rendered) {

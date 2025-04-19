@@ -5,7 +5,6 @@ import {
 	parseLinktext,
 	type TFile,
 } from "obsidian";
-import { getSNWCacheByFile, parseLinkTextToFullPath } from "../indexer";
 import type SNWPlugin from "../main";
 import { htmlDecorationForReferencesElement } from "./htmlDecorations";
 import type { Link } from "../types";
@@ -16,7 +15,7 @@ let referenceCountingPolicy: ReferenceCountingPolicy;
 
 export function setPluginVariableForMarkdownPreviewProcessor(snwPlugin: SNWPlugin) {
 	plugin = snwPlugin;
-	referenceCountingPolicy = new ReferenceCountingPolicy(plugin);
+	referenceCountingPolicy = plugin.referenceCountingPolicy;
 }
 
 /**
@@ -58,7 +57,7 @@ class snwChildComponentMardkownWithoutFile extends MarkdownRenderChild {
 	onload(): void {
 		for (const link of Array.from(this.containerEl.querySelectorAll("a.internal-link, span.internal-embed"))) {
 			const ref = ((link as HTMLElement).dataset.href || link.getAttribute("src")) as string;
-			const key = parseLinkTextToFullPath(ref).toLocaleUpperCase();
+			const key = referenceCountingPolicy.parseLinkTextToFullPath(ref).toLocaleUpperCase();
 			const resolvedTFile = plugin.app.metadataCache.getFirstLinkpathDest(parseLinktext(ref).path, "/");
 			const references = plugin.snwAPI.references.get(key);
 
@@ -98,7 +97,7 @@ class snwChildComponentForMarkdownFile extends MarkdownRenderChild {
 
 	onload(): void {
 		const minRefCountThreshold = plugin.settings.minimumRefCountThreshold;
-		const transformedCache = getSNWCacheByFile(this.currentFile);
+		const transformedCache = referenceCountingPolicy.getSNWCacheByFile(this.currentFile);
 
 		if (transformedCache?.cacheMetaData?.frontmatter?.["snw-file-exclude"] === true) return;
 		if (transformedCache?.cacheMetaData?.frontmatter?.["snw-canvas-exclude-preview"] === true) return;
@@ -149,7 +148,7 @@ class snwChildComponentForMarkdownFile extends MarkdownRenderChild {
 
 					// Testing for normal links, links within same page starting with # and for ghost links
 					const embedKey =
-						parseLinkTextToFullPath(
+						referenceCountingPolicy.parseLinkTextToFullPath(
 							src[0] === "#" ? this.currentFile.path.slice(0, -(this.currentFile.extension.length + 1)) + src : src,
 						) || src;
 
@@ -179,7 +178,7 @@ class snwChildComponentForMarkdownFile extends MarkdownRenderChild {
 					if (!dataHref) return;
 					// Testing for normal links, links within same page starting with # and for ghost links
 					const link =
-						parseLinkTextToFullPath(
+						referenceCountingPolicy.parseLinkTextToFullPath(
 							dataHref[0] === "#" ? this.currentFile.path.slice(0, -(this.currentFile.extension.length + 1)) + dataHref : dataHref,
 						) || dataHref;
 

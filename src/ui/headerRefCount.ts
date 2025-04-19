@@ -2,7 +2,6 @@
 
 import { type MarkdownView, Platform, type WorkspaceLeaf, debounce } from "obsidian";
 import tippy from "tippy.js";
-import { getIndexedReferences, getSNWCacheByFile } from "../indexer";
 import type SNWPlugin from "../main";
 import { UPDATE_DEBOUNCE } from "../main";
 import { processHtmlDecorationReferenceEvent } from "../view-extensions/htmlDecorations";
@@ -35,7 +34,7 @@ export const updateHeadersDebounce = debounce(
 function processHeader(mdView: MarkdownView) {
 	const mdViewFile = mdView.file;
 	if (!mdViewFile) return;
-	const allLinks = getIndexedReferences();
+	const allLinks = plugin.referenceCountingPolicy.getIndexedReferences();
 
 	let incomingLinksCount = 0;
 	const uniqueSourceFiles = new Set<string>();
@@ -56,7 +55,7 @@ function processHeader(mdView: MarkdownView) {
 	}
 
 	// check if the page is to be ignored
-	const transformedCache = getSNWCacheByFile(mdViewFile);
+	const transformedCache = plugin.referenceCountingPolicy.getSNWCacheByFile(mdViewFile);
 	if (transformedCache?.cacheMetaData?.frontmatter?.["snw-file-exclude"] === true) incomingLinksCount = 0;
 
 	// if no incoming links, check if there is a header and remove it. In all cases, exit roturin
