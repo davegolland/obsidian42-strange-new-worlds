@@ -4,11 +4,14 @@ import { editorInfoField } from "obsidian";
 import { getSNWCacheByFile, parseLinkTextToFullPath } from "src/indexer";
 import type SNWPlugin from "src/main";
 import { htmlDecorationForReferencesElement } from "src/view-extensions/htmlDecorations";
+import { ReferenceCountingPolicy } from "../policies/reference-counting";
 
 let plugin: SNWPlugin;
+let referenceCountingPolicy: ReferenceCountingPolicy;
 
 export function setPluginVariableForCM6Gutter(snwPlugin: SNWPlugin) {
 	plugin = snwPlugin;
+	referenceCountingPolicy = new ReferenceCountingPolicy(plugin);
 }
 
 const referenceGutterMarker = class extends GutterMarker {
@@ -70,8 +73,9 @@ const ReferenceGutterExtension = gutter({
 		for (const embed of embedsFromMetaDataCache) {
 			if (embed.position.start.line + 1 === lineNumberInFile) {
 				for (const ref of transformedCache?.embeds ?? []) {
+					const refCount = referenceCountingPolicy.countReferences(ref?.references);
 					if (
-						ref?.references.length >= Math.max(2, plugin.settings.minimumRefCountThreshold) &&
+						refCount >= Math.max(2, plugin.settings.minimumRefCountThreshold) &&
 						ref?.pos.start.line + 1 === lineNumberInFile
 					) {
 						const lineToAnalyze = editorView.state.doc.lineAt(line.from).text.trim();
@@ -85,7 +89,7 @@ const ReferenceGutterExtension = gutter({
 							).toLocaleUpperCase();
 							if (lineFromFile === ref.key) {
 								return new referenceGutterMarker(
-									ref.references.length,
+									refCount,
 									"embed",
 									ref.references[0].realLink,
 									ref.key,

@@ -4,11 +4,14 @@ import { htmlDecorationForReferencesElement } from "src/view-extensions/htmlDeco
 import type SNWPlugin from "../main";
 import { UPDATE_DEBOUNCE } from "../main";
 import type { TransformedCachedItem } from "../types";
+import { ReferenceCountingPolicy } from "../policies/reference-counting";
 
 let plugin: SNWPlugin;
+let referenceCountingPolicy: ReferenceCountingPolicy;
 
 export function setPluginVariableForFrontmatterLinksRefCount(snwPlugin: SNWPlugin) {
 	plugin = snwPlugin;
+	referenceCountingPolicy = new ReferenceCountingPolicy(plugin);
 }
 
 // Iterates all open documents to see if they are markdown file, and if so called processHeader
@@ -58,7 +61,7 @@ function processFrontmatterLinks(mdView: View) {
 
 function appendRefCounter(parentLink: HTMLElement, cacheItem: TransformedCachedItem) {
 	let wrapperEl = parentLink.parentElement?.querySelector(".snw-frontmatter-wrapper");
-	const refCount = cacheItem.references.length;
+	const refCount = referenceCountingPolicy.countReferences(cacheItem.references);
 
 	if (!wrapperEl && refCount >= plugin.settings.minimumRefCountThreshold) {
 		wrapperEl = createSpan({ cls: "snw-frontmatter-wrapper" });

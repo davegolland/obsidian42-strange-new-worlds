@@ -9,11 +9,14 @@ import type SNWPlugin from "src/main";
 import type { TransformedCachedItem } from "../types";
 import { htmlDecorationForReferencesElement } from "./htmlDecorations";
 import SnwAPI from "src/snwApi";
+import { ReferenceCountingPolicy } from "../policies/reference-counting";
 
 let plugin: SNWPlugin;
+let referenceCountingPolicy: ReferenceCountingPolicy;
 
 export function setPluginVariableForCM6InlineReferences(snwPlugin: SNWPlugin) {
 	plugin = snwPlugin;
+	referenceCountingPolicy = new ReferenceCountingPolicy(plugin);
 }
 
 /**
@@ -213,7 +216,8 @@ const constructWidgetForInlineReference = (
 			modifyKey = modifyKey.replace(/^\s+|\s+$/g, ""); // should be not leading spaces
 		}
 
-		if (refType === "link" && ref.references.length === 1) continue; // if this is a link and there is only one reference, don't show the widget
+		const refCount = referenceCountingPolicy.countReferences(ref.references);
+		if (refType === "link" && refCount === 1) continue; // if this is a link and there is only one reference, don't show the widget
 
 		if (refType === "embed" || refType === "link") {
 			// check for aliased references
@@ -231,9 +235,9 @@ const constructWidgetForInlineReference = (
 			const filePath = ref?.references[0]?.resolvedFile
 				? ref.references[0].resolvedFile.path.replace(`.${ref.references[0].resolvedFile}`, "")
 				: modifyKey;
-			if (ref?.references.length >= plugin.settings.minimumRefCountThreshold)
+			if (refCount >= plugin.settings.minimumRefCountThreshold)
 				return new InlineReferenceWidget(
-					ref.references.length,
+					refCount,
 					ref.type,
 					ref.references[0].realLink,
 					ref.key,
