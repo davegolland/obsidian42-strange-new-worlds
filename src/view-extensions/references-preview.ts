@@ -9,11 +9,14 @@ import { getSNWCacheByFile, parseLinkTextToFullPath } from "../indexer";
 import type SNWPlugin from "../main";
 import { htmlDecorationForReferencesElement } from "./htmlDecorations";
 import type { Link } from "../types";
+import { ReferenceCountingPolicy } from "../policies/reference-counting";
 
 let plugin: SNWPlugin;
+let referenceCountingPolicy: ReferenceCountingPolicy;
 
 export function setPluginVariableForMarkdownPreviewProcessor(snwPlugin: SNWPlugin) {
 	plugin = snwPlugin;
+	referenceCountingPolicy = new ReferenceCountingPolicy(plugin);
 }
 
 /**
@@ -59,15 +62,7 @@ class snwChildComponentMardkownWithoutFile extends MarkdownRenderChild {
 			const resolvedTFile = plugin.app.metadataCache.getFirstLinkpathDest(parseLinktext(ref).path, "/");
 			const references = plugin.snwAPI.references.get(key);
 
-			let refCount = 0;
-			if (references) {
-				if (plugin.settings.countUniqueFilesOnly) {
-					const uniqueSourceFiles = new Set(references.map((ref: Link) => ref.sourceFile?.path).filter(Boolean));
-					refCount = uniqueSourceFiles.size;
-				} else {
-					refCount = references.length;
-				}
-			}
+			const refCount = referenceCountingPolicy.countReferences(references);
 
 			if (refCount <= 0 || refCount < plugin.settings.minimumRefCountThreshold) continue;
 

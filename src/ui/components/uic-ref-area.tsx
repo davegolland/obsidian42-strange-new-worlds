@@ -9,11 +9,14 @@ import type { SortOption } from "../../settings";
 import { setFileLinkHandlers } from "./uic-ref--parent";
 import { getUIC_Ref_Item } from "./uic-ref-item";
 import { getUIC_Ref_Title_Div } from "./uic-ref-title";
+import { ReferenceCountingPolicy } from "../../policies/reference-counting";
 
 let plugin: SNWPlugin;
+let referenceCountingPolicy: ReferenceCountingPolicy;
 
 export function setPluginVariableUIC_RefArea(snwPlugin: SNWPlugin) {
 	plugin = snwPlugin;
+	referenceCountingPolicy = new ReferenceCountingPolicy(plugin);
 }
 
 //Creates the primarhy "AREA" body for displaying refrences. This is the overall wrapper for the title and individaul references
@@ -77,7 +80,6 @@ const sortLinks = (links: Link[], option: SortOption): Link[] => {
 
 // Creates a DIV for a collection of reference blocks to be displayed
 const getRefAreaItems = async (refType: string, key: string, filePath: string): Promise<{ response: HTMLElement; refCount: number }> => {
-	let countOfRefs = 0;
 	let linksToLoop: Link[] = [];
 
 	if (refType === "File") {
@@ -90,26 +92,14 @@ const getRefAreaItems = async (refType: string, key: string, filePath: string): 
 				}
 			}
 		}
-
-		if (plugin.settings.countUniqueFilesOnly) {
-			const uniqueSourceFiles = new Set(incomingLinks.map(link => link.sourceFile?.path).filter(Boolean));
-			countOfRefs = uniqueSourceFiles.size;
-		} else {
-			countOfRefs = incomingLinks.length;
-		}
-		linksToLoop = incomingLinks;
+		linksToLoop = referenceCountingPolicy.filterReferences(incomingLinks);
 	} else {
 		const refCache = getIndexedReferences().get(key) || [];
 		const sortedCache = await sortRefCache(refCache);
-		
-		if (plugin.settings.countUniqueFilesOnly) {
-			const uniqueSourceFiles = new Set(sortedCache.map(link => link.sourceFile?.path).filter(Boolean));
-			countOfRefs = uniqueSourceFiles.size;
-		} else {
-			countOfRefs = sortedCache.length;
-		}
-		linksToLoop = sortedCache;
+		linksToLoop = referenceCountingPolicy.filterReferences(sortedCache);
 	}
+
+	const countOfRefs = referenceCountingPolicy.countReferences(linksToLoop);
 
 	// get the unique file names for files in thie refeernces
 	const uniqueFileKeys: Link[] = Array.from(new Set(linksToLoop.map((a: Link) => a.sourceFile?.path))).map((file_path) => {
