@@ -41,7 +41,7 @@ export function htmlDecorationForReferencesElement(
 			className={`snw-reference snw-${referenceType} ${attachCSSClass}`}
 			data-snw-type={referenceType}
 			data-snw-reallink={realLink}
-			data-snw-key={key.toLocaleUpperCase()}
+			data-snw-key={key}
 			data-snw-filepath={filePath}
 			snw-data-line-number={lineNu.toString()}
 		>

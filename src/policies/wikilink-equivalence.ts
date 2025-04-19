@@ -25,32 +25,74 @@ export interface WikilinkEquivalencePolicy {
 }
 
 /**
- * Default policy that treats links as case insensitive
+ * Abstract base class implementing common functionality for wikilink equivalence policies
  */
-export class CaseInsensitivePolicy implements WikilinkEquivalencePolicy {
-    name = "Case Insensitive";
+export abstract class AbstractWikilinkEquivalencePolicy implements WikilinkEquivalencePolicy {
+    abstract name: string;
     
-    normalizeFileName(filename: string): string {
-        // Convert to uppercase for case insensitivity
-        let normalized = filename.toLocaleUpperCase();
+    /**
+     * Default implementation for normalizing filenames
+     * Adds .MD extension if not present and not a section link
+     * @param filename The filename to normalize
+     * @param toUpperCase Whether to convert to uppercase (default: true)
+     * @returns Normalized filename
+     */
+    normalizeFileName(filename: string, toUpperCase = true): string {
+        // Convert case if needed
+        let normalized = toUpperCase ? filename.toLocaleUpperCase() : filename.toLowerCase();
         
-        // Add .MD extension if not present and not a section link
-        if (!normalized.includes("#") && !normalized.endsWith(".MD")) {
-            normalized += ".MD";
+        // Add extension if not present and not a section link
+        const extension = toUpperCase ? ".MD" : ".md";
+        if (!normalized.includes("#") && !normalized.endsWith(extension)) {
+            normalized += extension;
         }
         
         return normalized;
     }
     
+    /**
+     * Helper to extract section subpath from a link
+     * @param link The link to extract section from
+     * @returns The section subpath if present
+     */
+    protected extractSubpath(link: Link): string | null {
+        if (link.realLink.includes("#")) {
+            const { subpath } = parseLinktext(link.realLink);
+            return subpath || null;
+        }
+        return null;
+    }
+    
+    /**
+     * Base implementation to get a path for key generation
+     * @param link The link to get path from
+     * @returns The normalized path
+     */
+    protected getBasePath(link: Link): string {
+        return link.resolvedFile ? 
+            link.resolvedFile.path : 
+            link.realLink;
+    }
+    
+    /**
+     * Each policy must implement its own key generation logic
+     */
+    abstract generateKey(link: Link): string;
+}
+
+/**
+ * Default policy that treats links as case insensitive
+ */
+export class CaseInsensitivePolicy extends AbstractWikilinkEquivalencePolicy {
+    name = "Case Insensitive";
+    
     generateKey(link: Link): string {
         // If we have a resolved file path, use that
         if (link.resolvedFile) {
             // For links to sections within files, maintain the section information
-            if (link.realLink.includes("#")) {
-                const { subpath } = parseLinktext(link.realLink);
-                if (subpath) {
-                    return (link.resolvedFile.path + subpath).toLocaleUpperCase();
-                }
+            const subpath = this.extractSubpath(link);
+            if (subpath) {
+                return (link.resolvedFile.path + subpath).toLocaleUpperCase();
             }
             return link.resolvedFile.path.toLocaleUpperCase();
         }
@@ -63,20 +105,8 @@ export class CaseInsensitivePolicy implements WikilinkEquivalencePolicy {
 /**
  * Policy that considers links within the same source file as different equivalence classes
  */
-export class SameFilePolicy implements WikilinkEquivalencePolicy {
+export class SameFilePolicy extends AbstractWikilinkEquivalencePolicy {
     name = "Same File Unification";
-    
-    normalizeFileName(filename: string): string {
-        // Convert to uppercase for case insensitivity
-        let normalized = filename.toLocaleUpperCase();
-        
-        // Add .MD extension if not present and not a section link
-        if (!normalized.includes("#") && !normalized.endsWith(".MD")) {
-            normalized += ".MD";
-        }
-        
-        return normalized;
-    }
     
     generateKey(link: Link): string {
         const baseKey = link.resolvedFile ? 
@@ -90,34 +120,37 @@ export class SameFilePolicy implements WikilinkEquivalencePolicy {
 /**
  * Policy that attempts to unify different word forms (simple implementation)
  */
-export class WordFormPolicy implements WikilinkEquivalencePolicy {
+export class WordFormPolicy extends AbstractWikilinkEquivalencePolicy {
     name = "Word Form Unification";
     
     normalizeFileName(filename: string): string {
-        // Add .md extension if not present and not a section link
-        let normalized = filename.toLowerCase();
-        
-        if (!normalized.includes("#") && !normalized.endsWith(".md")) {
-            normalized += ".md";
-        }
-        
-        return normalized;
+        // Override to use lowercase instead of uppercase
+        return super.normalizeFileName(filename, false);
     }
     
     generateKey(link: Link): string {
         const baseName = link.resolvedFile?.basename || 
             (link.realLink.split('/').pop() || link.realLink);
             
-        // Simple lemmatization example - removes common suffixes
-        return this.normalizeFileName(baseName)
-            .replace(/(\w+)(s|es|ing|ed|ness|ity)$/, '$1');
+        // Strip any extension to properly handle suffix removal
+        const nameWithoutExtension = baseName.replace(/\.\w+$/, '');
+        
+        // Simple lemmatization - removes common suffixes
+        const normalized = nameWithoutExtension.replace(/(\w+?)(s|es|ing|ed|ness|ity)$/, '$1');
+        
+        // Add the extension back if the original had one
+        if (baseName.includes('.')) {
+            return this.normalizeFileName(normalized + (baseName.includes('.md') ? '.md' : ''));
+        }
+        
+        return this.normalizeFileName(normalized);
     }
 }
 
 /**
  * Policy that only considers the base filename, ignoring paths and extensions
  */
-export class BaseNamePolicy implements WikilinkEquivalencePolicy {
+export class BaseNamePolicy extends AbstractWikilinkEquivalencePolicy {
     name = "Base Name Only";
     
     normalizeFileName(filename: string): string {
