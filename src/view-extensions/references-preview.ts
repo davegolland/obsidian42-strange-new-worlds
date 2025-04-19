@@ -8,6 +8,7 @@ import {
 import { getSNWCacheByFile, parseLinkTextToFullPath } from "../indexer";
 import type SNWPlugin from "../main";
 import { htmlDecorationForReferencesElement } from "./htmlDecorations";
+import type { Link } from "../types";
 
 let plugin: SNWPlugin;
 
@@ -58,7 +59,16 @@ class snwChildComponentMardkownWithoutFile extends MarkdownRenderChild {
 			const resolvedTFile = plugin.app.metadataCache.getFirstLinkpathDest(parseLinktext(ref).path, "/");
 			const references = plugin.snwAPI.references.get(key);
 
-			const refCount = references?.length || 0;
+			let refCount = 0;
+			if (references) {
+				if (plugin.settings.countUniqueFilesOnly) {
+					const uniqueSourceFiles = new Set(references.map((ref: Link) => ref.sourceFile?.path).filter(Boolean));
+					refCount = uniqueSourceFiles.size;
+				} else {
+					refCount = references.length;
+				}
+			}
+
 			if (refCount <= 0 || refCount < plugin.settings.minimumRefCountThreshold) continue;
 
 			const refType = link.classList.contains("internal-link") ? "link" : "embed";

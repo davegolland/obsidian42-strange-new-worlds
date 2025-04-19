@@ -342,5 +342,21 @@ export class SettingsTab extends PluginSettingTab {
 					await this.plugin.saveSettings();
 				});
 			});
+
+		new Setting(containerEl).setHeading().setName("Reference Counting");
+
+		new Setting(containerEl)
+			.setName("Count unique files only")
+			.setDesc(
+				"If enabled, each file will only be counted once even if it contains multiple links to the same target. " +
+				"By default, all link occurrences are counted. May require reopening files to take effect."
+			)
+			.addToggle((cb: ToggleComponent) => {
+				cb.setValue(this.plugin.settings.countUniqueFilesOnly);
+				cb.onChange(async (value: boolean) => {
+					this.plugin.settings.countUniqueFilesOnly = value;
+					await this.plugin.saveSettings();
+				});
+			});
 	}
 }

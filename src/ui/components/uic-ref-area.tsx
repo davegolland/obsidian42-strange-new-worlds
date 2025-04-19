@@ -78,31 +78,43 @@ const sortLinks = (links: Link[], option: SortOption): Link[] => {
 // Creates a DIV for a collection of reference blocks to be displayed
 const getRefAreaItems = async (refType: string, key: string, filePath: string): Promise<{ response: HTMLElement; refCount: number }> => {
 	let countOfRefs = 0;
-	let linksToLoop: Link[] = null;
+	let linksToLoop: Link[] = [];
 
 	if (refType === "File") {
-		const allLinks: Link[] = getIndexedReferences();
-		const incomingLinks = [];
+		const allLinks = getIndexedReferences();
+		const incomingLinks: Link[] = [];
 		for (const items of allLinks.values()) {
 			for (const item of items) {
-				if (item?.resolvedFile && item?.resolvedFile?.path === filePath) incomingLinks.push(item);
+				if (item?.resolvedFile && item?.resolvedFile?.path === filePath) {
+					incomingLinks.push(item);
+				}
 			}
 		}
 
-		countOfRefs = incomingLinks.length;
+		if (plugin.settings.countUniqueFilesOnly) {
+			const uniqueSourceFiles = new Set(incomingLinks.map(link => link.sourceFile?.path).filter(Boolean));
+			countOfRefs = uniqueSourceFiles.size;
+		} else {
+			countOfRefs = incomingLinks.length;
+		}
 		linksToLoop = incomingLinks;
 	} else {
-		let refCache: Link[] = getIndexedReferences().get(key);
-		if (refCache === undefined) refCache = getIndexedReferences().get(key);
+		const refCache = getIndexedReferences().get(key) || [];
 		const sortedCache = await sortRefCache(refCache);
-		countOfRefs = sortedCache.length;
+		
+		if (plugin.settings.countUniqueFilesOnly) {
+			const uniqueSourceFiles = new Set(sortedCache.map(link => link.sourceFile?.path).filter(Boolean));
+			countOfRefs = uniqueSourceFiles.size;
+		} else {
+			countOfRefs = sortedCache.length;
+		}
 		linksToLoop = sortedCache;
 	}
 
 	// get the unique file names for files in thie refeernces
 	const uniqueFileKeys: Link[] = Array.from(new Set(linksToLoop.map((a: Link) => a.sourceFile?.path))).map((file_path) => {
 		return linksToLoop.find((a) => a.sourceFile?.path === file_path);
-	});
+	}).filter((link): link is Link => link !== undefined);
 
 	const sortedFileKeys = sortLinks(uniqueFileKeys, plugin.settings.sortOptionDefault);
 
@@ -123,6 +135,8 @@ const getRefAreaItems = async (refType: string, key: string, filePath: string): 
 	for (let index = 0; index < sortedFileKeys.length; index++) {
 		if (itemsDisplayedCounter > maxItemsToShow) continue;
 		const file_path = sortedFileKeys[index];
+		if (!file_path.sourceFile) continue;
+		
 		const responseItemContainerEl = createDiv();
 		responseItemContainerEl.addClass("snw-ref-item-container");
 		responseItemContainerEl.addClass("tree-item");

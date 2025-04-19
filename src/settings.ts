@@ -27,6 +27,7 @@ export interface Settings {
 	sortOptionDefault: SortOption;
 	displayCustomPropertyList: string; //list of custom properties to display when showing references
 	pluginSupportKanban: boolean;
+	countUniqueFilesOnly: boolean; //if true, only count each file once even if it has multiple links
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -56,4 +57,5 @@ export const DEFAULT_SETTINGS: Settings = {
 	sortOptionDefault: "name-asc",
 	displayCustomPropertyList: "",
 	pluginSupportKanban: false,
+	countUniqueFilesOnly: false,
 };

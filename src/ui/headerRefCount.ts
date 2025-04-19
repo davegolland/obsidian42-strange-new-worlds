@@ -38,12 +38,21 @@ function processHeader(mdView: MarkdownView) {
 	const allLinks = getIndexedReferences();
 
 	let incomingLinksCount = 0;
+	const uniqueSourceFiles = new Set<string>();
 	for (const items of allLinks.values()) {
 		for (const item of items) {
 			if (item?.resolvedFile && item?.resolvedFile?.path === mdViewFile.path) {
-				incomingLinksCount++;
+				if (plugin.settings.countUniqueFilesOnly) {
+					uniqueSourceFiles.add(item.sourceFile?.path);
+				} else {
+					incomingLinksCount++;
+				}
 			}
 		}
+	}
+
+	if (plugin.settings.countUniqueFilesOnly) {
+		incomingLinksCount = uniqueSourceFiles.size;
 	}
 
 	// check if the page is to be ignored
