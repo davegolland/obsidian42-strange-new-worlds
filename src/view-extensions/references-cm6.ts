@@ -15,7 +15,7 @@ let referenceCountingPolicy: ReferenceCountingPolicy;
 
 export function setPluginVariableForCM6InlineReferences(snwPlugin: SNWPlugin) {
 	plugin = snwPlugin;
-	referenceCountingPolicy = new ReferenceCountingPolicy(plugin);
+	referenceCountingPolicy = plugin.referenceCountingPolicy;
 }
 
 /**
@@ -30,8 +30,8 @@ export const InlineReferenceExtension = ViewPlugin.fromClass(
 		constructor(public view: EditorView) {
 			// The constructor seems to be called only once when a file is viewed. The decorator is called multipe times.
 			if (plugin.settings.enableRenderingBlockIdInLivePreview) this.regxPattern = "(\\s\\^)(\\S+)$";
-			if (plugin.settings.enableRenderingEmbedsInLivePreview) this.regxPattern += `${this.regxPattern !== "" ? "|" : ""}!\\[\\[(.*?)\\]\\]`;
-			if (plugin.settings.enableRenderingLinksInLivePreview) this.regxPattern += `${this.regxPattern !== "" ? "|" : ""}\\[\\[(.*?)\\]\\]`;
+			if (plugin.settings.enableRenderingEmbedsInLivePreview) this.regxPattern += `${this.regxPattern !== "" ? "|" : ""}!\\[\\[[^\\]]+?\\]\\]|#+\\s.+$`;
+			if (plugin.settings.enableRenderingLinksInLivePreview) this.regxPattern += `${this.regxPattern !== "" ? "|" : ""}\\[\\[[^\\]]+?\\]\\]|#+\\s.+$`;
 			if (plugin.settings.enableRenderingHeadersInLivePreview) this.regxPattern += `${this.regxPattern !== "" ? "|" : ""}^#+\\s.+`;
 
 			//if there is no regex pattern, then don't go further
@@ -55,7 +55,7 @@ export const InlineReferenceExtension = ViewPlugin.fromClass(
 					// there is no file, likely a canvas file, look for links and embeds, process it with snwApi.references
 					if (!mdView.file && (plugin.settings.enableRenderingEmbedsInLivePreview || plugin.settings.enableRenderingLinksInLivePreview)) {
 						const ref = match[0].replace(/^\[\[|\]\]$|^!\[\[|\]\]$/g, "");
-						const key = referenceCountingPolicy.parseLinkTextToFullPath(ref).toLocaleUpperCase();
+						const key = referenceCountingPolicy.generateKeyFromPathAndLink("/", ref);
 						if (key) {
 							const refType = match.input.startsWith("!") ? "embed" : "link";
 							mdViewFile = plugin.app.metadataCache.getFirstLinkpathDest(parseLinktext(ref).path, "/") as TFile;
@@ -100,9 +100,9 @@ export const InlineReferenceExtension = ViewPlugin.fromClass(
 								let newLink = match[0].replace("[[", "").replace("]]", "");
 								//link to an internal page link, add page name
 								if (newLink.startsWith("#")) newLink = mdViewFile.path + newLink;
-								newLink = newLink.toLocaleUpperCase();
+								const key = referenceCountingPolicy.generateKeyFromPathAndLink(mdViewFile.path, newLink);
 								widgetsToAdd.push({
-									key: newLink,
+									key: key,
 									transformedCachedItem: transformedCache.links ?? null,
 									refType: "link",
 									from: to,
@@ -125,8 +125,10 @@ export const InlineReferenceExtension = ViewPlugin.fromClass(
 									const linksinHeader = match[0].match(/\[\[(.*?)\]\]|!\[\[(.*?)\]\]/g);
 									if (linksinHeader)
 										for (const l of linksinHeader) {
+											const linkText = l.replace("![[", "").replace("[[", "").replace("]]", "");
+											const key = referenceCountingPolicy.generateKeyFromPathAndLink(mdViewFile.path, linkText);
 											widgetsToAdd.push({
-												key: l.replace("![[", "").replace("[[", "").replace("]]", "").toLocaleUpperCase(), //change this to match the references cache
+												key: key,
 												transformedCachedItem: l.startsWith("!") ? (transformedCache.embeds ?? null) : (transformedCache.links ?? null),
 												refType: "link",
 												from: to - match[0].length + (match[0].indexOf(l) + l.length),
@@ -139,17 +141,21 @@ export const InlineReferenceExtension = ViewPlugin.fromClass(
 								let newEmbed = match[0].replace("![[", "").replace("]]", "");
 								//link to an internal page link, add page name
 								if (newEmbed.startsWith("#")) newEmbed = mdViewFile.path + stripHeading(newEmbed);
+								const key = referenceCountingPolicy.generateKeyFromPathAndLink(mdViewFile.path, newEmbed);
 								widgetsToAdd.push({
-									key: newEmbed.toLocaleUpperCase(),
+									key: key,
 									transformedCachedItem: transformedCache.embeds ?? null,
 									refType: "embed",
 									from: to,
 									to: to,
 								});
 							} else if (firstCharacterMatch === " " && (transformedCache?.blocks?.length ?? 0) > 0) {
+								// Use the new policy-based key generation for blocks
+								const blockId = match[0].replace(" ^", "");
+								const blockPath = mdViewFile.path + "#^" + blockId;
+								const key = referenceCountingPolicy.generateKeyFromPathAndLink(mdViewFile.path, "#^" + blockId);
 								widgetsToAdd.push({
-									//blocks
-									key: (mdViewFile.path + match[0].replace(" ^", "#^")).toLocaleUpperCase(), //change this to match the references cache
+									key: key,
 									transformedCachedItem: transformedCache.blocks ?? null,
 									refType: "block",
 									from: to,
@@ -221,12 +227,12 @@ const constructWidgetForInlineReference = (
 		if (refType === "embed" || refType === "link") {
 			// check for aliased references
 			if (modifyKey.contains("|")) modifyKey = modifyKey.substring(0, key.search(/\|/));
-			const parsedKey = referenceCountingPolicy.parseLinkTextToFullPath(modifyKey).toLocaleUpperCase();
+			const parsedKey = referenceCountingPolicy.generateKeyFromPathAndLink(filePath, modifyKey);
 			modifyKey = parsedKey === "" ? modifyKey : parsedKey; //if no results, likely a ghost link
 
 			if (matchKey.startsWith("#")) {
 				// internal page link
-				matchKey = filePath + stripHeading(matchKey);
+				matchKey = referenceCountingPolicy.generateKeyFromPathAndLink(filePath, matchKey);
 			}
 		}
 

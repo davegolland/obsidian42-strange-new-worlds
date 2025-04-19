@@ -3,6 +3,7 @@ import {
 	type CachedMetadata,
 	type MarkdownPostProcessor,
 	MarkdownPreviewRenderer,
+	Notice,
 	Platform,
 	Plugin,
 	type TFile,
@@ -60,6 +61,13 @@ export default class SNWPlugin extends Plugin {
 		this.snwAPI.references = this.referenceCountingPolicy.getIndexedReferences();
 
 		await this.loadSettings();
+		
+		// Ensure the reference counting policy is using the correct policy from settings
+		this.referenceCountingPolicy.setActivePolicy(this.settings.wikilinkEquivalencePolicy);
+		
+		// Force a rebuild of all references with the correct policy
+		this.referenceCountingPolicy.buildLinksAndReferences();
+		
 		this.addSettingTab(new SettingsTab(this.app, this));
 
 		// set current state based on startup parameters
@@ -116,12 +124,50 @@ export default class SNWPlugin extends Plugin {
 		this.toggleStateSNWLivePreview();
 		this.toggleStateSNWGutters();
 
+		// Add command to force rebuild of references
+		this.addCommand({
+			id: 'rebuild-references',
+			name: 'Rebuild all references',
+			callback: () => {
+				this.rebuildIndex();
+			}
+		});
+
 		this.app.workspace.onLayoutReady(async () => {
 			if (!this.app.workspace.getLeavesOfType(VIEW_TYPE_SNW)?.length) {
 				await this.app.workspace.getRightLeaf(false)?.setViewState({ type: VIEW_TYPE_SNW, active: false });
 			}
 			this.referenceCountingPolicy.buildLinksAndReferences();
 		});
+	}
+
+	/**
+	 * Force a complete rebuild of the reference index
+	 */
+	rebuildIndex(): void {
+		// First toggle debug mode on if it's not already
+		if (!this.referenceCountingPolicy.isDebugModeEnabled()) {
+			this.referenceCountingPolicy.setDebugMode(true);
+		}
+		
+		// Clear caches
+		this.referenceCountingPolicy.invalidateCache();
+		
+		// Reset to default policy then back to current to ensure clean state
+		const currentPolicy = this.settings.wikilinkEquivalencePolicy;
+		this.referenceCountingPolicy.setActivePolicy("case-insensitive");
+		this.referenceCountingPolicy.setActivePolicy(currentPolicy);
+		
+		// Completely rebuild index
+		this.referenceCountingPolicy.buildLinksAndReferences();
+		
+		// Force UI updates
+		updateHeadersDebounce();
+		updatePropertiesDebounce();
+		updateAllSnwLiveUpdateReferencesDebounce();
+		
+		// Show notice
+		new Notice("SNW: References rebuilt successfully");
 	}
 
 	// Displays the sidebar SNW pane

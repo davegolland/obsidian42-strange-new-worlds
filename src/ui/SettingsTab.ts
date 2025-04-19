@@ -348,8 +348,7 @@ export class SettingsTab extends PluginSettingTab {
 		new Setting(containerEl)
 			.setName("Count unique files only")
 			.setDesc(
-				"If enabled, each file will only be counted once even if it contains multiple links to the same target. " +
-				"By default, all link occurrences are counted. May require reopening files to take effect."
+				"If enabled, each source file will be counted only once, even if it references the same target multiple times."
 			)
 			.addToggle((cb: ToggleComponent) => {
 				cb.setValue(this.plugin.settings.countUniqueFilesOnly);
@@ -357,6 +356,43 @@ export class SettingsTab extends PluginSettingTab {
 					this.plugin.settings.countUniqueFilesOnly = value;
 					await this.plugin.saveSettings();
 				});
+			});
+
+		new Setting(containerEl)
+			.setName("Wikilink equivalence policy")
+			.setDesc(
+				"Choose how wikilinks are grouped when counting references. This determines when different links are considered equivalent."
+			)
+			.addDropdown((dropdown) => {
+				dropdown
+					.addOption("case-insensitive", "Case Insensitive")
+					.addOption("same-file", "Same File Unification")
+					.addOption("word-form", "Word Form Unification")
+					.addOption("base-name", "Base Name Only")
+					.setValue(this.plugin.settings.wikilinkEquivalencePolicy)
+					.onChange(async (value) => {
+						this.plugin.settings.wikilinkEquivalencePolicy = value as any;
+						this.plugin.referenceCountingPolicy.setActivePolicy(value);
+						await this.plugin.saveSettings();
+					});
+			})
+			.addButton((button) => {
+				button
+					.setButtonText("Rebuild References")
+					.setTooltip("Force rebuild all references using the selected policy")
+					.onClick(() => {
+						this.plugin.referenceCountingPolicy.buildLinksAndReferences();
+					});
+			})
+			.addButton((button) => {
+				button
+					.setButtonText("Toggle Debug")
+					.setTooltip("Enable/Disable debug mode for troubleshooting (logs to console)")
+					.onClick(() => {
+						// Toggle the debug flag
+						const debugEnabled = !this.plugin.referenceCountingPolicy.isDebugModeEnabled();
+						this.plugin.referenceCountingPolicy.setDebugMode(debugEnabled);
+					});
 			});
 	}
 }

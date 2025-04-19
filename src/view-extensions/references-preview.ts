@@ -57,16 +57,16 @@ class snwChildComponentMardkownWithoutFile extends MarkdownRenderChild {
 	onload(): void {
 		for (const link of Array.from(this.containerEl.querySelectorAll("a.internal-link, span.internal-embed"))) {
 			const ref = ((link as HTMLElement).dataset.href || link.getAttribute("src")) as string;
-			const key = referenceCountingPolicy.parseLinkTextToFullPath(ref).toLocaleUpperCase();
 			const resolvedTFile = plugin.app.metadataCache.getFirstLinkpathDest(parseLinktext(ref).path, "/");
-			const references = plugin.snwAPI.references.get(key);
-
-			const refCount = referenceCountingPolicy.countReferences(references);
+			if (!resolvedTFile) continue;
+			
+			const references = referenceCountingPolicy.findAllReferencesForLink("/", ref);
+			const refCount = references.length;
 
 			if (refCount <= 0 || refCount < plugin.settings.minimumRefCountThreshold) continue;
 
 			const refType = link.classList.contains("internal-link") ? "link" : "embed";
-			if (!resolvedTFile) continue;
+			const key = referenceCountingPolicy.generateKeyFromPathAndLink("/", ref);
 
 			const referenceElement = htmlDecorationForReferencesElement(
 				refCount,
@@ -147,18 +147,19 @@ class snwChildComponentForMarkdownFile extends MarkdownRenderChild {
 					if (!src) return;
 
 					// Testing for normal links, links within same page starting with # and for ghost links
-					const embedKey =
-						referenceCountingPolicy.parseLinkTextToFullPath(
-							src[0] === "#" ? this.currentFile.path.slice(0, -(this.currentFile.extension.length + 1)) + src : src,
-						) || src;
+					const embedPath = src[0] === "#" ? 
+						this.currentFile.path.slice(0, -(this.currentFile.extension.length + 1)) + src : 
+						src;
+					const embedKey = referenceCountingPolicy.generateKeyFromPathAndLink(this.currentFile.path, embedPath);
 
 					for (const value of transformedCache.embeds ?? []) {
-						if (value.references.length >= minRefCountThreshold && embedKey.toLocaleUpperCase() === value.key.toLocaleUpperCase()) {
+						if (value.references.length >= minRefCountThreshold && 
+							embedKey === value.key) {
 							const referenceElement = htmlDecorationForReferencesElement(
 								value.references.length,
 								"embed",
 								value.references[0].realLink,
-								value.key.toLocaleUpperCase(),
+								value.key,
 								value.references[0]?.resolvedFile?.path ?? "",
 								"snw-liveupdate",
 								value.pos.start.line,
@@ -177,21 +178,21 @@ class snwChildComponentForMarkdownFile extends MarkdownRenderChild {
 					const dataHref = element.getAttribute("data-href");
 					if (!dataHref) return;
 					// Testing for normal links, links within same page starting with # and for ghost links
-					const link =
-						referenceCountingPolicy.parseLinkTextToFullPath(
-							dataHref[0] === "#" ? this.currentFile.path.slice(0, -(this.currentFile.extension.length + 1)) + dataHref : dataHref,
-						) || dataHref;
+					const linkPath = dataHref[0] === "#" ? 
+						this.currentFile.path.slice(0, -(this.currentFile.extension.length + 1)) + dataHref : 
+						dataHref;
+					const linkKey = referenceCountingPolicy.generateKeyFromPathAndLink(this.currentFile.path, linkPath);
 
 					for (const value of transformedCache.links ?? []) {
 						if (
 							value.references.length >= Math.max(2, minRefCountThreshold) &&
-							value.key.toLocaleUpperCase() === link.toLocaleUpperCase()
+							linkKey === value.key
 						) {
 							const referenceElement = htmlDecorationForReferencesElement(
 								value.references.length,
 								"link",
 								value.references[0].realLink,
-								value.key.toLocaleUpperCase(),
+								value.key,
 								value.references[0]?.resolvedFile?.path ?? "",
 								"snw-liveupdate",
 								value.pos.start.line,
