@@ -7,7 +7,11 @@ export class ReferenceCountingPolicy {
     private plugin: SNWPlugin;
     private cacheCurrentPages: Map<string, TransformedCache>;
     private lastUpdateToReferences: number;
-    private indexedReferences: Map<string, Link[]>;
+    /** 
+     * The map of all indexed references. Public for direct access, with getter
+     * method maintained for backwards compatibility.
+     */
+    public indexedReferences: Map<string, Link[]>;
     private activePolicy: WikilinkEquivalencePolicy = WIKILINK_EQUIVALENCE_POLICIES.CASE_INSENSITIVE;
     private debugMode: boolean = false; // Can be toggled for diagnostics
 
@@ -60,30 +64,9 @@ export class ReferenceCountingPolicy {
     }
 
     /**
-     * Gets the current active policy
-     * @returns The active wikilink equivalence policy
+     * NOTE: The generateKey method has been inlined throughout the code.
+     * All calls now directly use this.activePolicy.generateKey(link)
      */
-    getActivePolicy(): WikilinkEquivalencePolicy {
-        return this.activePolicy;
-    }
-
-    /**
-     * Generates a key for a link using the active policy
-     * @param link The link to generate a key for
-     * @returns The key for this link according to the active policy
-     */
-    private generateKey(link: Link): string {
-        return this.activePolicy.generateKey(link);
-    }
-
-    /**
-     * Public method to generate a consistent key for UI components
-     * @param link The link to generate a key for
-     * @returns The key for this link according to the active policy
-     */
-    public generateKeyForUI(link: Link): string {
-        return this.activePolicy.generateKey(link);
-    }
 
     /**
      * Generates a key from a path and link for UI components
@@ -121,7 +104,7 @@ export class ReferenceCountingPolicy {
                 sourceFile: null
             };
             
-            return this.generateKey(ghostLink);
+            return this.activePolicy.generateKey(ghostLink);
         }
         
         // Create a temporary Link object with resolved file
@@ -140,10 +123,10 @@ export class ReferenceCountingPolicy {
         if (this.debugMode) {
             console.log(`Generating key for link: ${linkText}`);
             console.log(`  Resolved file: ${resolvedFile?.path || 'None'}`);
-            console.log(`  Generated key: ${this.generateKey(link)}`);
+            console.log(`  Generated key: ${this.activePolicy.generateKey(link)}`);
         }
         
-        return this.generateKey(link);
+        return this.activePolicy.generateKey(link);
     }
 
     /**
@@ -291,7 +274,7 @@ export class ReferenceCountingPolicy {
                         sourceFile: file,
                     };
 
-                    const linkKey = this.generateKey(link);
+                    const linkKey = this.activePolicy.generateKey(link);
                     
                     if (logDebugInfo) {
                         console.log(`Link from ${file.path} -> ${tfileDestination.path}`);
@@ -318,7 +301,7 @@ export class ReferenceCountingPolicy {
                         sourceFile: file,
                     };
                     
-                    const linkKey = this.generateKey(ghostLink);
+                    const linkKey = this.activePolicy.generateKey(ghostLink);
                     
                     if (logDebugInfo) {
                         console.log(`Ghost link from ${file.path} -> ${path}.md`);
@@ -393,7 +376,7 @@ export class ReferenceCountingPolicy {
             const tempCacheHeadings = cachedMetaData.headings
                 .map(header => {
                     const headingLink = createHeadingLink(header, file.path);
-                    const key = this.generateKey(headingLink);
+                    const key = this.activePolicy.generateKey(headingLink);
                     
                     // Check if we have references with this key
                     const refs = this.findReferencesWithFallback(key, headingLink);
@@ -434,7 +417,7 @@ export class ReferenceCountingPolicy {
             const tempCacheBlocks = Object.values(cachedMetaData.blocks)
                 .map(block => {
                     const blockLink = createBlockLink(block, file.path);
-                    const key = this.generateKey(blockLink);
+                    const key = this.activePolicy.generateKey(blockLink);
                     
                     // Check if we have references with this key
                     const refs = this.findReferencesWithFallback(key, blockLink);
@@ -484,7 +467,7 @@ export class ReferenceCountingPolicy {
             const tempCacheLinks = cachedMetaData.links
                 .map(link => {
                     const linkObj = createLinkObject(link, file.path);
-                    const key = this.generateKey(linkObj);
+                    const key = this.activePolicy.generateKey(linkObj);
                     
                     // Log lookups for debugging
                     if (logDebugInfo) {
@@ -561,7 +544,7 @@ export class ReferenceCountingPolicy {
             const tempCacheEmbeds = cachedMetaData.embeds
                 .map(embed => {
                     const embedLink = createEmbedLink(embed, file.path);
-                    const key = this.generateKey(embedLink);
+                    const key = this.activePolicy.generateKey(embedLink);
                     
                     // Check if we have references with this key
                     const refs = this.findReferencesWithFallback(key, embedLink);
@@ -601,7 +584,7 @@ export class ReferenceCountingPolicy {
             const tempCacheFrontmatter = cachedMetaData.frontmatterLinks
                 .map(link => {
                     const frontmatterLink = createFrontmatterLink(link);
-                    const key = this.generateKey(frontmatterLink);
+                    const key = this.activePolicy.generateKey(frontmatterLink);
                     
                     // Check if we have references with this key
                     const refs = this.findReferencesWithFallback(key, frontmatterLink);

@@ -58,7 +58,7 @@ export default class SNWPlugin extends Plugin {
 		setPluginVariableForUIC(this);
 
 		window.snwAPI = this.snwAPI; // API access to SNW for Templater, Dataviewjs and the console debugger
-		this.snwAPI.references = this.referenceCountingPolicy.getIndexedReferences();
+		this.snwAPI.references = this.referenceCountingPolicy.indexedReferences;
 
 		await this.loadSettings();
 		
