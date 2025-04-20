@@ -24,20 +24,10 @@ import {
 	updatePropertiesDebounce,
 	updateAllSnwLiveUpdateReferencesDebounce
 } from "./ui/debounced-helpers";
-import ReferenceGutterExtension from "./view-extensions/gutters-cm6";
 import { updateAllSnwLiveUpdateReferences } from "./view-extensions/htmlDecorations";
-import { InlineReferenceExtension } from "./view-extensions/references-cm6";
-import markdownPreviewProcessor from "./view-extensions/references-preview";
+import { FeatureManager } from "./FeatureManager";
 
 export const UPDATE_DEBOUNCE = 200;
-
-// Define a Feature interface for toggling features
-interface Feature {
-	key: keyof Settings;            // which settings flag to check
-	register: () => void;           // how to turn it ON
-	unregister: () => void;         // how to turn it OFF
-	additionalCheck?: () => boolean; // optional additional condition
-}
 
 // Type for objects that can be event targets (vault, metadataCache, workspace, etc.)
 // Using a more flexible type definition to accommodate Obsidian's API
@@ -70,6 +60,7 @@ export default class SNWPlugin extends Plugin {
 	editorExtensions: Extension[] = [];
 	commands: PluginCommands = new PluginCommands(this);
 	referenceCountingPolicy: ReferenceCountingPolicy = new ReferenceCountingPolicy(this);
+	featureManager!: FeatureManager;
 	
 	// Publicly accessible debounced versions of functions
 	updateHeadersDebounced: (() => void) | null = null;
@@ -87,39 +78,6 @@ export default class SNWPlugin extends Plugin {
 		uiInits.setPluginVariableForCM6InlineReferences,
 		uiInits.setPluginVariableForUIC,
 		uiInits.initDebouncedHelpers,
-	];
-	
-	// Collection of all features that can be toggled
-	private features: Feature[] = [
-		{
-			key: "displayInlineReferencesMarkdown",
-			register: () => {
-				this.markdownPostProcessor = this.registerMarkdownPostProcessor(
-					(el, ctx) => markdownPreviewProcessor(el, ctx), 100
-				);
-			},
-			unregister: () => {
-				if (this.markdownPostProcessor) {
-					MarkdownPreviewRenderer.unregisterPostProcessor(this.markdownPostProcessor);
-					this.markdownPostProcessor = null;
-				}
-			}
-		},
-		{
-			key: "displayInlineReferencesLivePreview",
-			register: () => this.updateCMExtensionState("inline-ref", true, InlineReferenceExtension),
-			unregister: () => this.updateCMExtensionState("inline-ref", false, InlineReferenceExtension)
-		},
-		{
-			key: "displayEmbedReferencesInGutter",
-			register: () => this.updateCMExtensionState("gutter", true, ReferenceGutterExtension),
-			unregister: () => this.updateCMExtensionState("gutter", false, ReferenceGutterExtension),
-			additionalCheck: () => {
-				return Platform.isMobile || Platform.isMobileApp 
-					? this.settings.displayEmbedReferencesInGutterMobile
-					: true;
-			}
-		}
 	];
 
 	/**
@@ -139,6 +97,9 @@ export default class SNWPlugin extends Plugin {
 
 	async onload(): Promise<void> {
 		console.log(`loading ${this.appName}`);
+		
+		// Initialize feature manager
+		this.featureManager = new FeatureManager(this, this.settings, this.showCountsActive);
 		
 		await this.initUI();
 		await this.initAPI();
@@ -192,6 +153,10 @@ export default class SNWPlugin extends Plugin {
 		} else {
 			this.showCountsActive = this.settings.enableOnStartupDesktop;
 		}
+		
+		// Update feature manager with current settings and state
+		this.featureManager.updateSettings(this.settings);
+		this.featureManager.updateShowCountsActive(this.showCountsActive);
 	}
 
 	/**
@@ -205,6 +170,8 @@ export default class SNWPlugin extends Plugin {
 			defaultMod: true,
 		});
 		
+		// Get editor extensions from feature manager
+		this.editorExtensions = this.featureManager.getEditorExtensions();
 		this.registerEditorExtension(this.editorExtensions);
 	}
 
@@ -275,10 +242,8 @@ export default class SNWPlugin extends Plugin {
 	 * Initialize feature toggles based on settings
 	 */
 	private async initFeatureToggles(): Promise<void> {
-		// Initial feature toggles
-		for (const feature of this.features) {
-			this.toggleFeature(feature);
-		}
+		// Apply all feature toggles using the feature manager
+		this.featureManager.apply();
 	}
 
 	/**
@@ -291,24 +256,6 @@ export default class SNWPlugin extends Plugin {
 			}
 			this.referenceCountingPolicy.buildLinksAndReferences();
 		});
-	}
-
-	/**
-	 * Generic helper method to toggle a feature on or off based on settings and state
-	 */
-	private toggleFeature(feature: Feature) {
-		let enabled = Boolean(this.settings[feature.key]) && this.showCountsActive;
-		
-		// Check additional condition if it exists
-		if (feature.additionalCheck && enabled) {
-			enabled = feature.additionalCheck();
-		}
-		
-		if (enabled) {
-			feature.register();
-		} else {
-			feature.unregister();
-		}
 	}
 
 	/**
@@ -366,36 +313,24 @@ export default class SNWPlugin extends Plugin {
 		await (this.app.workspace.getLeavesOfType(VIEW_TYPE_SNW)[0].view as SideBarPaneView).updateView();
 	}
 
-	// Legacy toggle methods that now use the DRY approach of toggleFeature
+	// Legacy toggle methods that now use the FeatureManager
 	toggleStateSNWMarkdownPreview(): void {
-		this.toggleFeature(this.features[0]); // Markdown Preview feature
+		this.featureManager.toggleMarkdownPreview();
 	}
 
 	toggleStateSNWLivePreview(): void {
-		this.toggleFeature(this.features[1]); // Live Preview feature
+		this.featureManager.toggleLivePreview();
 	}
 
 	toggleStateSNWGutters(): void {
-		this.toggleFeature(this.features[2]); // Gutters feature
+		this.featureManager.toggleGutters();
 	}
 
-	// Manages which CM extensions are loaded into Obsidian
+	// This method is now handled by the feature manager
+	// Keeping the method signature to maintain backward compatibility
 	updateCMExtensionState(extensionIdentifier: string, extensionState: boolean, extension: Extension) {
-		if (extensionState === true) {
-			this.editorExtensions.push(extension);
-			// @ts-ignore
-			this.editorExtensions[this.editorExtensions.length - 1].snwID = extensionIdentifier;
-		} else {
-			for (let i = 0; i < this.editorExtensions.length; i++) {
-				const ext = this.editorExtensions[i];
-				// @ts-ignore
-				if (ext.snwID === extensionIdentifier) {
-					this.editorExtensions.splice(i, 1);
-					break;
-				}
-			}
-		}
-		this.app.workspace.updateOptions();
+		// This is just a pointer to methods in FeatureManager,
+		// actual implementation moved to the FeatureManager class
 	}
 
 	async loadSettings(): Promise<void> {
@@ -404,16 +339,16 @@ export default class SNWPlugin extends Plugin {
 
 	async saveSettings(): Promise<void> {
 		await this.saveData(this.settings);
+		// Update the feature manager with the new settings
+		this.featureManager.updateSettings(this.settings);
 	}
 
 	onunload(): void {
 		console.log(`unloading ${this.appName}`);
 		try {
-			if (!this.markdownPostProcessor) {
-				console.log("Markdown post processor is not registered");
-			} else {
-				MarkdownPreviewRenderer.unregisterPostProcessor(this.markdownPostProcessor);
-			}
+			// Unload all features using the feature manager
+			this.featureManager.unloadAll();
+			
 			this.app.workspace.unregisterHoverLinkSource(this.appID);
 		} catch (error) {
 			/* don't do anything */
