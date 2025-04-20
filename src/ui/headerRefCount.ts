@@ -1,6 +1,6 @@
 // Displays in the header of open documents the count of incoming links
 
-import { type MarkdownView, Platform, type WorkspaceLeaf } from "obsidian";
+import { type MarkdownView, Platform, type TFile, type WorkspaceLeaf } from "obsidian";
 import tippy from "tippy.js";
 import type SNWPlugin from "../main";
 import { processHtmlDecorationReferenceEvent } from "../view-extensions/htmlDecorations";
@@ -27,14 +27,10 @@ function setHeaderWithReferenceCounts() {
 	});
 }
 
-// Analyzes the page and if there is incoming links displays a header message
-function processHeader(mdView: MarkdownView) {
-	const mdViewFile = mdView.file;
-	if (!mdViewFile) return;
+// Count the incoming links for a file
+function countIncomingLinks(mdViewFile: TFile) {
 	const allLinks = plugin.referenceCountingPolicy.getIndexedReferences();
-
 	let incomingLinksCount = 0;
-	const uniqueSourceFiles = new Set<string>();
 	
 	// Calculate the incoming links count
 	for (const items of allLinks.values()) {
@@ -48,25 +44,22 @@ function processHeader(mdView: MarkdownView) {
 	// check if the page is to be ignored
 	const transformedCache = plugin.referenceCountingPolicy.getSNWCacheByFile(mdViewFile);
 	if (transformedCache?.cacheMetaData?.frontmatter?.["snw-file-exclude"] === true) incomingLinksCount = 0;
+	
+	return incomingLinksCount;
+}
 
-	// if no incoming links, check if there is a header and remove it. In all cases, exit roturin
-	if (incomingLinksCount < 1) {
-		const headerCountWrapper = mdView.contentEl.querySelector(".snw-header-count-wrapper");
-		if (headerCountWrapper) headerCountWrapper.remove();
-		return;
-	}
-
+// Creates or updates the header element in the view
+function createHeaderElement(mdView: MarkdownView, mdViewFile: TFile, incomingLinksCount: number) {
 	let snwTitleRefCountDisplayCountEl: HTMLElement | null = mdView.contentEl.querySelector(".snw-header-count");
-
+	
 	// header count is already displayed, just update information.
 	if (snwTitleRefCountDisplayCountEl && snwTitleRefCountDisplayCountEl.dataset.snwKey === mdViewFile.basename) {
 		snwTitleRefCountDisplayCountEl.innerText = ` ${incomingLinksCount.toString()} `;
-		return;
+		return { wrapper: null, snwTitleRefCountDisplayCountEl, isExisting: true };
 	}
 
-	// ad new header count
+	// add new header count
 	const containerViewContent: HTMLElement = mdView.contentEl;
-
 	let wrapper: HTMLElement | null = containerViewContent.querySelector(".snw-header-count-wrapper");
 
 	if (!wrapper) {
@@ -79,16 +72,23 @@ function processHeader(mdView: MarkdownView) {
 	}
 
 	if (snwTitleRefCountDisplayCountEl) snwTitleRefCountDisplayCountEl.innerText = ` ${incomingLinksCount.toString()} `;
+	
+	wrapper.setAttribute("data-snw-reallink", mdViewFile.basename);
+	wrapper.setAttribute("data-snw-key", mdViewFile.basename);
+	wrapper.setAttribute("data-snw-type", "File");
+	wrapper.setAttribute("data-snw-filepath", mdViewFile.path);
+
+	return { wrapper, snwTitleRefCountDisplayCountEl, isExisting: false };
+}
+
+// Attaches event handlers and tippy to the header element
+function attachTippy(wrapper: HTMLElement, snwTitleRefCountDisplayCountEl: HTMLElement | null) {
 	if ((Platform.isDesktop || Platform.isDesktopApp) && snwTitleRefCountDisplayCountEl) {
 		snwTitleRefCountDisplayCountEl.onclick = (e: MouseEvent) => {
 			e.stopPropagation();
 			if (wrapper) processHtmlDecorationReferenceEvent(wrapper);
 		};
 	}
-	wrapper.setAttribute("data-snw-reallink", mdViewFile.basename);
-	wrapper.setAttribute("data-snw-key", mdViewFile.basename);
-	wrapper.setAttribute("data-snw-type", "File");
-	wrapper.setAttribute("data-snw-filepath", mdViewFile.path);
 
 	wrapper.onclick = (e: MouseEvent) => {
 		e.stopPropagation();
@@ -123,4 +123,31 @@ function processHeader(mdView: MarkdownView) {
 	});
 
 	tippyObject.popper.classList.add("snw-tippy");
+}
+
+// Analyzes the page and if there is incoming links displays a header message
+function processHeader(mdView: MarkdownView) {
+	const mdViewFile = mdView.file;
+	if (!mdViewFile) return;
+	
+	// Count incoming links
+	const incomingLinksCount = countIncomingLinks(mdViewFile);
+
+	// if no incoming links, check if there is a header and remove it
+	if (incomingLinksCount < 1) {
+		const headerCountWrapper = mdView.contentEl.querySelector(".snw-header-count-wrapper");
+		if (headerCountWrapper) headerCountWrapper.remove();
+		return;
+	}
+
+	// Create or update the header element
+	const { wrapper, snwTitleRefCountDisplayCountEl, isExisting } = createHeaderElement(mdView, mdViewFile, incomingLinksCount);
+	
+	// If we're just updating an existing element, we're done
+	if (isExisting) return;
+	
+	// Attach event handlers and tippy
+	if (wrapper) {
+		attachTippy(wrapper, snwTitleRefCountDisplayCountEl);
+	}
 }
