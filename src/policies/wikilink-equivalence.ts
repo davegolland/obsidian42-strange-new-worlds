@@ -65,16 +65,14 @@ export abstract class AbstractWikilinkEquivalencePolicy implements WikilinkEquiv
     }
     
     /**
-     * Helper to extract section subpath from a link
-     * @param link The link to extract section from
-     * @returns The section subpath if present
+     * Helper method to extract subpath from a link
+     * Gets the part after the # in a link, if present
+     * @param link The link to extract from
+     * @returns The subpath or undefined if none
      */
-    protected extractSubpath(link: Link): string | null {
-        if (link.realLink.includes("#")) {
-            const { subpath } = parseLinktext(link.realLink);
-            return subpath || null;
-        }
-        return null;
+    protected extractSubpath(link: Link): string | undefined {
+        const parsed = parseLinktext(link.reference.link);
+        return parsed.subpath ? `#${parsed.subpath}` : undefined;
     }
     
     /**
@@ -103,9 +101,9 @@ export abstract class AbstractWikilinkEquivalencePolicy implements WikilinkEquiv
     }
     
     /**
-     * Default implementation that returns all references unfiltered
+     * Default implementation that returns all references
      * @param references Array of Link objects to filter
-     * @returns All references unchanged
+     * @returns The same array of references
      */
     filterReferences(references: Link[] | undefined): Link[] {
         return references || [];
@@ -268,15 +266,4 @@ export class UniqueFilesPolicy extends AbstractWikilinkEquivalencePolicy {
             return true;
         });
     }
-}
-
-/**
- * Collection of all available policies
- */
-export const WIKILINK_EQUIVALENCE_POLICIES = {
-    CASE_INSENSITIVE: new CaseInsensitivePolicy(),
-    SAME_FILE: new SameFilePolicy(),
-    WORD_FORM: new WordFormPolicy(),
-    BASE_NAME: new BaseNamePolicy(),
-    UNIQUE_FILES: new UniqueFilesPolicy()
-}; 
+} 

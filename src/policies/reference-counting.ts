@@ -1,7 +1,8 @@
 import type { Link, TransformedCache, TransformedCachedItem } from "../types";
 import type SNWPlugin from "../main";
 import { stripHeading, type TFile, parseLinktext } from "obsidian";
-import { WIKILINK_EQUIVALENCE_POLICIES, type WikilinkEquivalencePolicy } from "./wikilink-equivalence";
+import { type WikilinkEquivalencePolicy } from "./wikilink-equivalence";
+import { getPolicyByType } from "./index";
 
 export class ReferenceCountingPolicy {
     private plugin: SNWPlugin;
@@ -12,7 +13,7 @@ export class ReferenceCountingPolicy {
      * method maintained for backwards compatibility.
      */
     public indexedReferences: Map<string, Link[]>;
-    private activePolicy: WikilinkEquivalencePolicy = WIKILINK_EQUIVALENCE_POLICIES.CASE_INSENSITIVE;
+    private activePolicy: WikilinkEquivalencePolicy = getPolicyByType('case-insensitive');
     private debugMode: boolean = false; // Can be toggled for diagnostics
 
     constructor(plugin: SNWPlugin) {
@@ -27,25 +28,7 @@ export class ReferenceCountingPolicy {
      * Sets the active equivalence policy based on the current settings
      */
     private setActivePolicyFromSettings(): void {
-        switch (this.plugin.settings.wikilinkEquivalencePolicy) {
-            case "case-insensitive":
-                this.activePolicy = WIKILINK_EQUIVALENCE_POLICIES.CASE_INSENSITIVE;
-                break;
-            case "same-file":
-                this.activePolicy = WIKILINK_EQUIVALENCE_POLICIES.SAME_FILE;
-                break;
-            case "word-form":
-                this.activePolicy = WIKILINK_EQUIVALENCE_POLICIES.WORD_FORM;
-                break;
-            case "base-name":
-                this.activePolicy = WIKILINK_EQUIVALENCE_POLICIES.BASE_NAME;
-                break;
-            case "unique-files":
-                this.activePolicy = WIKILINK_EQUIVALENCE_POLICIES.UNIQUE_FILES;
-                break;
-            default:
-                this.activePolicy = WIKILINK_EQUIVALENCE_POLICIES.CASE_INSENSITIVE;
-        }
+        this.activePolicy = getPolicyByType(this.plugin.settings.wikilinkEquivalencePolicy);
     }
 
     /**
@@ -793,7 +776,8 @@ export class ReferenceCountingPolicy {
         }
         
         // If Same File policy is active, we need to check for references across all source files
-        if (this.activePolicy === WIKILINK_EQUIVALENCE_POLICIES.SAME_FILE) {
+        const sameFilePolicy = getPolicyByType('same-file');
+        if (this.activePolicy.name === sameFilePolicy.name) {
             // Try without the source file prefix to find CaseInsensitive-style keys
             const { path, subpath } = parseLinktext(linkText);
             const resolvedFile = this.plugin.app.metadataCache.getFirstLinkpathDest(path, filePath);
@@ -834,7 +818,7 @@ export class ReferenceCountingPolicy {
         }
         
         // If we're using Case Insensitive or other policy, but Same File style keys exist
-        if (this.activePolicy !== WIKILINK_EQUIVALENCE_POLICIES.SAME_FILE) {
+        if (this.activePolicy.name !== sameFilePolicy.name) {
             // Look for any Same File style keys (file:target format)
             const potentialKeys = Array.from(this.indexedReferences.keys())
                 .filter(k => k.includes(":") && k.endsWith(":" + key));

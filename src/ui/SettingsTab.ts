@@ -1,5 +1,6 @@
 import { type App, PluginSettingTab, Setting, type ToggleComponent } from "obsidian";
 import type SNWPlugin from "../main";
+import { getPolicyOptions } from "../policies/index";
 
 export class SettingsTab extends PluginSettingTab {
 	plugin: SNWPlugin;
@@ -351,12 +352,12 @@ export class SettingsTab extends PluginSettingTab {
 				"Choose how wikilinks are grouped when counting references. This determines when different links are considered equivalent."
 			)
 			.addDropdown((dropdown) => {
+				const policyOptions = getPolicyOptions();
+				policyOptions.forEach(option => {
+					dropdown.addOption(option.value, option.name);
+				});
+				
 				dropdown
-					.addOption("case-insensitive", "Case Insensitive")
-					.addOption("same-file", "Same File Unification")
-					.addOption("word-form", "Word Form Unification")
-					.addOption("base-name", "Base Name Only")
-					.addOption("unique-files", "Unique Files Only")
 					.setValue(this.plugin.settings.wikilinkEquivalencePolicy)
 					.onChange(async (value) => {
 						this.plugin.settings.wikilinkEquivalencePolicy = value as any;
@@ -377,7 +378,6 @@ export class SettingsTab extends PluginSettingTab {
 					.setButtonText("Toggle Debug")
 					.setTooltip("Enable/Disable debug mode for troubleshooting (logs to console)")
 					.onClick(() => {
-						// Toggle the debug flag
 						const debugEnabled = !this.plugin.referenceCountingPolicy.isDebugModeEnabled();
 						this.plugin.referenceCountingPolicy.setDebugMode(debugEnabled);
 					});
