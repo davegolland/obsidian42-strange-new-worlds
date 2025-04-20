@@ -66,7 +66,7 @@ const context = await esbuild.context({
     ...builtins,
   ],
   format: 'cjs',
-  target: 'es2018',
+  target: 'es2020',
   logLevel: 'info',
   loader: { '.ts': 'ts', '.tsx': 'tsx' },
   jsxFactory: 'h',
