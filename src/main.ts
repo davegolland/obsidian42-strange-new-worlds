@@ -16,16 +16,23 @@ import { ReferenceCountingPolicy } from "./policies/reference-counting";
 import PluginCommands from "./ui/PluginCommands";
 import { SettingsTab } from "./ui/SettingsTab";
 import { SideBarPaneView, VIEW_TYPE_SNW } from "./ui/SideBarPaneView";
-import { setPluginVariableForUIC } from "./ui/components/uic-ref--parent";
-import { setPluginVariableUIC_RefArea } from "./ui/components/uic-ref-area";
-import { setPluginVariableForFrontmatterLinksRefCount, updatePropertiesDebounce } from "./ui/frontmatterRefCount";
-import { setPluginVariableForHeaderRefCount, updateHeadersDebounce } from "./ui/headerRefCount";
-import ReferenceGutterExtension, { setPluginVariableForCM6Gutter } from "./view-extensions/gutters-cm6";
-import { setPluginVariableForHtmlDecorations, updateAllSnwLiveUpdateReferencesDebounce } from "./view-extensions/htmlDecorations";
-import { InlineReferenceExtension, setPluginVariableForCM6InlineReferences } from "./view-extensions/references-cm6";
-import markdownPreviewProcessor, { setPluginVariableForMarkdownPreviewProcessor } from "./view-extensions/references-preview";
+import * as uiInits from "./ui/ui-inits";
+import { updatePropertiesDebounce } from "./ui/frontmatterRefCount";
+import { updateHeadersDebounce } from "./ui/headerRefCount";
+import ReferenceGutterExtension from "./view-extensions/gutters-cm6";
+import { updateAllSnwLiveUpdateReferencesDebounce } from "./view-extensions/htmlDecorations";
+import { InlineReferenceExtension } from "./view-extensions/references-cm6";
+import markdownPreviewProcessor from "./view-extensions/references-preview";
 
 export const UPDATE_DEBOUNCE = 200;
+
+// Define a Feature interface for toggling features
+interface Feature {
+	key: keyof Settings;            // which settings flag to check
+	register: () => void;           // how to turn it ON
+	unregister: () => void;         // how to turn it OFF
+	additionalCheck?: () => boolean; // optional additional condition
+}
 
 export default class SNWPlugin extends Plugin {
 	appName = this.manifest.name;
@@ -44,18 +51,59 @@ export default class SNWPlugin extends Plugin {
 	editorExtensions: Extension[] = [];
 	commands: PluginCommands = new PluginCommands(this);
 	referenceCountingPolicy: ReferenceCountingPolicy = new ReferenceCountingPolicy(this);
+	
+	// Collection of all UI initializers
+	private UI_INITIALIZERS: Array<(plugin: SNWPlugin) => void> = [
+		uiInits.setPluginVariableUIC_RefArea,
+		uiInits.setPluginVariableForHtmlDecorations,
+		uiInits.setPluginVariableForCM6Gutter,
+		uiInits.setPluginVariableForHeaderRefCount,
+		uiInits.setPluginVariableForFrontmatterLinksRefCount,
+		uiInits.setPluginVariableForMarkdownPreviewProcessor,
+		uiInits.setPluginVariableForCM6InlineReferences,
+		uiInits.setPluginVariableForUIC,
+	];
+	
+	// Collection of all features that can be toggled
+	private features: Feature[] = [
+		{
+			key: "displayInlineReferencesMarkdown",
+			register: () => {
+				this.markdownPostProcessor = this.registerMarkdownPostProcessor(
+					(el, ctx) => markdownPreviewProcessor(el, ctx), 100
+				);
+			},
+			unregister: () => {
+				if (this.markdownPostProcessor) {
+					MarkdownPreviewRenderer.unregisterPostProcessor(this.markdownPostProcessor);
+					this.markdownPostProcessor = null;
+				}
+			}
+		},
+		{
+			key: "displayInlineReferencesLivePreview",
+			register: () => this.updateCMExtensionState("inline-ref", true, InlineReferenceExtension),
+			unregister: () => this.updateCMExtensionState("inline-ref", false, InlineReferenceExtension)
+		},
+		{
+			key: "displayEmbedReferencesInGutter",
+			register: () => this.updateCMExtensionState("gutter", true, ReferenceGutterExtension),
+			unregister: () => this.updateCMExtensionState("gutter", false, ReferenceGutterExtension),
+			additionalCheck: () => {
+				return Platform.isMobile || Platform.isMobileApp 
+					? this.settings.displayEmbedReferencesInGutterMobile
+					: true;
+			}
+		}
+	];
 
 	async onload(): Promise<void> {
 		console.log(`loading ${this.appName}`);
 		
-		setPluginVariableUIC_RefArea(this);
-		setPluginVariableForHtmlDecorations(this);
-		setPluginVariableForCM6Gutter(this);
-		setPluginVariableForHeaderRefCount(this);
-		setPluginVariableForFrontmatterLinksRefCount(this);
-		setPluginVariableForMarkdownPreviewProcessor(this);
-		setPluginVariableForCM6InlineReferences(this);
-		setPluginVariableForUIC(this);
+		// Initialize all UI components by calling each initializer
+		for (const init of this.UI_INITIALIZERS) {
+			init(this);
+		}
 
 		window.snwAPI = this.snwAPI; // API access to SNW for Templater, Dataviewjs and the console debugger
 		this.snwAPI.references = this.referenceCountingPolicy.indexedReferences;
@@ -120,14 +168,15 @@ export default class SNWPlugin extends Plugin {
 			updatePropertiesDebounce();
 		});
 
-		this.toggleStateSNWMarkdownPreview();
-		this.toggleStateSNWLivePreview();
-		this.toggleStateSNWGutters();
+		// Initial feature toggles
+		for (const feature of this.features) {
+			this.toggleFeature(feature);
+		}
 
 		// Add command to force rebuild of references
 		this.addCommand({
-			id: 'rebuild-references',
-			name: 'Rebuild all references',
+			id: "rebuild-references",
+			name: "Rebuild all references",
 			callback: () => {
 				this.rebuildIndex();
 			}
@@ -139,6 +188,24 @@ export default class SNWPlugin extends Plugin {
 			}
 			this.referenceCountingPolicy.buildLinksAndReferences();
 		});
+	}
+
+	/**
+	 * Generic helper method to toggle a feature on or off based on settings and state
+	 */
+	private toggleFeature(feature: Feature) {
+		let enabled = Boolean(this.settings[feature.key]) && this.showCountsActive;
+		
+		// Check additional condition if it exists
+		if (feature.additionalCheck && enabled) {
+			enabled = feature.additionalCheck();
+		}
+		
+		if (enabled) {
+			feature.register();
+		} else {
+			feature.unregister();
+		}
 	}
 
 	/**
@@ -196,39 +263,17 @@ export default class SNWPlugin extends Plugin {
 		await (this.app.workspace.getLeavesOfType(VIEW_TYPE_SNW)[0].view as SideBarPaneView).updateView();
 	}
 
-	// Turns on and off the SNW reference counters in Reading mode
+	// Legacy toggle methods that now use the DRY approach of toggleFeature
 	toggleStateSNWMarkdownPreview(): void {
-		if (this.settings.displayInlineReferencesMarkdown && this.showCountsActive && this.markdownPostProcessor === null) {
-			this.markdownPostProcessor = this.registerMarkdownPostProcessor((el, ctx) => markdownPreviewProcessor(el, ctx), 100);
-		} else {
-			if (!this.markdownPostProcessor) {
-				console.log("Markdown post processor is not registered");
-			} else {
-				MarkdownPreviewRenderer.unregisterPostProcessor(this.markdownPostProcessor);
-			}
-			this.markdownPostProcessor = null;
-		}
+		this.toggleFeature(this.features[0]); // Markdown Preview feature
 	}
 
-	// Turns on and off the SNW reference counters in CM editor
 	toggleStateSNWLivePreview(): void {
-		let state = this.settings.displayInlineReferencesLivePreview;
-
-		if (state === true) state = this.showCountsActive;
-
-		this.updateCMExtensionState("inline-ref", state, InlineReferenceExtension);
+		this.toggleFeature(this.features[1]); // Live Preview feature
 	}
 
-	// Turns on and off the SNW reference counters in CM editor gutter
 	toggleStateSNWGutters(): void {
-		let state =
-			Platform.isMobile || Platform.isMobileApp
-				? this.settings.displayEmbedReferencesInGutterMobile
-				: this.settings.displayEmbedReferencesInGutter;
-
-		if (state === true) state = this.showCountsActive;
-
-		this.updateCMExtensionState("gutter", state, ReferenceGutterExtension);
+		this.toggleFeature(this.features[2]); // Gutters feature
 	}
 
 	// Manages which CM extensions are loaded into Obsidian
