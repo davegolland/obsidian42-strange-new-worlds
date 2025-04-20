@@ -34,6 +34,20 @@ interface Feature {
 	additionalCheck?: () => boolean; // optional additional condition
 }
 
+// Type for objects that can be event targets (vault, metadataCache, workspace, etc.)
+// Using a more flexible type definition to accommodate Obsidian's API
+type EventTargetLike = {
+	on(event: string, callback: (...args: any[]) => any, ctx?: any): any;
+};
+
+// Configuration for debounced event handlers
+interface DebounceEventConfig {
+	target: EventTargetLike;         // e.g. this.app.vault, this.app.metadataCache
+	events: string[];                // names of events to subscribe to
+	handler: (...args: any[]) => any; // handler function for these events
+	delay: number;                   // debounce interval in ms
+}
+
 export default class SNWPlugin extends Plugin {
 	appName = this.manifest.name;
 	appID = this.manifest.id;
@@ -97,6 +111,21 @@ export default class SNWPlugin extends Plugin {
 		}
 	];
 
+	/**
+	 * Helper to wire up multiple debounced event handlers in a DRY way
+	 */
+	private wireDebouncedEvents(configs: DebounceEventConfig[]) {
+		for (const { target, events, handler, delay } of configs) {
+			// Bind `this` so handler can refer to plugin state
+			const debounced = debounce(handler.bind(this), delay, true);
+			// Register each event name on its target
+			for (const evt of events) {
+				// registerEvent ensures the plugin will auto-unregister on unload
+				this.registerEvent(target.on(evt, debounced));
+			}
+		}
+	}
+
 	async onload(): Promise<void> {
 		console.log(`loading ${this.appName}`);
 		
@@ -124,34 +153,44 @@ export default class SNWPlugin extends Plugin {
 
 		this.registerView(VIEW_TYPE_SNW, (leaf) => new SideBarPaneView(leaf, this));
 
-		//Build the full index of the vault of references
-		const indexFullUpdateDebounce = debounce(
-			() => {
-				this.referenceCountingPolicy.buildLinksAndReferences();
-				updateHeadersDebounce();
-				updatePropertiesDebounce();
-				updateAllSnwLiveUpdateReferencesDebounce();
+		// Set up all debounced event handlers with a single helper
+		this.wireDebouncedEvents([
+			{
+				target: this.app.vault,
+				events: ["rename", "delete"],
+				handler: () => {
+					// Full vault rebuild
+					this.referenceCountingPolicy.buildLinksAndReferences();
+					updateHeadersDebounce();
+					updatePropertiesDebounce();
+					updateAllSnwLiveUpdateReferencesDebounce();
+				},
+				delay: 3000,
 			},
-			3000,
-			true,
-		);
-
-		// Updates reference index for a single file by removing and re-adding the references
-		const indexFileUpdateDebounce = debounce(
-			async (file: TFile, data: string, cache: CachedMetadata) => {
-				await this.referenceCountingPolicy.removeLinkReferencesForFile(file);
-				this.referenceCountingPolicy.getLinkReferencesForFile(file, cache);
-				updateHeadersDebounce();
-				updatePropertiesDebounce();
-				updateAllSnwLiveUpdateReferencesDebounce();
+			{
+				target: this.app.metadataCache,
+				events: ["changed"],
+				handler: async (file: TFile, data: string, cache: CachedMetadata) => {
+					// Single file update
+					await this.referenceCountingPolicy.removeLinkReferencesForFile(file);
+					this.referenceCountingPolicy.getLinkReferencesForFile(file, cache);
+					updateHeadersDebounce();
+					updatePropertiesDebounce();
+					updateAllSnwLiveUpdateReferencesDebounce();
+				},
+				delay: 1000,
 			},
-			1000,
-			true,
-		);
-
-		this.registerEvent(this.app.vault.on("rename", indexFullUpdateDebounce));
-		this.registerEvent(this.app.vault.on("delete", indexFullUpdateDebounce));
-		this.registerEvent(this.app.metadataCache.on("changed", indexFileUpdateDebounce));
+			{
+				target: this.app.workspace,
+				events: ["layout-change"],
+				handler: () => {
+					// UI header/property refresh
+					updateHeadersDebounce();
+					updatePropertiesDebounce();
+				},
+				delay: UPDATE_DEBOUNCE,
+			}
+		]);
 
 		this.app.workspace.registerHoverLinkSource(this.appID, {
 			display: this.appName,
@@ -162,11 +201,6 @@ export default class SNWPlugin extends Plugin {
 		this.snwAPI.settings = this.settings;
 
 		this.registerEditorExtension(this.editorExtensions);
-
-		this.app.workspace.on("layout-change", () => {
-			updateHeadersDebounce();
-			updatePropertiesDebounce();
-		});
 
 		// Initial feature toggles
 		for (const feature of this.features) {
