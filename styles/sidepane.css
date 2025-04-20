@@ -1,0 +1,141 @@
+/* Sidepane */
+.snw-sidepane-container {
+  height: 100%;
+  padding: 10px;
+  overflow: scroll;
+}
+
+.snw-sidepane-container>div>.snw-ref-area {
+  max-height: 100% !important;
+  margin-bottom: 10px;
+}
+
+.snw-ref-title-side-pane {
+  color: var(--tab-text-color-active);
+  padding-top: 5px;
+  padding-left: 10px;
+  padding-right: 5px;
+  padding-bottom: 5px;
+  margin-bottom: 5px;
+  border-radius: var(--radius-s);
+  background-color: var(--titlebar-background-focused);
+  border: var(--border-width) solid var(--modal-border-color);
+  align-items: center;
+}
+
+.snw-header-count-wrapper {
+  position: absolute;
+  border: var(--border-width) dotted;
+  font-size: var(--font-ui-smallest);
+  border-radius: var(--radius-s);
+  min-width: 18px;
+  min-height: 18px;
+  right: 20px;
+  opacity: var(--snw-counter-opacity);
+  padding: 3px;
+  z-index: 1000;
+}
+
+/* Modification for when Edting Toolbar plugin is used */
+.view-content:has(.top.cMenuToolbarDefaultAesthetic),
+.view-content:has(.top.cMenuToolbarTinyAesthetic) {
+  .snw-header-count-wrapper {
+    top: 80px;
+  }
+}
+
+.view-content:has(.top.cMenuToolbarGlassAesthetic) {
+  .snw-header-count-wrapper {
+    top: 70px;
+  }
+}
+
+.snw-header-count {
+  text-align: center;
+}
+
+.snw-sidepane-header {
+  font-weight: bold;
+  padding-top: 5px;
+  padding-bottom: 5px;
+}
+
+.snw-sidepane-header-references-header {
+  font-weight: bold;
+  padding-top: 15px;
+  padding-bottom: 5px;
+}
+
+.snw-sidepane-references {
+  margin-top: 0px;
+  padding-left: 20px;
+}
+
+.snw-sidepane-reference-item {
+  padding-bottom: 5px;
+  line-height: normal;
+}
+
+.snw-sidepane-loading {
+  color: var(--text-muted);
+  margin-top: 15px;
+  margin-left: 20px;
+}
+
+.snw-sidepane-loading-subtext {
+  margin-left: 20px;
+}
+
+/* Sort dropdown */
+.snw-sort-dropdown-wrapper {
+  position: relative;
+  display: inline-block;
+}
+
+.snw-sort-dropdown-button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  padding: 0;
+  opacity: var(--snw-icon-opacity);
+}
+
+.snw-sort-dropdown-button:hover {
+  opacity: 1;
+}
+
+.snw-sort-dropdown-list {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  z-index: 1;
+  min-width: 200px;
+  background-color: var(--background-primary);
+  border: var(--border-width) solid var(--background-modifier-border);
+  border-radius: var(--radius-s);
+  box-shadow: var(--shadow-s);
+  padding: 5px 0;
+  list-style: none;
+  margin: 0;
+}
+
+.snw-sort-dropdown-list-item {
+  padding: 5px 15px;
+  cursor: pointer;
+}
+
+.snw-sort-dropdown-list-item:hover {
+  background-color: var(--background-secondary);
+}
+
+.snw-sort-dropdown-list-item-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.snw-sort-dropdown-list-item-label .icon {
+  margin-left: 5px;
+} 

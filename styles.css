@@ -1,9 +1,17 @@
+/* 
+ * DEPRECATED: This file is kept for backward compatibility.
+ * Please use the modular CSS files in the styles/ directory instead.
+ * See styles/README.md for details.
+ */
+
+/* Common variables and shared styles */
 body {
   --snw-counter-opacity: 0.4;
   --snw-icon-opacity: 0.4;
 }
 
-
+/* Include all modular CSS content directly rather than using imports */
+/* Inline references styling */
 div:has(> .snw-reference),
 .snw-link-preview {
   display: inline;

@@ -1,0 +1,81 @@
+/* Inline references styling */
+div:has(> .snw-reference),
+.snw-link-preview {
+  display: inline;
+}
+
+.snw-reference {
+  display: inline;
+  font-size: var(--font-ui-smaller);
+  border-radius: var(--radius-s);
+  border: var(--border-width) dotted;
+  vertical-align: top;
+  opacity: var(--snw-counter-opacity);
+  min-width: 10px;
+  padding-left: 3px;
+  padding-right: 3px !important;
+  margin-left: 3px !important;
+  margin-right: 2px;
+}
+
+.is-mobile .snw-reference {
+  font-size: var(--font-ui-smaller);
+}
+
+/* Properties */
+/* Have to remove the underline since text-decoration-line isn't inheritted, but then re-add ito the link */
+.metadata-container .internal-link:has(.snw-frontmatter-wrapper) {
+  text-decoration-line: none !important;
+  color: unset;
+  cursor: unset;
+
+  .multi-select-pill-content {
+    text-decoration-line: underline !important;
+    color: var(--link-color);
+    cursor: var(--cursor-link);
+  }
+}
+
+/* custom properties display */
+.snw-custom-property-name {
+  font-style: italic;
+}
+
+/* CM Live Preview */
+.cm-content .snw-reference {
+  padding-right: 2px;
+}
+
+/* Preview mode */
+.markdown-preview-view .snw-reference {
+  padding-right: 3px;
+}
+
+.snw-block {
+  padding-left: 2px;
+  margin-left: 2px;
+}
+
+.snw-heading {
+  margin-left: 2px;
+  font-size: var(--font-ui-smaller);
+}
+
+.snw-embed {
+  margin-top: 1px;
+}
+
+.snw-embed-preview {
+  top: 2px;
+}
+
+.snw-link {
+  margin-left: 3px;
+}
+
+/* Print media query for references */
+@media print {
+  .snw-reference {
+    display: none;
+  }
+} 
