@@ -129,14 +129,42 @@ export default class SNWPlugin extends Plugin {
 	async onload(): Promise<void> {
 		console.log(`loading ${this.appName}`);
 		
+		await this.initUI();
+		await this.initAPI();
+		await this.initSettings();
+		await this.initViews();
+		await this.initDebouncedEvents();
+		await this.initCommands();
+		await this.initFeatureToggles();
+		await this.initLayoutReadyHandler();
+	}
+
+	/**
+	 * Initialize all UI components
+	 */
+	private async initUI(): Promise<void> {
 		// Initialize all UI components by calling each initializer
 		for (const init of this.UI_INITIALIZERS) {
 			init(this);
 		}
+	}
 
+	/**
+	 * Initialize the API for external access
+	 */
+	private async initAPI(): Promise<void> {
 		window.snwAPI = this.snwAPI; // API access to SNW for Templater, Dataviewjs and the console debugger
 		this.snwAPI.references = this.referenceCountingPolicy.indexedReferences;
+		
+		// Will be set after settings are loaded
+		// @ts-ignore
+		this.snwAPI.settings = this.settings;
+	}
 
+	/**
+	 * Initialize and load settings, apply to reference counting policy
+	 */
+	private async initSettings(): Promise<void> {
 		await this.loadSettings();
 		
 		// Ensure the reference counting policy is using the correct policy from settings
@@ -148,11 +176,31 @@ export default class SNWPlugin extends Plugin {
 		this.addSettingTab(new SettingsTab(this.app, this));
 
 		// set current state based on startup parameters
-		if (Platform.isMobile || Platform.isMobileApp) this.showCountsActive = this.settings.enableOnStartupMobile;
-		else this.showCountsActive = this.settings.enableOnStartupDesktop;
+		if (Platform.isMobile || Platform.isMobileApp) {
+			this.showCountsActive = this.settings.enableOnStartupMobile;
+		} else {
+			this.showCountsActive = this.settings.enableOnStartupDesktop;
+		}
+	}
 
+	/**
+	 * Initialize views and register them
+	 */
+	private async initViews(): Promise<void> {
 		this.registerView(VIEW_TYPE_SNW, (leaf) => new SideBarPaneView(leaf, this));
+		
+		this.app.workspace.registerHoverLinkSource(this.appID, {
+			display: this.appName,
+			defaultMod: true,
+		});
+		
+		this.registerEditorExtension(this.editorExtensions);
+	}
 
+	/**
+	 * Initialize all debounced event handlers
+	 */
+	private async initDebouncedEvents(): Promise<void> {
 		// Set up all debounced event handlers with a single helper
 		this.wireDebouncedEvents([
 			{
@@ -191,22 +239,12 @@ export default class SNWPlugin extends Plugin {
 				delay: UPDATE_DEBOUNCE,
 			}
 		]);
+	}
 
-		this.app.workspace.registerHoverLinkSource(this.appID, {
-			display: this.appName,
-			defaultMod: true,
-		});
-
-		// @ts-ignore
-		this.snwAPI.settings = this.settings;
-
-		this.registerEditorExtension(this.editorExtensions);
-
-		// Initial feature toggles
-		for (const feature of this.features) {
-			this.toggleFeature(feature);
-		}
-
+	/**
+	 * Initialize plugin commands
+	 */
+	private async initCommands(): Promise<void> {
 		// Add command to force rebuild of references
 		this.addCommand({
 			id: "rebuild-references",
@@ -215,7 +253,22 @@ export default class SNWPlugin extends Plugin {
 				this.rebuildIndex();
 			}
 		});
+	}
 
+	/**
+	 * Initialize feature toggles based on settings
+	 */
+	private async initFeatureToggles(): Promise<void> {
+		// Initial feature toggles
+		for (const feature of this.features) {
+			this.toggleFeature(feature);
+		}
+	}
+
+	/**
+	 * Initialize handlers that run when the layout is ready
+	 */
+	private async initLayoutReadyHandler(): Promise<void> {
 		this.app.workspace.onLayoutReady(async () => {
 			if (!this.app.workspace.getLeavesOfType(VIEW_TYPE_SNW)?.length) {
 				await this.app.workspace.getRightLeaf(false)?.setViewState({ type: VIEW_TYPE_SNW, active: false });
