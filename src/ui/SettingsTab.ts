@@ -1,6 +1,12 @@
 import { type App, PluginSettingTab, Setting, type ToggleComponent } from "obsidian";
 import type SNWPlugin from "../main";
 import { getPolicyOptions } from "../policies/index";
+import { 
+	createSettingsHeading, 
+	createSettingsSlider, 
+	createSettingsToggle, 
+	createSettingsToggleGroup 
+} from "./components";
 
 export class SettingsTab extends PluginSettingTab {
 	plugin: SNWPlugin;
@@ -14,117 +20,133 @@ export class SettingsTab extends PluginSettingTab {
 		const { containerEl } = this;
 		containerEl.empty();
 
-		new Setting(containerEl).setHeading().setName("Enable on startup");
-		new Setting(containerEl).setName("On the desktop enable SNW at startup").addToggle((cb: ToggleComponent) => {
-			cb.setValue(this.plugin.settings.startup.enableOnDesktop);
-			cb.onChange(async (value: boolean) => {
-				this.plugin.settings.startup.enableOnDesktop = value;
-				await this.plugin.saveSettings();
-			});
+		// Startup section
+		createSettingsToggleGroup({
+			containerEl,
+			headingText: "Enable on startup",
+			toggles: [
+				{
+					name: "On the desktop enable SNW at startup",
+					value: this.plugin.settings.startup.enableOnDesktop,
+					onChange: async (value: boolean) => {
+						this.plugin.settings.startup.enableOnDesktop = value;
+						await this.plugin.saveSettings();
+					}
+				},
+				{
+					name: "On mobile devices enable SNW at startup",
+					value: this.plugin.settings.startup.enableOnMobile,
+					onChange: async (value: boolean) => {
+						this.plugin.settings.startup.enableOnMobile = value;
+						await this.plugin.saveSettings();
+					}
+				}
+			]
 		});
 
-		new Setting(containerEl).setName("On mobile devices enable SNW at startup").addToggle((cb: ToggleComponent) => {
-			cb.setValue(this.plugin.settings.startup.enableOnMobile);
-			cb.onChange(async (value: boolean) => {
-				this.plugin.settings.startup.enableOnMobile = value;
-				await this.plugin.saveSettings();
-			});
+		// SNW Activation section
+		createSettingsHeading({
+			containerEl,
+			headingText: "SNW Activation"
 		});
 
-		new Setting(containerEl).setHeading().setName("SNW Activation");
-		new Setting(containerEl)
-			.setName("Require modifier key to activate SNW")
-			.setDesc(
+		createSettingsToggle({
+			containerEl,
+			name: "Require modifier key to activate SNW",
+			description: 
 				`If enabled, SNW will only activate when the modifier key is pressed when hovering the mouse over an SNW counter.  
-						Otherwise, SNW will activate on a mouse hover. May require reopening open files to take effect.`,
-			)
-			.addToggle((cb: ToggleComponent) => {
-				cb.setValue(this.plugin.settings.requireModifierKeyToActivateSNWView);
-				cb.onChange(async (value: boolean) => {
-					this.plugin.settings.requireModifierKeyToActivateSNWView = value;
-					await this.plugin.saveSettings();
-				});
-			});
-
-		new Setting(containerEl).setHeading().setName("Thresholds");
-		new Setting(containerEl)
-			.setName("Minimal required count to show counter")
-			.setDesc(
-				`This setting defines how many references there needs to be for the reference count box to appear. May require reloading open files.
-				 Currently set to: ${this.plugin.settings.minimumRefCountThreshold} references.`,
-			)
-			.addSlider((slider) =>
-				slider
-					.setLimits(1, 1000, 1)
-					.setValue(this.plugin.settings.minimumRefCountThreshold)
-					.onChange(async (value) => {
-						this.plugin.settings.minimumRefCountThreshold = value;
-						await this.plugin.saveSettings();
-					})
-					.setDynamicTooltip(),
-			);
-
-		new Setting(containerEl)
-			.setName("Maximum file references to show")
-			.setDesc(
-				`This setting defines the max amount of files with their references are displayed in the popup or sidebar.  Set to 1000 for no maximum.
-				 Currently set to: ${this.plugin.settings.maxFileCountToDisplay} references. Keep in mind higher numbers can affect performance on larger vaults.`,
-			)
-			.addSlider((slider) =>
-				slider
-					.setLimits(1, 1000, 1)
-					.setValue(this.plugin.settings.maxFileCountToDisplay)
-					.onChange(async (value) => {
-						this.plugin.settings.maxFileCountToDisplay = value;
-						await this.plugin.saveSettings();
-					})
-					.setDynamicTooltip(),
-			);
-
-		new Setting(containerEl).setHeading().setName(`Use Obsidian's Excluded Files list (Settings > Files & Links)`);
-
-		new Setting(containerEl)
-			.setName("Outgoing links")
-			.setDesc(
-				"If enabled, links FROM files in the excluded folder will not be included in SNW's reference counters. May require restarting Obsidian.",
-			)
-			.addToggle((cb: ToggleComponent) => {
-				cb.setValue(this.plugin.settings.ignore.obsExcludeFoldersLinksFrom);
-				cb.onChange(async (value: boolean) => {
-					this.plugin.settings.ignore.obsExcludeFoldersLinksFrom = value;
-					await this.plugin.saveSettings();
-				});
-			});
-
-		new Setting(containerEl)
-			.setName("Incoming links")
-			.setDesc(
-				"If enabled, links TO files in the excluded folder will not be included in SNW's reference counters.  May require restarting Obsidian.",
-			)
-			.addToggle((cb: ToggleComponent) => {
-				cb.setValue(this.plugin.settings.ignore.obsExcludeFoldersLinksTo);
-				cb.onChange(async (value: boolean) => {
-					this.plugin.settings.ignore.obsExcludeFoldersLinksTo = value;
-					await this.plugin.saveSettings();
-				});
-			});
-
-		new Setting(containerEl).setHeading().setName("Properties");
-
-		new Setting(containerEl).setName("Show references in properties on Desktop").addToggle((cb: ToggleComponent) => {
-			cb.setValue(this.plugin.settings.display.propertyReferences);
-			cb.onChange(async (value: boolean) => {
-				this.plugin.settings.display.propertyReferences = value;
+				Otherwise, SNW will activate on a mouse hover. May require reopening open files to take effect.`,
+			value: this.plugin.settings.requireModifierKeyToActivateSNWView,
+			onChange: async (value: boolean) => {
+				this.plugin.settings.requireModifierKeyToActivateSNWView = value;
 				await this.plugin.saveSettings();
-			});
+			}
 		});
 
-		new Setting(containerEl).setName("Show references in properties on mobile").addToggle((cb: ToggleComponent) => {
-			cb.setValue(this.plugin.settings.display.propertyReferencesMobile);
-			cb.onChange(async (value: boolean) => {
-				this.plugin.settings.display.propertyReferencesMobile = value;
+		// Thresholds section
+		createSettingsHeading({
+			containerEl,
+			headingText: "Thresholds"
+		});
+
+		createSettingsSlider({
+			containerEl,
+			name: "Minimal required count to show counter",
+			description: `This setting defines how many references there needs to be for the reference count box to appear. May require reloading open files.
+				Currently set to: ${this.plugin.settings.minimumRefCountThreshold} references.`,
+			min: 1,
+			max: 1000,
+			step: 1,
+			value: this.plugin.settings.minimumRefCountThreshold,
+			onChange: async (value) => {
+				this.plugin.settings.minimumRefCountThreshold = value;
 				await this.plugin.saveSettings();
-			});
+			}
+		});
+
+		createSettingsSlider({
+			containerEl,
+			name: "Maximum file references to show",
+			description: `This setting defines the max amount of files with their references are displayed in the popup or sidebar. Set to 1000 for no maximum.
+				Currently set to: ${this.plugin.settings.maxFileCountToDisplay} references. Keep in mind higher numbers can affect performance on larger vaults.`,
+			min: 1,
+			max: 1000,
+			step: 1,
+			value: this.plugin.settings.maxFileCountToDisplay,
+			onChange: async (value) => {
+				this.plugin.settings.maxFileCountToDisplay = value;
+				await this.plugin.saveSettings();
+			}
+		});
+
+		// Use Obsidian's Excluded Files section
+		createSettingsToggleGroup({
+			containerEl,
+			headingText: "Use Obsidian's Excluded Files list (Settings > Files & Links)",
+			toggles: [
+				{
+					name: "Outgoing links",
+					description: "If enabled, links FROM files in the excluded folder will not be included in SNW's reference counters. May require restarting Obsidian.",
+					value: this.plugin.settings.ignore.obsExcludeFoldersLinksFrom,
+					onChange: async (value: boolean) => {
+						this.plugin.settings.ignore.obsExcludeFoldersLinksFrom = value;
+						await this.plugin.saveSettings();
+					}
+				},
+				{
+					name: "Incoming links",
+					description: "If enabled, links TO files in the excluded folder will not be included in SNW's reference counters. May require restarting Obsidian.",
+					value: this.plugin.settings.ignore.obsExcludeFoldersLinksTo,
+					onChange: async (value: boolean) => {
+						this.plugin.settings.ignore.obsExcludeFoldersLinksTo = value;
+						await this.plugin.saveSettings();
+					}
+				}
+			]
+		});
+
+		// Properties section
+		createSettingsToggleGroup({
+			containerEl,
+			headingText: "Properties",
+			toggles: [
+				{
+					name: "Show references in properties on Desktop",
+					value: this.plugin.settings.display.propertyReferences,
+					onChange: async (value: boolean) => {
+						this.plugin.settings.display.propertyReferences = value;
+						await this.plugin.saveSettings();
+					}
+				},
+				{
+					name: "Show references in properties on mobile",
+					value: this.plugin.settings.display.propertyReferencesMobile,
+					onChange: async (value: boolean) => {
+						this.plugin.settings.display.propertyReferencesMobile = value;
+						await this.plugin.saveSettings();
+					}
+				}
+			]
 		});
 
 		new Setting(containerEl).setHeading().setName("View Modes");

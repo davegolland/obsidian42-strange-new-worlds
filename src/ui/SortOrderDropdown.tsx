@@ -1,7 +1,8 @@
 import type { FunctionComponent } from "preact";
-import { useEffect, useRef, useState } from "preact/hooks";
+import { useState } from "preact/hooks";
 import type SNWPlugin from "src/main";
 import type { SortOption } from "../settings";
+import { Dropdown, DropdownOption } from "./components";
 
 interface SortOptionUI {
 	label: string;
@@ -27,69 +28,50 @@ const sortOptions: Record<string, SortOptionUI> = {
 	},
 };
 
-interface HelpSourceButtonProps {
+interface SortOrderDropdownProps {
 	plugin: SNWPlugin;
 	onChange: () => void;
 }
 
-export const SortOrderDropdown: FunctionComponent<HelpSourceButtonProps> = ({ plugin, onChange }) => {
+export const SortOrderDropdown: FunctionComponent<SortOrderDropdownProps> = ({ plugin, onChange }) => {
 	const [isOpen, setIsOpen] = useState(false);
-	const menuRef = useRef<HTMLDivElement>(null);
 
-	const handleButtonClick = () => {
+	const handleToggle = () => {
 		setIsOpen(!isOpen);
 	};
 
-	const handleOptionClick = async (value: SortOption) => {
+	const handleOptionClick = async (value: string) => {
 		setIsOpen(false);
-		plugin.settings.sortOptionDefault = value;
+		plugin.settings.sortOptionDefault = value as SortOption;
 		await plugin.saveSettings();
 		onChange();
 	};
 
-	useEffect(() => {
-		const handleClickOutside = (event: MouseEvent) => {
-			if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-				setIsOpen(false);
-			}
-		};
+	const currentSortOption = sortOptions[plugin.settings.sortOptionDefault];
 
-		document.addEventListener("mousedown", handleClickOutside);
-		return () => {
-			document.removeEventListener("mousedown", handleClickOutside);
-		};
-	}, []);
+	// biome-ignore lint/security/noDangerouslySetInnerHtml: SVG icon rendering
+	const buttonContent = <div dangerouslySetInnerHTML={{ __html: currentSortOption.icon }} />;
 
 	return (
-		<div className="snw-sort-dropdown-wrapper" ref={menuRef}>
-			<button type="button" onClick={handleButtonClick} class="snw-sort-dropdown-button">
-				<div
-					// biome-ignore lint/security/noDangerouslySetInnerHtml: <explanation>
-					dangerouslySetInnerHTML={{
-						__html: sortOptions[plugin.settings.sortOptionDefault].icon,
-					}}
+		<Dropdown 
+			buttonContent={buttonContent}
+			isOpen={isOpen}
+			onToggle={handleToggle}
+			className="snw-sort-dropdown-wrapper"
+			buttonClassName="snw-sort-dropdown-button"
+			listClassName="snw-sort-dropdown-list"
+		>
+			{Object.entries(sortOptions).map(([value, { label, icon }]) => (
+				<DropdownOption
+					key={value}
+					value={value}
+					icon={icon}
+					label={label}
+					onClick={(value) => handleOptionClick(value)}
+					className="snw-sort-dropdown-list-item"
+					labelClassName="snw-sort-dropdown-list-item-label"
 				/>
-			</button>
-			{isOpen && (
-				<ul className="snw-sort-dropdown-list">
-					{Object.entries(sortOptions).map(([value, { label, icon }]) => (
-						// biome-ignore lint/correctness/useJsxKeyInIterable: <explanation>
-						// biome-ignore lint/a11y/useKeyWithClickEvents: <explanation>
-						<li
-							id={value}
-							onClick={async (e: Event) => {
-								e.stopPropagation();
-								await handleOptionClick(value as SortOption);
-							}}
-							class="snw-sort-dropdown-list-item"
-						>
-							{/* biome-ignore lint/security/noDangerouslySetInnerHtml: <explanation> */}
-							<span dangerouslySetInnerHTML={{ __html: icon }} />
-							<span className="snw-sort-dropdown-list-item-label">{label}</span>
-						</li>
-					))}
-				</ul>
-			)}
-		</div>
+			))}
+		</Dropdown>
 	);
 };
