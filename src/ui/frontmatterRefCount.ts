@@ -26,7 +26,7 @@ function setFrontmatterLinksReferenceCounts() {
 function processFrontmatterLinks(mdView: View) {
 	if (!plugin.showCountsActive) return;
 	const state =
-		Platform.isMobile || Platform.isMobileApp ? plugin.settings.displayPropertyReferencesMobile : plugin.settings.displayPropertyReferences;
+		Platform.isMobile || Platform.isMobileApp ? plugin.settings.display.propertyReferencesMobile : plugin.settings.display.propertyReferences;
 
 	const markdownView = mdView as MarkdownView;
 	if (!state || !markdownView?.rawFrontmatter) return;

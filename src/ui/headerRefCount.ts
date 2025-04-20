@@ -21,7 +21,7 @@ export function updateHeaders() {
 
 // Iterates all open documents to see if they are markdown file, and if so called processHeader
 function setHeaderWithReferenceCounts() {
-	if (!plugin.settings.displayIncomingFilesheader || !plugin.showCountsActive) return;
+	if (!plugin.settings.display.incomingFilesHeader || !plugin.showCountsActive) return;
 	plugin.app.workspace.iterateAllLeaves((leaf: WorkspaceLeaf) => {
 		if (leaf.view.getViewType() === "markdown") processHeader(leaf.view as MarkdownView);
 	});

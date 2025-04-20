@@ -7,10 +7,10 @@ import ReferenceGutterExtension from "./view-extensions/gutters-cm6";
 
 // Define a Feature interface for toggling features
 export interface Feature {
-    key: keyof Settings;            // which settings flag to check
-    register: () => void;           // how to turn it ON
-    unregister: () => void;         // how to turn it OFF
-    additionalCheck?: () => boolean; // optional additional condition
+    name: string;                  // Descriptive name for the feature
+    check: (settings: Settings) => boolean; // Function to check if feature is enabled in settings
+    register: () => void;           // How to turn it ON
+    unregister: () => void;         // How to turn it OFF
 }
 
 /**
@@ -36,7 +36,8 @@ export class FeatureManager {
     private initFeatures(): void {
         this.features = [
             {
-                key: "displayInlineReferencesMarkdown",
+                name: "markdownPreview",
+                check: (settings: Settings) => settings.display.inlineReferencesMarkdown,
                 register: () => {
                     this.markdownPostProcessor = this.plugin.registerMarkdownPostProcessor(
                         (el: HTMLElement, ctx: any) => markdownPreviewProcessor(el, ctx), 100
@@ -50,19 +51,20 @@ export class FeatureManager {
                 }
             },
             {
-                key: "displayInlineReferencesLivePreview",
+                name: "livePreview",
+                check: (settings: Settings) => settings.display.inlineReferencesLivePreview,
                 register: () => this.updateCMExtensionState("inline-ref", true, InlineReferenceExtension),
                 unregister: () => this.updateCMExtensionState("inline-ref", false, InlineReferenceExtension)
             },
             {
-                key: "displayEmbedReferencesInGutter",
-                register: () => this.updateCMExtensionState("gutter", true, ReferenceGutterExtension),
-                unregister: () => this.updateCMExtensionState("gutter", false, ReferenceGutterExtension),
-                additionalCheck: () => {
+                name: "gutter",
+                check: (settings: Settings) => {
                     return Platform.isMobile || Platform.isMobileApp 
-                        ? this.settings.displayEmbedReferencesInGutterMobile
-                        : true;
-                }
+                        ? settings.embed.referencesInGutterMobile
+                        : settings.embed.referencesInGutter;
+                },
+                register: () => this.updateCMExtensionState("gutter", true, ReferenceGutterExtension),
+                unregister: () => this.updateCMExtensionState("gutter", false, ReferenceGutterExtension)
             }
         ];
     }
@@ -93,10 +95,10 @@ export class FeatureManager {
     }
     
     /**
-     * Toggle a specific feature by key
+     * Toggle a specific feature by name
      */
-    public toggleFeatureByKey(key: keyof Settings): void {
-        const feature = this.features.find(f => f.key === key);
+    public toggleFeatureByName(name: string): void {
+        const feature = this.features.find(f => f.name === name);
         if (feature) {
             this.toggleFeature(feature);
         }
@@ -106,12 +108,7 @@ export class FeatureManager {
      * Generic helper method to toggle a feature on or off based on settings and state
      */
     private toggleFeature(feature: Feature): void {
-        let enabled = Boolean(this.settings[feature.key]) && this.showCountsActive;
-        
-        // Check additional condition if it exists
-        if (feature.additionalCheck && enabled) {
-            enabled = feature.additionalCheck();
-        }
+        let enabled = feature.check(this.settings) && this.showCountsActive;
         
         if (enabled) {
             feature.register();
@@ -157,15 +154,15 @@ export class FeatureManager {
     
     // Legacy toggle methods
     public toggleMarkdownPreview(): void {
-        this.toggleFeature(this.features[0]);
+        this.toggleFeatureByName("markdownPreview");
     }
     
     public toggleLivePreview(): void {
-        this.toggleFeature(this.features[1]);
+        this.toggleFeatureByName("livePreview");
     }
     
     public toggleGutters(): void {
-        this.toggleFeature(this.features[2]);
+        this.toggleFeatureByName("gutter");
     }
     
     /**

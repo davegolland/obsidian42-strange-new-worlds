@@ -103,7 +103,7 @@ class snwChildComponentForMarkdownFile extends MarkdownRenderChild {
 		if (transformedCache?.cacheMetaData?.frontmatter?.["snw-canvas-exclude-preview"] === true) return;
 
 		if (transformedCache?.blocks || transformedCache.embeds || transformedCache.headings || transformedCache.links) {
-			if (plugin.settings.enableRenderingBlockIdInMarkdown && transformedCache?.blocks && this.sectionInfo) {
+			if (plugin.settings.render.blockIdInMarkdown && transformedCache?.blocks && this.sectionInfo) {
 				for (const value of transformedCache.blocks) {
 					if (
 						value.references.length >= minRefCountThreshold &&
@@ -140,7 +140,7 @@ class snwChildComponentForMarkdownFile extends MarkdownRenderChild {
 				}
 			}
 
-			if (plugin.settings.enableRenderingEmbedsInMarkdown && transformedCache?.embeds) {
+			if (plugin.settings.render.embedsInMarkdown && transformedCache?.embeds) {
 				// biome-ignore lint/complexity/noForEach: <explanation>
 				this.containerEl.querySelectorAll(".internal-embed:not(.snw-embed-preview)").forEach((element) => {
 					const src = element.getAttribute("src");
@@ -172,7 +172,7 @@ class snwChildComponentForMarkdownFile extends MarkdownRenderChild {
 				});
 			}
 
-			if (plugin.settings.enableRenderingLinksInMarkdown && transformedCache?.links) {
+			if (plugin.settings.render.linksInMarkdown && transformedCache?.links) {
 				// biome-ignore lint/complexity/noForEach: <explanation>
 				this.containerEl.querySelectorAll("a.internal-link").forEach((element) => {
 					const dataHref = element.getAttribute("data-href");
@@ -205,7 +205,7 @@ class snwChildComponentForMarkdownFile extends MarkdownRenderChild {
 				});
 			}
 
-			if (plugin.settings.enableRenderingHeadersInMarkdown) {
+			if (plugin.settings.render.headersInMarkdown) {
 				const headerKey = this.containerEl.querySelector("[data-heading]");
 				if (transformedCache?.headings && headerKey) {
 					const textContext = headerKey.getAttribute("data-heading");

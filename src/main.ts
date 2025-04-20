@@ -10,7 +10,7 @@ import {
 	type WorkspaceLeaf,
 	debounce,
 } from "obsidian";
-import { DEFAULT_SETTINGS, type Settings } from "./settings";
+import { DEFAULT_SETTINGS, type Settings, type LegacySettings, migrateSettings } from "./settings";
 import SnwAPI from "./snwApi";
 import { ReferenceCountingPolicy } from "./policies/reference-counting";
 import PluginCommands from "./ui/PluginCommands";
@@ -49,7 +49,7 @@ export default class SNWPlugin extends Plugin {
 	APP_ABBREVIARTION = "SNW";
 	settings: Settings = DEFAULT_SETTINGS;
 	//controls global state if the plugin is showing counters
-	showCountsActive: boolean = DEFAULT_SETTINGS.enableOnStartupDesktop;
+	showCountsActive: boolean = DEFAULT_SETTINGS.startup.enableOnDesktop;
 	lastSelectedReferenceType = "";
 	lastSelectedReferenceRealLink = "";
 	lastSelectedReferenceKey = "";
@@ -149,9 +149,9 @@ export default class SNWPlugin extends Plugin {
 
 		// set current state based on startup parameters
 		if (Platform.isMobile || Platform.isMobileApp) {
-			this.showCountsActive = this.settings.enableOnStartupMobile;
+			this.showCountsActive = this.settings.startup.enableOnMobile;
 		} else {
-			this.showCountsActive = this.settings.enableOnStartupDesktop;
+			this.showCountsActive = this.settings.startup.enableOnDesktop;
 		}
 		
 		// Update feature manager with current settings and state
@@ -334,7 +334,15 @@ export default class SNWPlugin extends Plugin {
 	}
 
 	async loadSettings(): Promise<void> {
-		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+		const loadedData = await this.loadData();
+		
+		// Check if we need to migrate from legacy format
+		if (loadedData && 'enableOnStartupDesktop' in loadedData) {
+			console.log(`${this.appName}: Migrating settings from legacy format to new format`);
+			this.settings = migrateSettings(loadedData as unknown as LegacySettings);
+		} else {
+			this.settings = Object.assign({}, DEFAULT_SETTINGS, loadedData);
+		}
 	}
 
 	async saveSettings(): Promise<void> {
