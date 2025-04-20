@@ -22,6 +22,20 @@ export interface WikilinkEquivalencePolicy {
      * @returns Normalized filename
      */
     normalizeFileName(filename: string): string;
+    
+    /**
+     * Count references according to the policy's rules
+     * @param references Array of Link objects to count
+     * @returns The number of references according to this policy
+     */
+    countReferences(references: Link[] | undefined): number;
+    
+    /**
+     * Filter references according to the policy's rules
+     * @param references Array of Link objects to filter
+     * @returns Filtered array of references
+     */
+    filterReferences(references: Link[] | undefined): Link[];
 }
 
 /**
@@ -78,6 +92,24 @@ export abstract class AbstractWikilinkEquivalencePolicy implements WikilinkEquiv
      * Each policy must implement its own key generation logic
      */
     abstract generateKey(link: Link): string;
+    
+    /**
+     * Default implementation that simply counts all references
+     * @param references Array of Link objects to count
+     * @returns The total number of references
+     */
+    countReferences(references: Link[] | undefined): number {
+        return references ? references.length : 0;
+    }
+    
+    /**
+     * Default implementation that returns all references unfiltered
+     * @param references Array of Link objects to filter
+     * @returns All references unchanged
+     */
+    filterReferences(references: Link[] | undefined): Link[] {
+        return references || [];
+    }
 }
 
 /**
@@ -196,6 +228,45 @@ export class UniqueFilesPolicy extends AbstractWikilinkEquivalencePolicy {
         
         // For unresolved links, normalize the file name
         return this.normalizeFileName(link.realLink);
+    }
+    
+    /**
+     * Override to count each source file only once
+     * @param references Array of Link objects to count
+     * @returns The number of unique source files
+     */
+    countReferences(references: Link[] | undefined): number {
+        if (!references) return 0;
+        
+        const uniqueSourceFiles = new Set<string>();
+        for (const ref of references) {
+            if (ref.sourceFile?.path) {
+                uniqueSourceFiles.add(ref.sourceFile.path);
+            }
+        }
+        return uniqueSourceFiles.size;
+    }
+    
+    /**
+     * Override to keep only one reference per source file
+     * @param references Array of Link objects to filter
+     * @returns Filtered array with one reference per source file
+     */
+    filterReferences(references: Link[] | undefined): Link[] {
+        if (!references) return [];
+        
+        const seenSourceFiles = new Set<string>();
+        return references.filter(ref => {
+            const sourcePath = ref.sourceFile?.path;
+            if (!sourcePath) return false;
+            
+            // If we've already seen this source file, filter it out
+            if (seenSourceFiles.has(sourcePath)) return false;
+            
+            // Otherwise, add it to the seen set and keep it
+            seenSourceFiles.add(sourcePath);
+            return true;
+        });
     }
 }
 

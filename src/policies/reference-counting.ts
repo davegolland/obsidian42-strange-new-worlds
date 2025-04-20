@@ -202,18 +202,8 @@ export class ReferenceCountingPolicy {
     countReferences(references: Link[] | undefined): number {
         if (!references) return 0;
 
-        // For the unique files policy, count each source file only once
-        if (this.activePolicy === WIKILINK_EQUIVALENCE_POLICIES.UNIQUE_FILES) {
-            const uniqueSourceFiles = new Set<string>();
-            for (const ref of references) {
-                if (ref.sourceFile?.path) {
-                    uniqueSourceFiles.add(ref.sourceFile.path);
-                }
-            }
-            return uniqueSourceFiles.size;
-        }
-        
-        return references.length;
+        // Delegate counting to the active policy
+        return this.activePolicy.countReferences(references);
     }
 
     /**
@@ -224,23 +214,8 @@ export class ReferenceCountingPolicy {
     filterReferences(references: Link[] | undefined): Link[] {
         if (!references) return [];
 
-        // For the unique files policy, keep only one reference per source file
-        if (this.activePolicy === WIKILINK_EQUIVALENCE_POLICIES.UNIQUE_FILES) {
-            const seenSourceFiles = new Set<string>();
-            return references.filter(ref => {
-                const sourcePath = ref.sourceFile?.path;
-                if (!sourcePath) return false;
-                
-                // If we've already seen this source file, filter it out
-                if (seenSourceFiles.has(sourcePath)) return false;
-                
-                // Otherwise, add it to the seen set and keep it
-                seenSourceFiles.add(sourcePath);
-                return true;
-            });
-        }
-
-        return references;
+        // Delegate filtering to the active policy
+        return this.activePolicy.filterReferences(references);
     }
 
     /**
