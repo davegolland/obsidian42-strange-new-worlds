@@ -17,10 +17,15 @@ import PluginCommands from "./ui/PluginCommands";
 import { SettingsTab } from "./ui/SettingsTab";
 import { SideBarPaneView, VIEW_TYPE_SNW } from "./ui/SideBarPaneView";
 import * as uiInits from "./ui/ui-inits";
-import { updatePropertiesDebounce } from "./ui/frontmatterRefCount";
-import { updateHeadersDebounce } from "./ui/headerRefCount";
+import { updateProperties } from "./ui/frontmatterRefCount";
+import { updateHeaders } from "./ui/headerRefCount";
+import {
+	updateHeadersDebounce,
+	updatePropertiesDebounce,
+	updateAllSnwLiveUpdateReferencesDebounce
+} from "./ui/debounced-helpers";
 import ReferenceGutterExtension from "./view-extensions/gutters-cm6";
-import { updateAllSnwLiveUpdateReferencesDebounce } from "./view-extensions/htmlDecorations";
+import { updateAllSnwLiveUpdateReferences } from "./view-extensions/htmlDecorations";
 import { InlineReferenceExtension } from "./view-extensions/references-cm6";
 import markdownPreviewProcessor from "./view-extensions/references-preview";
 
@@ -66,6 +71,11 @@ export default class SNWPlugin extends Plugin {
 	commands: PluginCommands = new PluginCommands(this);
 	referenceCountingPolicy: ReferenceCountingPolicy = new ReferenceCountingPolicy(this);
 	
+	// Publicly accessible debounced versions of functions
+	updateHeadersDebounced: (() => void) | null = null;
+	updatePropertiesDebounced: (() => void) | null = null;
+	updateAllSnwLiveUpdateReferencesDebounced: (() => void) | null = null;
+
 	// Collection of all UI initializers
 	private UI_INITIALIZERS: Array<(plugin: SNWPlugin) => void> = [
 		uiInits.setPluginVariableUIC_RefArea,
@@ -76,6 +86,7 @@ export default class SNWPlugin extends Plugin {
 		uiInits.setPluginVariableForMarkdownPreviewProcessor,
 		uiInits.setPluginVariableForCM6InlineReferences,
 		uiInits.setPluginVariableForUIC,
+		uiInits.initDebouncedHelpers,
 	];
 	
 	// Collection of all features that can be toggled
@@ -201,6 +212,11 @@ export default class SNWPlugin extends Plugin {
 	 * Initialize all debounced event handlers
 	 */
 	private async initDebouncedEvents(): Promise<void> {
+		// Create debounced versions of our update functions for external use
+		this.updateHeadersDebounced = debounce(updateHeaders, UPDATE_DEBOUNCE, true);
+		this.updatePropertiesDebounced = debounce(updateProperties, UPDATE_DEBOUNCE, true);
+		this.updateAllSnwLiveUpdateReferencesDebounced = debounce(updateAllSnwLiveUpdateReferences, UPDATE_DEBOUNCE, true);
+
 		// Set up all debounced event handlers with a single helper
 		this.wireDebouncedEvents([
 			{
@@ -315,7 +331,7 @@ export default class SNWPlugin extends Plugin {
 		// Completely rebuild index
 		this.referenceCountingPolicy.buildLinksAndReferences();
 		
-		// Force UI updates
+		// Force UI updates using debounced helpers
 		updateHeadersDebounce();
 		updatePropertiesDebounce();
 		updateAllSnwLiveUpdateReferencesDebounce();

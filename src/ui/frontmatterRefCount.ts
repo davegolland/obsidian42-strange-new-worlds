@@ -1,7 +1,6 @@
-import { MarkdownView, Platform, View, type WorkspaceLeaf, debounce } from "obsidian";
+import { MarkdownView, Platform, View, type WorkspaceLeaf } from "obsidian";
 import { htmlDecorationForReferencesElement } from "src/view-extensions/htmlDecorations";
 import type SNWPlugin from "../main";
-import { UPDATE_DEBOUNCE } from "../main";
 import type { TransformedCachedItem } from "../types";
 import { ReferenceCountingPolicy } from "../policies/reference-counting";
 
@@ -13,20 +12,16 @@ export function setPluginVariableForFrontmatterLinksRefCount(snwPlugin: SNWPlugi
 	referenceCountingPolicy = plugin.referenceCountingPolicy;
 }
 
-// Iterates all open documents to see if they are markdown file, and if so called processHeader
+// Export the direct function instead of a debounced wrapper
+export function updateProperties() {
+	setFrontmatterLinksReferenceCounts();
+}
+
 function setFrontmatterLinksReferenceCounts() {
 	plugin.app.workspace.iterateAllLeaves((leaf: WorkspaceLeaf) => {
 		if (leaf.view.getViewType() === "markdown" || leaf.view.getViewType() === "file-properties") processFrontmatterLinks(leaf.view);
 	});
 }
-
-export const updatePropertiesDebounce = debounce(
-	() => {
-		setFrontmatterLinksReferenceCounts();
-	},
-	UPDATE_DEBOUNCE,
-	true,
-);
 
 function processFrontmatterLinks(mdView: View) {
 	if (!plugin.showCountsActive) return;

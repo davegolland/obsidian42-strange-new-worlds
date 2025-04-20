@@ -101,23 +101,18 @@ export const processHtmlDecorationReferenceEvent = async (target: HTMLElement) =
 	plugin.activateView(refType, realLink, key, filePath, Number(lineNu));
 };
 
-// loops all visble references marked with the class snw-liveupdate and updates the count if needed
-// or removes the element if the reference is no longer in the document
-export const updateAllSnwLiveUpdateReferencesDebounce = debounce(
-	() => {
-		const elements = document.querySelectorAll(".snw-liveupdate");
-		for (const el of Array.from(elements) as HTMLElement[]) {
-			const newCount = plugin.snwAPI.references.get(el.dataset.snwKey)?.length ?? 0;
-			if (newCount < plugin.settings.minimumRefCountThreshold) {
-				el.remove();
-				continue;
-			}
-			const newCountStr = String(newCount);
-			if (el.textContent !== newCountStr) {
-				el.textContent = newCountStr;
-			}
+// Export the direct function instead of a debounced wrapper
+export function updateAllSnwLiveUpdateReferences() {
+	const elements = document.querySelectorAll(".snw-liveupdate");
+	for (const el of Array.from(elements) as HTMLElement[]) {
+		const newCount = plugin.snwAPI.references.get(el.dataset.snwKey)?.length ?? 0;
+		if (newCount < plugin.settings.minimumRefCountThreshold) {
+			el.remove();
+			continue;
 		}
-	},
-	UPDATE_DEBOUNCE,
-	true,
-);
+		const newCountStr = String(newCount);
+		if (el.textContent !== newCountStr) {
+			el.textContent = newCountStr;
+		}
+	}
+}
