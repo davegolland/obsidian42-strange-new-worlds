@@ -26,20 +26,47 @@ export default class SnwAPI {
 		return this.getMetaInfoByFileName(this.plugin.app.workspace.getActiveFile()?.path || "");
 	};
 
-	searchReferencesStartingWith = async (searchString: string) => {
+	/**
+	 * Search for references based on provided criteria
+	 * @param options Search options object
+	 * @param options.startsWith Search for keys starting with this string
+	 * @param options.contains Search for keys containing this string
+	 */
+	searchReferences = async (options: { startsWith?: string; contains?: string }) => {
+		if (!options.startsWith && !options.contains) {
+			console.warn("SNW: searchReferences called without any search criteria");
+			return;
+		}
+
+		const results: [string, unknown][] = [];
+		
 		for (const [key, value] of this.plugin.referenceCountingPolicy.getIndexedReferences()) {
-			if (key.startsWith(searchString)) {
-				console.log(key, value);
+			if (options.startsWith && key.startsWith(options.startsWith)) {
+				results.push([key, value]);
+			} else if (options.contains && key.contains(options.contains)) {
+				results.push([key, value]);
 			}
 		}
+		
+		results.forEach(([key, value]) => {
+			console.log(key, value);
+		});
+		
+		return results;
 	};
 
+	/**
+	 * @deprecated Use searchReferences({ startsWith: searchString }) instead
+	 */
+	searchReferencesStartingWith = async (searchString: string) => {
+		return this.searchReferences({ startsWith: searchString });
+	};
+
+	/**
+	 * @deprecated Use searchReferences({ contains: searchString }) instead
+	 */
 	searchReferencesContains = async (searchString: string) => {
-		for (const [key, value] of this.plugin.referenceCountingPolicy.getIndexedReferences()) {
-			if (key.contains(searchString)) {
-				console.log(key, value);
-			}
-		}
+		return this.searchReferences({ contains: searchString });
 	};
 
 	// For given file name passed into the function, get the meta info for that file
