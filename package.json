@@ -6,8 +6,8 @@
 		"dev": "node --no-warnings esbuild.config.mjs",
 		"build": "node --no-warnings esbuild.config.mjs production",
 		"lint": "biome check ./src",
-		"version": "node version-bump.mjs",
-		"githubaction": "node version-github-action.mjs"
+		"version": "node scripts/release.mjs --local",
+		"tag-version": "node scripts/release.mjs --ci"
 	},
 	"author": "TfTHacker",
 	"license": "MIT",
