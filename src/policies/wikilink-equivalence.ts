@@ -76,8 +76,8 @@ export class CaseSensitivePolicy extends AbstractWikilinkEquivalencePolicy {
     name = "Case Sensitive";
     
     generateKey(link: Link): string {
-        const basePath = normalizeBase(link, true); // true = preserve case
-        return basePath;
+        // Preserve original casing
+        return normalizeBase(link, "preserve");
     }
 }
 
@@ -117,7 +117,7 @@ export class WordFormPolicy extends AbstractWikilinkEquivalencePolicy {
     name = "Word Form Unification";
     
     generateKey(link: Link): string {
-        const basePath = normalizeBase(link, false);
+        const basePath = normalizeBase(link, "lower");
         const baseName = getBasenameWithoutExt(basePath);
         const stemmedWords = LancasterStemmer.tokenizeAndStem(baseName);
         return stemmedWords.join('-');

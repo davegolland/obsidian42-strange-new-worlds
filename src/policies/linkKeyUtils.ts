@@ -13,12 +13,13 @@ export function extractSubpath(link: Link): string | undefined {
 }
 
 /**
- * Normalizes a base path from a link, handling extensions and casing
- * @param link The link to normalize
- * @param uppercase Whether to use uppercase (default: true)
- * @returns Normalized path string
+ * Normalizes a base path from a link, handling extensions and casing.
+ * `casing` controls how the result is cased:
+ *  - "upper": force UPPERCASE (good for case-insensitive keys)
+ *  - "lower": force lowercase
+ *  - "preserve": keep original casing
  */
-export function normalizeBase(link: Link, uppercase = true): string {
+export function normalizeBase(link: Link, casing: "upper" | "lower" | "preserve" = "upper"): string {
     // Get the base path from resolved file or real link
     let path = link.resolvedFile?.path || link.realLink;
     
@@ -30,11 +31,14 @@ export function normalizeBase(link: Link, uppercase = true): string {
     
     // Add extension if not present and not a section link
     if (!subpath && !extname(path)) {
-        path += uppercase ? ".MD" : ".md";
+        // We default to .md for preserved or lower; .MD for upper for backward compat
+        path += casing === "upper" ? ".MD" : ".md";
     }
-    
+
     // Apply casing
-    return uppercase ? path.toUpperCase() : path.toLowerCase();
+    if (casing === "upper") return path.toUpperCase();
+    if (casing === "lower") return path.toLowerCase();
+    return path; // preserve
 }
 
 /**

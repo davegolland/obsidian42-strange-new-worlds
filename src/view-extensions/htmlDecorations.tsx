@@ -5,6 +5,7 @@ import "tippy.js/dist/tippy.css";
 import { Platform, debounce } from "obsidian";
 import { render } from "preact";
 import { getUIC_Hoverview } from "src/ui/components/uic-ref--parent";
+import { rescanAllInlineEditorsAfterIndexUpdate } from "./references-cm6";
 
 let plugin: SNWPlugin;
 
@@ -190,4 +191,7 @@ export function updateAllSnwLiveUpdateReferences() {
 			el.textContent = newCountStr;
 		}
 	}
+	// Ensure CM6 decorations are created for links that didn't have a widget yet
+	// (e.g., when the index finished building/rebuilt).
+	try { rescanAllInlineEditorsAfterIndexUpdate(); } catch {}
 }

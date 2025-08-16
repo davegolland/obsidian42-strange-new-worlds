@@ -176,7 +176,8 @@ class snwChildComponentForMarkdownFile extends MarkdownRenderChild {
 
 			if (plugin.settings.render.linksInMarkdown && transformedCache?.links) {
 				// biome-ignore lint/complexity/noForEach: <explanation>
-				this.containerEl.querySelectorAll("a.internal-link").forEach((element) => {
+				// Avoid duplicating badges when the post-processor runs multiple times
+				this.containerEl.querySelectorAll("a.internal-link:not(.snw-link-preview)").forEach((element) => {
 					const dataHref = element.getAttribute("data-href");
 					if (!dataHref) return;
 					// Testing for normal links, links within same page starting with # and for ghost links

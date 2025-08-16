@@ -3,6 +3,7 @@
  * CM will call update as the doc updates.
  */
 import { Decoration, type DecorationSet, type EditorView, MatchDecorator, ViewPlugin, type ViewUpdate, WidgetType } from "@codemirror/view";
+import { Transaction } from "@codemirror/state";
 import { editorInfoField, parseLinktext, stripHeading, TFile } from "obsidian";
 import type SNWPlugin from "src/main";
 import type { TransformedCachedItem } from "../types";
@@ -30,8 +31,8 @@ export const InlineReferenceExtension = ViewPlugin.fromClass(
 		constructor(public view: EditorView) {
 			// The constructor seems to be called only once when a file is viewed. The decorator is called multipe times.
 			if (plugin.settings.render.blockIdInLivePreview) this.regxPattern = "(\\s\\^)(\\S+)$";
-			if (plugin.settings.render.embedsInLivePreview) this.regxPattern += `${this.regxPattern !== "" ? "|" : ""}!\\[\\[[^\\]]+?\\]\\]|#+\\s.+$`;
-			if (plugin.settings.render.linksInLivePreview) this.regxPattern += `${this.regxPattern !== "" ? "|" : ""}\\[\\[[^\\]]+?\\]\\]|#+\\s.+$`;
+			if (plugin.settings.render.embedsInLivePreview) this.regxPattern += `${this.regxPattern !== "" ? "|" : ""}!\\[\\[[^\\]]+?\\]\\]`;
+			if (plugin.settings.render.linksInLivePreview)  this.regxPattern += `${this.regxPattern !== "" ? "|" : ""}\\[\\[[^\\]]+?\\]\\]`;
 			if (plugin.settings.render.headersInLivePreview) this.regxPattern += `${this.regxPattern !== "" ? "|" : ""}^#+\\s.+`;
 
 			//if there is no regex pattern, then don't go further
@@ -192,10 +193,26 @@ export const InlineReferenceExtension = ViewPlugin.fromClass(
 			this.decorations = this.decorator.createDeco(view);
 		}
 
+		// Called when we want to rebuild decorations after the index updates
+		refresh(view: EditorView) {
+			if (!this.decorator) return;
+			this.decorations = this.decorator.createDeco(view);
+		}
+
 		update(update: ViewUpdate) {
+			if (!this.decorator) return;
+			// Normal reactive rebuilds
 			if (this.regxPattern !== "" && (update.docChanged || update.viewportChanged)) {
-				this.decorations = this.decorator ? this.decorator.updateDeco(update, this.decorations) : this.decorations;
-				// this.decorations = this.decorator?.updateDeco(update, this.decorations);
+				this.decorations = this.decorator.updateDeco(update, this.decorations);
+			}
+
+			// If we receive our "snw-refresh" userEvent, force a full rebuild even
+			// when the doc/viewport haven't changed (index became ready).
+			const refreshed = update.transactions?.some(tr =>
+				tr.annotation(Transaction.userEvent) === "snw-refresh"
+			);
+			if (refreshed) {
+				this.refresh(update.view);
 			}
 		}
 	},
@@ -299,5 +316,20 @@ export class InlineReferenceWidget extends WidgetType {
 
 	ignoreEvent() {
 		return false;
+	}
+}
+
+// --- exported helper to rescan all editors after index updates ---
+export function rescanAllInlineEditorsAfterIndexUpdate() {
+	const leaves = plugin.app.workspace.getLeavesOfType("markdown");
+	for (const leaf of leaves) {
+		const md: any = (leaf as any).view;
+		const cm: any = md?.editor?.cm;
+		if (cm) {
+			cm.dispatch({
+				// no changes; just a tag our ViewPlugin watches for
+				annotations: Transaction.userEvent.of("snw-refresh"),
+			});
+		}
 	}
 }
