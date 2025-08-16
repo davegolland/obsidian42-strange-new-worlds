@@ -1,6 +1,6 @@
 import type SNWPlugin from "./main";
 import type { TFile, CachedMetadata } from "obsidian";
-import type { TransformedCache } from "./types";
+import type { TransformedCache, VirtualLinkProvider } from "./types";
 
 /**
  * Provide a simple API for use with Templater, Dataview and debugging the complexities of various pages.
@@ -75,11 +75,19 @@ export default class SnwAPI {
 		return {
 			TFile: currentFile,
 			metadataCache: currentFile ? this.plugin.app.metadataCache.getFileCache(currentFile) : null,
-			SnwTransformedCache: currentFile ? this.plugin.referenceCountingPolicy.getSNWCacheByFile(currentFile) : null,
+			SnwTransformedCache: currentFile ? await this.plugin.referenceCountingPolicy.getSNWCacheByFile(currentFile) : null,
 		};
 	};
 
 	parseLinkTextToFullPath(linkText: string) {
 		return this.plugin.referenceCountingPolicy.parseLinkTextToFullPath(linkText);
+	}
+
+	/**
+	 * Register a Virtual Link Provider.
+	 * Returns an unregister function; call it to remove the provider.
+	 */
+	registerVirtualLinkProvider(provider: VirtualLinkProvider): () => void {
+		return this.plugin.referenceCountingPolicy.registerVirtualLinkProvider(provider);
 	}
 }

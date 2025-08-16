@@ -1,4 +1,4 @@
-import type { Link, TransformedCache, TransformedCachedItem } from "../types";
+import type { Link, TransformedCache, TransformedCachedItem, VirtualLinkProvider } from "../types";
 import type SNWPlugin from "../main";
 import { stripHeading, type TFile, parseLinktext } from "obsidian";
 import { type WikilinkEquivalencePolicy } from "./wikilink-equivalence";
@@ -15,6 +15,8 @@ export class ReferenceCountingPolicy {
     public indexedReferences: Map<string, Link[]>;
     private activePolicy: WikilinkEquivalencePolicy = getPolicyByType('case-insensitive');
     private debugMode: boolean = false; // Can be toggled for diagnostics
+    /** Registered virtual link providers */
+    private virtualLinkProviders: Set<VirtualLinkProvider> = new Set();
 
     constructor(plugin: SNWPlugin) {
         this.plugin = plugin;
@@ -43,7 +45,7 @@ export class ReferenceCountingPolicy {
         
         this.setActivePolicyFromSettings();
         this.invalidateCache();
-        this.buildLinksAndReferences();
+        this.buildLinksAndReferences().catch(console.error);
     }
 
     /**
@@ -185,9 +187,90 @@ export class ReferenceCountingPolicy {
     }
 
     /**
+     * Register a provider that supplies additional (virtual) links per file.
+     * Returns an unregister function.
+     */
+    registerVirtualLinkProvider(provider: VirtualLinkProvider): () => void {
+        this.virtualLinkProviders.add(provider);
+        // Rebuild so new links are visible immediately
+        this.invalidateCache();
+        this.buildLinksAndReferences().catch(console.error);
+        return () => {
+            this.virtualLinkProviders.delete(provider);
+            this.invalidateCache();
+            this.buildLinksAndReferences().catch(console.error);
+        };
+    }
+
+    /**
+     * Small helper for providers to build a fully-formed Link from link text.
+     */
+    private makeLinkFor(file: TFile, linkText: string, displayText = "", pos?: { start: any; end: any }): Link {
+        const parsed = parseLinktext(linkText);
+        // Resolve destination (may be null → ghost file handling below)
+        const dest = this.plugin.app.metadataCache.getFirstLinkpathDest(parsed.path, file.path);
+        const real = parsed.subpath ? `${parsed.path}#${parsed.subpath}` : parsed.path;
+        const reference = {
+            link: parsed.subpath ? `#${parsed.subpath}` : parsed.path,
+            key: `${(dest?.path ?? parsed.path).toUpperCase()}${parsed.subpath ? `#${parsed.subpath}` : ""}`,
+            displayText: displayText || parsed.path,
+            // Pos is optional; when missing we synthesize a harmless zero-length range
+            position: (pos as any) ?? ({ start: { line: 0, col: 0, offset: 0 }, end: { line: 0, col: 0, offset: 0 } }),
+        } as Link["reference"];
+        if (dest) {
+            return {
+                realLink: real,
+                reference,
+                resolvedFile: dest,
+                sourceFile: file,
+            };
+        }
+        // Ghost destination: synthesize a TFile-like shape enough for keying
+        return {
+            realLink: real,
+            reference,
+            resolvedFile: {
+                path: `${parsed.path}.md`,
+                name: `${parsed.path}.md`,
+                basename: parsed.path,
+                extension: "md",
+            } as unknown as TFile,
+            sourceFile: file,
+        };
+    }
+
+    /**
+     * Invoke all providers for a file and merge their links into the index.
+     */
+    private async applyVirtualProviders(file: TFile, cache: any): Promise<void> {
+        if (this.virtualLinkProviders.size === 0) return;
+        const makeLink = (lt: string, dt?: string, p?: any) => this.makeLinkFor(file, lt, dt, p);
+        for (const provider of this.virtualLinkProviders) {
+            try {
+                const links = await Promise.resolve(provider({ file, cache, makeLink }));
+                for (const link of links || []) {
+                    const k = this.activePolicy.generateKey(link);
+                    this.indexedReferences.set(k, [ ...(this.indexedReferences.get(k) || []), link ]);
+                }
+            } catch (e) {
+                console.warn("SNW: VirtualLinkProvider error", e);
+            }
+        }
+    }
+
+    /**
+     * Ensures virtual links are included whenever we scan a file.
+     * Hook this at the end of any per-file indexing pass.
+     */
+    private async finalizeFileIndexing(file: TFile, cache: any): Promise<void> {
+        await this.applyVirtualProviders(file, cache);
+        this.lastUpdateToReferences = Date.now();
+    }
+
+    /**
      * Builds a list of cache references for resolving the block count
      */
-    buildLinksAndReferences(): void {
+    async buildLinksAndReferences(): Promise<void> {
         if (this.plugin.showCountsActive !== true) return;
 
         // Clear existing references
@@ -299,6 +382,9 @@ export class ReferenceCountingPolicy {
                 }
             }
         }
+        
+        // Apply virtual link providers for this file
+        this.finalizeFileIndexing(file, cache);
     }
 
     /**
@@ -317,7 +403,7 @@ export class ReferenceCountingPolicy {
      * @param file The file to get cache for
      * @returns The transformed cache
      */
-    getSNWCacheByFile(file: TFile): TransformedCache {
+    async getSNWCacheByFile(file: TFile): Promise<TransformedCache> {
         // Debug flags
         const logDebugInfo = this.debugMode;
         
@@ -337,7 +423,9 @@ export class ReferenceCountingPolicy {
         if (!cachedMetaData) return transformedCache;
         const filePathInUppercase = file.path.toLocaleUpperCase();
 
-        if (!this.indexedReferences.size) this.buildLinksAndReferences();
+        if (!this.indexedReferences.size) {
+            await this.buildLinksAndReferences();
+        }
 
         if (cachedMetaData?.headings) {
             // Create a heading link object that can be used with the policy

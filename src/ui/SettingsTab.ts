@@ -392,7 +392,7 @@ export class SettingsTab extends PluginSettingTab {
 					.setButtonText("Rebuild References")
 					.setTooltip("Force rebuild all references using the selected policy")
 					.onClick(() => {
-						this.plugin.referenceCountingPolicy.buildLinksAndReferences();
+						this.plugin.referenceCountingPolicy.buildLinksAndReferences().catch(console.error);
 					});
 			})
 			.addButton((button) => {

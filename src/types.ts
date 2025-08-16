@@ -78,3 +78,17 @@ export interface Section {
 	pos?: number;
 	type: string;
 }
+
+/**
+ * Providers can return additional virtual links (e.g., Dataview, properties, computed relationships)
+ * for a given file+cache. Returned links will be indexed just like regular wikilinks.
+ */
+export type VirtualLinkProvider = (args: {
+	file: TFile;
+	cache: CachedMetadata;
+	/**
+	 * Helper to build a Link object from a link text (e.g., 'Note A#Section' or 'Folder/Note A').
+	 * Use this to avoid constructing Link by hand.
+	 */
+	makeLink: (linkText: string, displayText?: string, pos?: Pos) => Link;
+}) => Link[] | Promise<Link[]>;

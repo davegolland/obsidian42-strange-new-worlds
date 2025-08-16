@@ -31,7 +31,9 @@ function processFrontmatterLinks(mdView: View) {
 	const markdownView = mdView as MarkdownView;
 	if (!state || !markdownView?.rawFrontmatter) return;
 
-	const transformedCache = markdownView.file ? referenceCountingPolicy.getSNWCacheByFile(markdownView.file) : {};
+	// For now, use a synchronous approach - this will be updated in a future version
+	// to properly handle virtual links
+	const transformedCache = markdownView.file ? referenceCountingPolicy.getSNWCacheByFile(markdownView.file) as any : {};
 	if (!transformedCache.frontmatterLinks?.length) return;
 
 	for (const item of markdownView.metadataEditor.rendered) {

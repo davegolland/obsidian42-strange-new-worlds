@@ -143,7 +143,7 @@ export default class SNWPlugin extends Plugin {
 		this.referenceCountingPolicy.setActivePolicy(this.settings.wikilinkEquivalencePolicy);
 		
 		// Force a rebuild of all references with the correct policy
-		this.referenceCountingPolicy.buildLinksAndReferences();
+		this.referenceCountingPolicy.buildLinksAndReferences().catch(console.error);
 		
 		this.addSettingTab(new SettingsTab(this.app, this));
 
@@ -191,7 +191,7 @@ export default class SNWPlugin extends Plugin {
 				events: ["rename", "delete"],
 				handler: () => {
 					// Full vault rebuild
-					this.referenceCountingPolicy.buildLinksAndReferences();
+					this.referenceCountingPolicy.buildLinksAndReferences().catch(console.error);
 					updateHeadersDebounce();
 					updatePropertiesDebounce();
 					updateAllSnwLiveUpdateReferencesDebounce();
@@ -254,7 +254,7 @@ export default class SNWPlugin extends Plugin {
 			if (!this.app.workspace.getLeavesOfType(VIEW_TYPE_SNW)?.length) {
 				await this.app.workspace.getRightLeaf(false)?.setViewState({ type: VIEW_TYPE_SNW, active: false });
 			}
-			this.referenceCountingPolicy.buildLinksAndReferences();
+			this.referenceCountingPolicy.buildLinksAndReferences().catch(console.error);
 		});
 	}
 
@@ -276,7 +276,7 @@ export default class SNWPlugin extends Plugin {
 		this.referenceCountingPolicy.setActivePolicy(currentPolicy);
 		
 		// Completely rebuild index
-		this.referenceCountingPolicy.buildLinksAndReferences();
+		this.referenceCountingPolicy.buildLinksAndReferences().catch(console.error);
 		
 		// Force UI updates using debounced helpers
 		updateHeadersDebounce();

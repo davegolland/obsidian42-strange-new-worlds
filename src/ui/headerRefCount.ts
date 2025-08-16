@@ -42,7 +42,9 @@ function countIncomingLinks(mdViewFile: TFile) {
 	}
 
 	// check if the page is to be ignored
-	const transformedCache = plugin.referenceCountingPolicy.getSNWCacheByFile(mdViewFile);
+	// For now, use a synchronous approach - this will be updated in a future version
+	// to properly handle virtual links
+	const transformedCache = plugin.referenceCountingPolicy.getSNWCacheByFile(mdViewFile) as any;
 	if (transformedCache?.cacheMetaData?.frontmatter?.["snw-file-exclude"] === true) incomingLinksCount = 0;
 	
 	return incomingLinksCount;

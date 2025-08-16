@@ -87,7 +87,9 @@ export const InlineReferenceExtension = ViewPlugin.fromClass(
 
 						mdViewFile = mdView.file as TFile;
 
-						const transformedCache = referenceCountingPolicy.getSNWCacheByFile(mdViewFile);
+						// For now, use a synchronous approach - this will be updated in a future version
+						// to properly handle virtual links
+						const transformedCache = referenceCountingPolicy.getSNWCacheByFile(mdViewFile) as any;
 
 						if (
 							(transformedCache.links || transformedCache.headings || transformedCache.embeds || transformedCache.blocks) &&

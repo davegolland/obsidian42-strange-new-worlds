@@ -6,6 +6,27 @@ The basic idea is we want to see when links, block references and embeds have as
 
 ![](media/SNW.gif)
 
+## 🆕 Virtual Links
+
+Strange New Worlds now supports **Virtual Links** - a powerful feature that allows other plugins and snippets to register dynamic link providers. These virtual links are indexed just like regular wikilinks and appear in reference counts, gutters, and the sidebar.
+
+### Quick Example
+
+```typescript
+// Register a provider that treats frontmatter 'related' property as links
+const unregister = window.snwAPI!.registerVirtualLinkProvider(({ file, cache, makeLink }) => {
+    const links = [];
+    if (cache?.frontmatter?.related) {
+        cache.frontmatter.related.forEach(noteName => {
+            links.push(makeLink(noteName, `Related: ${noteName}`));
+        });
+    }
+    return links;
+});
+```
+
+See [Virtual Links Documentation](docs/VIRTUAL_LINKS_EXAMPLE.md) for detailed examples and API reference.
+
 Documentation for this plugin can be found at: https://tfthacker.com/SNW
 
 See videos on how to use Strange New Worlds: https://tfthacker.com/SNW-videos

@@ -97,7 +97,9 @@ class snwChildComponentForMarkdownFile extends MarkdownRenderChild {
 
 	onload(): void {
 		const minRefCountThreshold = plugin.settings.minimumRefCountThreshold;
-		const transformedCache = referenceCountingPolicy.getSNWCacheByFile(this.currentFile);
+		// For now, use a synchronous approach - this will be updated in a future version
+		// to properly handle virtual links
+		const transformedCache = referenceCountingPolicy.getSNWCacheByFile(this.currentFile) as any;
 
 		if (transformedCache?.cacheMetaData?.frontmatter?.["snw-file-exclude"] === true) return;
 		if (transformedCache?.cacheMetaData?.frontmatter?.["snw-canvas-exclude-preview"] === true) return;
