@@ -257,8 +257,30 @@ export default class SNWPlugin extends Plugin {
 			if (!this.app.workspace.getLeavesOfType(VIEW_TYPE_SNW)?.length) {
 				await this.app.workspace.getRightLeaf(false)?.setViewState({ type: VIEW_TYPE_SNW, active: false });
 			}
-			this.referenceCountingPolicy.buildLinksAndReferences().catch(console.error);
+			// Build the index, then proactively refresh all UI so badges appear without edits
+			this.referenceCountingPolicy.buildLinksAndReferences()
+				.then(() => {
+					try {
+						updateHeadersDebounce();
+						updatePropertiesDebounce();
+						updateAllSnwLiveUpdateReferencesDebounce(); // also triggers CM6 rescan internally
+					} catch (e) {
+						console.error("SNW: post-index UI refresh failed", e);
+					}
+				})
+				.catch(console.error);
 		});
+
+		// When the user switches notes, ensure inline badges render even if nothing changed
+		this.registerEvent(
+			this.app.workspace.on("active-leaf-change", () => {
+				try {
+					updateAllSnwLiveUpdateReferencesDebounce();
+				} catch (e) {
+					console.error("SNW: leaf-change refresh failed", e);
+				}
+			})
+		);
 	}
 
 	/**

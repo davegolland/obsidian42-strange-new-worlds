@@ -78,6 +78,8 @@ class snwChildComponentMardkownWithoutFile extends MarkdownRenderChild {
 				1,
 			);
 			link.after(referenceElement);
+			// Mark so we don't add another badge if this block gets re-rendered
+			(link as HTMLElement).setAttribute("data-snw-has-badge", "1");
 		}
 	}
 }
@@ -228,7 +230,9 @@ class snwChildComponentForMarkdownFile extends MarkdownRenderChild {
 							);
 							referenceElement.addClass("snw-heading-preview");
 							const headerElement = this.containerEl.querySelector("h1,h2,h3,h4,h5,h6");
-							if (headerElement) {
+							// De-dupe: the preview post-processor can run multiple times on the same section.
+							// If this heading already has our badge, skip inserting a second copy.
+							if (headerElement && !headerElement.querySelector(".snw-heading-preview")) {
 								headerElement.insertAdjacentElement("beforeend", referenceElement);
 							}
 							break;
