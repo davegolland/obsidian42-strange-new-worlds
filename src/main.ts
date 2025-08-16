@@ -101,9 +101,12 @@ export default class SNWPlugin extends Plugin {
 		// Initialize feature manager
 		this.featureManager = new FeatureManager(this, this.settings, this.showCountsActive);
 		
+		// 1) Load settings and build the index FIRST so UI has data on first paint
+		await this.initSettings();
+		await this.referenceCountingPolicy.buildLinksAndReferences();
+		// 2) Now wire up UI/view extensions
 		await this.initUI();
 		await this.initAPI();
-		await this.initSettings();
 		await this.initViews();
 		await this.initDebouncedEvents();
 		await this.initCommands();
@@ -142,8 +145,8 @@ export default class SNWPlugin extends Plugin {
 		// Ensure the reference counting policy is using the correct policy from settings
 		this.referenceCountingPolicy.setActivePolicy(this.settings.wikilinkEquivalencePolicy);
 		
-		// Force a rebuild of all references with the correct policy
-		this.referenceCountingPolicy.buildLinksAndReferences().catch(console.error);
+		// Build synchronously from caller so first render has data
+		// await this.referenceCountingPolicy.buildLinksAndReferences();
 		
 		this.addSettingTab(new SettingsTab(this.app, this));
 
@@ -204,7 +207,7 @@ export default class SNWPlugin extends Plugin {
 				handler: async (file: TFile, data: string, cache: CachedMetadata) => {
 					// Single file update
 					await this.referenceCountingPolicy.removeLinkReferencesForFile(file);
-					this.referenceCountingPolicy.getLinkReferencesForFile(file, cache);
+					await this.referenceCountingPolicy.getLinkReferencesForFile(file, cache);
 					updateHeadersDebounce();
 					updatePropertiesDebounce();
 					updateAllSnwLiveUpdateReferencesDebounce();

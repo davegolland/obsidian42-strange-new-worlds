@@ -290,7 +290,7 @@ export class ReferenceCountingPolicy {
                         console.log(`  Links found: ${fileCache.links.length}`);
                     }
                 }
-                this.getLinkReferencesForFile(file, fileCache);
+                await this.getLinkReferencesForFile(file, fileCache);
             }
         }
         
@@ -308,7 +308,7 @@ export class ReferenceCountingPolicy {
      * @param file The file to process
      * @param cache The cached metadata for the file
      */
-    getLinkReferencesForFile(file: TFile, cache: any): void {
+    async getLinkReferencesForFile(file: TFile, cache: any): Promise<void> {
         // Debug flags
         const logDebugInfo = this.debugMode;
         
@@ -383,8 +383,8 @@ export class ReferenceCountingPolicy {
             }
         }
         
-        // Apply virtual link providers for this file
-        this.finalizeFileIndexing(file, cache);
+        // Include virtual links before reporting "done"
+        await this.finalizeFileIndexing(file, cache);
     }
 
     /**
@@ -403,7 +403,7 @@ export class ReferenceCountingPolicy {
      * @param file The file to get cache for
      * @returns The transformed cache
      */
-    async getSNWCacheByFile(file: TFile): Promise<TransformedCache> {
+    getSNWCacheByFile(file: TFile): TransformedCache {
         // Debug flags
         const logDebugInfo = this.debugMode;
         
@@ -423,9 +423,9 @@ export class ReferenceCountingPolicy {
         if (!cachedMetaData) return transformedCache;
         const filePathInUppercase = file.path.toLocaleUpperCase();
 
-        if (!this.indexedReferences.size) {
-            await this.buildLinksAndReferences();
-        }
+        // Keep this synchronous for callers (CM6/preview). The index is guaranteed
+        // to be built up front by main.ts onload()/initSettings().
+        if (!this.indexedReferences.size) this.buildLinksAndReferences();
 
         if (cachedMetaData?.headings) {
             // Create a heading link object that can be used with the policy

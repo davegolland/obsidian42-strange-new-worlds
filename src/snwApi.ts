@@ -69,13 +69,13 @@ export default class SnwAPI {
 		return this.searchReferences({ contains: searchString });
 	};
 
-	// For given file name passed into the function, get the meta info for that file
+			// For given file name passed into the function, get the meta info for that file
 	getMetaInfoByFileName = async (fileName: string) => {
 		const currentFile = this.plugin.app.metadataCache.getFirstLinkpathDest(fileName, "/");
 		return {
 			TFile: currentFile,
 			metadataCache: currentFile ? this.plugin.app.metadataCache.getFileCache(currentFile) : null,
-			SnwTransformedCache: currentFile ? await this.plugin.referenceCountingPolicy.getSNWCacheByFile(currentFile) : null,
+			SnwTransformedCache: currentFile ? this.plugin.referenceCountingPolicy.getSNWCacheByFile(currentFile) : null,
 		};
 	};
 
