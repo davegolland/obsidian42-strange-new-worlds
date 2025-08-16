@@ -144,7 +144,7 @@ class snwChildComponentForMarkdownFile extends MarkdownRenderChild {
 
 			if (plugin.settings.render.embedsInMarkdown && transformedCache?.embeds) {
 				// biome-ignore lint/complexity/noForEach: <explanation>
-				this.containerEl.querySelectorAll(".internal-embed:not(.snw-embed-preview)").forEach((element) => {
+				this.containerEl.querySelectorAll(".internal-embed:not([data-snw-has-badge=\"1\"])").forEach((element) => {
 					const src = element.getAttribute("src");
 					if (!src) return;
 
@@ -168,6 +168,7 @@ class snwChildComponentForMarkdownFile extends MarkdownRenderChild {
 							);
 							referenceElement.addClass("snw-embed-preview");
 							element.after(referenceElement);
+							element.setAttribute("data-snw-has-badge", "1"); // Mark the embed element
 							break;
 						}
 					}
@@ -177,7 +178,7 @@ class snwChildComponentForMarkdownFile extends MarkdownRenderChild {
 			if (plugin.settings.render.linksInMarkdown && transformedCache?.links) {
 				// biome-ignore lint/complexity/noForEach: <explanation>
 				// Avoid duplicating badges when the post-processor runs multiple times
-				this.containerEl.querySelectorAll("a.internal-link:not(.snw-link-preview)").forEach((element) => {
+				this.containerEl.querySelectorAll("a.internal-link:not([data-snw-has-badge=\"1\"])").forEach((element) => {
 					const dataHref = element.getAttribute("data-href");
 					if (!dataHref) return;
 					// Testing for normal links, links within same page starting with # and for ghost links
@@ -188,7 +189,7 @@ class snwChildComponentForMarkdownFile extends MarkdownRenderChild {
 
 					for (const value of transformedCache.links ?? []) {
 						if (
-							value.references.length >= Math.max(2, minRefCountThreshold) &&
+							value.references.length >= minRefCountThreshold &&
 							linkKey === value.key
 						) {
 							const referenceElement = htmlDecorationForReferencesElement(
@@ -202,6 +203,7 @@ class snwChildComponentForMarkdownFile extends MarkdownRenderChild {
 							);
 							referenceElement.addClass("snw-link-preview");
 							element.after(referenceElement);
+							element.setAttribute("data-snw-has-badge", "1"); // Mark the link element
 							break;
 						}
 					}

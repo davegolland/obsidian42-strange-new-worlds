@@ -241,7 +241,7 @@ const constructWidgetForInlineReference = (
 		}
 
 		const refCount = referenceCountingPolicy.countReferences(ref.references);
-		if (refType === "link" && refCount === 1) continue; // if this is a link and there is only one reference, don't show the widget
+		// Remove the hard-coded skip for links with count = 1, let the threshold setting control this
 
 		if (refType === "embed" || refType === "link") {
 			// check for aliased references
