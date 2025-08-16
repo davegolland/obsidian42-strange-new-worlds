@@ -1,5 +1,5 @@
 export type SortOption = "name-asc" | "name-desc" | "mtime-asc" | "mtime-desc";
-export type WikilinkEquivalencePolicyType = "case-insensitive" | "same-file" | "word-form" | "base-name" | "unique-files";
+export type WikilinkEquivalencePolicyType = "case-insensitive" | "case-sensitive" | "prefix-overlap" | "same-file" | "word-form" | "base-name" | "unique-files";
 
 export interface RenderSettings {
 	blockIdInMarkdown: boolean;

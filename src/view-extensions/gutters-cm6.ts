@@ -58,10 +58,10 @@ const ReferenceGutterExtension = gutter({
 		// @ts-ignore - Check if should show in source mode
 		if (mdView.currentMode?.sourceMode === true && plugin.settings.displayInlineReferencesInSourceMode === false) return null;
 
-		if (!mdView.file) return null;
-		// For now, use a synchronous approach - this will be updated in a future version
-		// to properly handle virtual links
-		const transformedCache = referenceCountingPolicy.getSNWCacheByFile(mdView.file) as any;
+		        if (!mdView.file) return null;
+        // For now, use a synchronous approach - this will be updated in a future version
+        // to properly handle virtual links
+        const transformedCache = referenceCountingPolicy.getSNWCacheByFile(mdView.file) as any;
 
 		// check if the page is to be ignored
 		if (transformedCache?.cacheMetaData?.frontmatter?.["snw-file-exclude"] === true) return null;

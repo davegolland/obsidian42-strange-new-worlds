@@ -70,6 +70,35 @@ export class CaseInsensitivePolicy extends AbstractWikilinkEquivalencePolicy {
 }
 
 /**
+ * Policy that treats links as case sensitive (exact matching)
+ */
+export class CaseSensitivePolicy extends AbstractWikilinkEquivalencePolicy {
+    name = "Case Sensitive";
+    
+    generateKey(link: Link): string {
+        const basePath = normalizeBase(link, true); // true = preserve case
+        return basePath;
+    }
+}
+
+/**
+ * Policy that considers links equivalent if they share a prefix overlap of 1
+ * For example: "Project Alpha" and "Project Beta" would be equivalent
+ */
+export class PrefixOverlapPolicy extends AbstractWikilinkEquivalencePolicy {
+    name = "Prefix Overlap (1)";
+    
+    generateKey(link: Link): string {
+        const basePath = normalizeBase(link);
+        const baseName = getBasenameWithoutExt(basePath);
+        
+        // Split by common separators and take the first part
+        const parts = baseName.split(/[\s\-_\.]+/);
+        return parts[0] || baseName;
+    }
+}
+
+/**
  * Policy that considers links within the same source file as different equivalence classes
  */
 export class SameFilePolicy extends AbstractWikilinkEquivalencePolicy {

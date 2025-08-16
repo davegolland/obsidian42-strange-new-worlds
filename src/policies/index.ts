@@ -1,5 +1,7 @@
 import { 
     CaseInsensitivePolicy, 
+    CaseSensitivePolicy,
+    PrefixOverlapPolicy,
     SameFilePolicy, 
     WordFormPolicy, 
     BaseNamePolicy, 
@@ -22,6 +24,8 @@ interface PolicyRegistry {
  */
 export const POLICY_REGISTRY: PolicyRegistry = {
     'case-insensitive': new CaseInsensitivePolicy(),
+    'case-sensitive': new CaseSensitivePolicy(),
+    'prefix-overlap': new PrefixOverlapPolicy(),
     'same-file': new SameFilePolicy(),
     'word-form': new WordFormPolicy(),
     'base-name': new BaseNamePolicy(),
