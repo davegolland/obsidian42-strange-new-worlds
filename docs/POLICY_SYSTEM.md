@@ -21,7 +21,10 @@ src/policies/
 │   ├── PrefixOverlapPolicy.ts          # Prefix-based grouping
 │   ├── UniqueFilesPolicy.ts            # No grouping
 │   └── ExternalServicePolicy.ts        # External service integration
-├── index.ts                            # Policy registry
+├── auto-registry.ts                    # Auto-generated registry (DO NOT EDIT)
+├── auto-types.ts                       # Auto-generated types (DO NOT EDIT)
+├── registry.ts                         # Registry implementation
+├── index.ts                            # Policy exports
 ├── linkKeyUtils.ts                     # Shared utilities
 └── reference-counting.ts               # Main counting logic
 ```
@@ -99,22 +102,23 @@ This policy:
 
 ## Configuration
 
+### Auto-Discovery System
+
+The policy system now uses **automatic discovery** - no manual configuration required! Simply add a new policy file to `src/policies/policies/` and it will be automatically registered.
+
+**Policy ID Convention**: The system automatically generates policy IDs from filenames:
+- `CaseInsensitivePolicy.ts` → `case-insensitive`
+- `WordFormPolicy.ts` → `word-form`
+- `ExternalServicePolicy.ts` → `external-service`
+
+**Dynamic Settings Types**: The `WikilinkEquivalencePolicyType` is automatically generated from discovered policies, so TypeScript settings remain type-safe without manual updates.
+
 ### Enabling/Disabling Policies
 
-Policies are configured by commenting/uncommenting lines in `src/policies/index.ts`:
+Policies are automatically discovered from files in `src/policies/policies/`. To disable a policy:
 
-```typescript
-// To enable a policy, uncomment these lines:
-import { ExternalServicePolicy } from './policies/ExternalServicePolicy';
-"external-service": new ExternalServicePolicy({ 
-  endpoint: "http://localhost:8787/snw/key", 
-  apiKey: "env:SNW_KEY" 
-}),
-
-// To disable a policy, comment out the import and registry entry
-// import { WordFormPolicy } from './policies/WordFormPolicy';
-// "word-form": new WordFormPolicy(),
-```
+1. **Temporary**: Comment out the registration in the generated `src/policies/auto-registry.ts`
+2. **Permanent**: Rename the file (e.g., `ExternalServicePolicy.ts.bak`) or move it out of the directory
 
 ### Adding New Policies
 
@@ -123,7 +127,7 @@ import { ExternalServicePolicy } from './policies/ExternalServicePolicy';
 ```typescript
 // src/policies/policies/CustomPolicy.ts
 import { AbstractWikilinkEquivalencePolicy } from "../base/WikilinkEquivalencePolicy";
-import { Link } from "../../types";
+import type { Link } from "../../types";
 
 export class CustomPolicy extends AbstractWikilinkEquivalencePolicy {
   name = "Custom Policy";
@@ -135,16 +139,17 @@ export class CustomPolicy extends AbstractWikilinkEquivalencePolicy {
 }
 ```
 
-2. Add to the registry in `src/policies/index.ts`:
+2. **That's it!** The policy will be automatically discovered and registered with ID `custom`.
+
+### Policies with Constructor Parameters
+
+For policies that need configuration (like `ExternalServicePolicy`), the auto-registry will comment them out with a TODO:
 
 ```typescript
-import { CustomPolicy } from './policies/CustomPolicy';
-
-export const POLICY_REGISTRY: PolicyRegistry = {
-  // ... existing policies
-  "custom": new CustomPolicy(),
-};
+// _registerPolicy("external-service", new ExternalServicePolicy({ endpoint: "http://localhost:8787/snw/key", apiKey: "env:SNW_KEY" })); // TODO: Configure external service policy
 ```
+
+To enable such policies, uncomment and configure the registration in `src/policies/auto-registry.ts`.
 
 ### Async Policies
 
@@ -220,4 +225,6 @@ The old monolithic `wikilink-equivalence.ts` file has been replaced with the mod
 If you have custom policies from the old system, migrate them by:
 1. Moving the class to `src/policies/policies/`
 2. Extending `AbstractWikilinkEquivalencePolicy`
-3. Adding to the registry in `index.ts`
+3. **That's it!** The auto-discovery system will automatically register your policy
+
+The new system eliminates the need to manually maintain the policy registry - just add files and they're automatically discovered!

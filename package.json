@@ -3,7 +3,9 @@
 	"version": "2.3.2",
 	"description": "Revealing networked thought and the strange new worlds created by your vault",
 	"scripts": {
+		"predev": "node scripts/generate-policy-registry.mjs",
 		"dev": "node --no-warnings esbuild.config.mjs",
+		"prebuild": "node scripts/generate-policy-registry.mjs",
 		"build": "node --no-warnings esbuild.config.mjs production",
 		"lint": "biome check ./src",
 		"version": "node scripts/release.mjs --local",
