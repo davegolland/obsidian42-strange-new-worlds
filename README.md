@@ -4,6 +4,17 @@ This plugin helps you to see the connections between the different parts of your
 
 The basic idea is we want to see when links, block references and embeds have associations with other files in the vault. The problem is you have to search, open backlinks, and so on to find out what is going on. But there are so many strange new worlds of networked thought to discover in our vault. This plugin attempts to resurface those connections and not be too intrusive (or not too intrusive) in doing so.
 
+## 🔧 Modular Policy System
+
+Strange New Worlds features a **modular policy system** that determines how wikilinks should be considered equivalent. Each policy is self-contained and can be easily enabled/disabled or extended:
+
+- **Built-in Policies**: Case insensitive, word form unification, prefix overlap, and more
+- **External Service Integration**: Connect to backend services for advanced link normalization
+- **Easy Configuration**: Toggle policies by commenting/uncommenting lines
+- **Async Support**: Policies can perform external API calls for real-time normalization
+
+See [Policy System Documentation](docs/POLICY_SYSTEM.md) for detailed information on creating and configuring policies.
+
 ![](media/SNW.gif)
 
 ## 🆕 Virtual Links

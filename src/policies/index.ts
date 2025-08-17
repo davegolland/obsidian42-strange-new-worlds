@@ -1,13 +1,13 @@
-import { 
-    CaseInsensitivePolicy, 
-    CaseSensitivePolicy,
-    PrefixOverlapPolicy,
-    SameFilePolicy, 
-    WordFormPolicy, 
-    BaseNamePolicy, 
-    UniqueFilesPolicy,
-    WikilinkEquivalencePolicy
-} from './wikilink-equivalence';
+import type { WikilinkEquivalencePolicy } from './base/WikilinkEquivalencePolicy';
+import { CaseInsensitivePolicy } from './policies/CaseInsensitivePolicy';
+import { CaseSensitivePolicy } from './policies/CaseSensitivePolicy';
+import { PrefixOverlapPolicy } from './policies/PrefixOverlapPolicy';
+import { SameFilePolicy } from './policies/SameFilePolicy';
+import { WordFormPolicy } from './policies/WordFormPolicy';
+import { BaseNamePolicy } from './policies/BaseNamePolicy';
+import { UniqueFilesPolicy } from './policies/UniqueFilesPolicy';
+// Optional: comment in/out to enable service-backed policy
+// import { ExternalServicePolicy } from './policies/ExternalServicePolicy';
 import { WikilinkEquivalencePolicyType } from '../settings';
 
 /**
@@ -19,17 +19,18 @@ interface PolicyRegistry {
 }
 
 /**
- * All available policy instances
- * This map auto-registers all policy classes and provides a central lookup
+ * Toggle policies simply by commenting import lines above and the entries below.
+ * This keeps "configuration = set of files present/imported".
  */
 export const POLICY_REGISTRY: PolicyRegistry = {
-    'case-insensitive': new CaseInsensitivePolicy(),
-    'case-sensitive': new CaseSensitivePolicy(),
-    'prefix-overlap': new PrefixOverlapPolicy(),
-    'same-file': new SameFilePolicy(),
-    'word-form': new WordFormPolicy(),
-    'base-name': new BaseNamePolicy(),
-    'unique-files': new UniqueFilesPolicy()
+  "case-insensitive": new CaseInsensitivePolicy(),
+  "case-sensitive":   new CaseSensitivePolicy(),
+  "prefix-overlap":   new PrefixOverlapPolicy(),
+  "same-file":        new SameFilePolicy(),
+  "word-form":        new WordFormPolicy(),
+  "base-name":        new BaseNamePolicy(),
+  "unique-files":     new UniqueFilesPolicy(),
+  // "external-service": new ExternalServicePolicy({ endpoint: "http://localhost:8787/snw/key", apiKey: "env:SNW_KEY" }),
 };
 
 /**

@@ -1,3 +1,23 @@
+# 2.4.0
+
+## Major: Modular Policy System
+
+- **New**: Completely modularized the policy system for better maintainability and extensibility
+  - Each policy is now in its own file under `src/policies/policies/`
+  - Added support for async policies with external service integration
+  - New `ExternalServicePolicy` for backend integration
+  - Easy policy configuration by commenting/uncommenting imports
+- **New**: Added comprehensive policy system documentation (`docs/POLICY_SYSTEM.md`)
+- **Improved**: Better separation of concerns with shared interface in `src/policies/base/`
+- **Enhanced**: Async support for policies that need external API calls
+- **Maintained**: Full backward compatibility with existing functionality
+
+## Documentation
+
+- Added detailed policy system documentation with examples and best practices
+- Updated main README to highlight the new modular policy system
+- Updated developer guide to reflect new structure
+
 # 2.3.2
 - Fix: When using editing toolbar configured for showing toolbar at top, the SNW reference counter overlapped. The CSS was mofiied to prevent this. [#155](https://github.com/TfTHacker/obsidian42-strange-new-worlds/issues/155).
 

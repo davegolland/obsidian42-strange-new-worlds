@@ -1,7 +1,7 @@
 import type { Link, TransformedCache, TransformedCachedItem, VirtualLinkProvider } from "../types";
 import type SNWPlugin from "../main";
 import { stripHeading, type TFile, parseLinktext } from "obsidian";
-import { type WikilinkEquivalencePolicy } from "./wikilink-equivalence";
+import type { WikilinkEquivalencePolicy } from "./base/WikilinkEquivalencePolicy";
 import { getPolicyByType } from "./index";
 
 export class ReferenceCountingPolicy {
@@ -89,7 +89,16 @@ export class ReferenceCountingPolicy {
                 sourceFile: null
             };
             
-            return this.activePolicy.generateKey(ghostLink);
+            // For async policies, we need to fall back to sync method in UI context
+            const useAsync = !!this.activePolicy.isAsync?.();
+            if (useAsync && this.activePolicy.generateKey) {
+                return this.activePolicy.generateKey(ghostLink);
+            } else if (useAsync) {
+                // Fallback for async-only policies
+                return (ghostLink.resolvedFile?.path ?? ghostLink.realLink).toUpperCase();
+            } else {
+                return this.activePolicy.generateKey!(ghostLink);
+            }
         }
         
         // Create a temporary Link object with resolved file
@@ -105,13 +114,25 @@ export class ReferenceCountingPolicy {
             sourceFile: null
         };
         
+        // For async policies, we need to fall back to sync method in UI context
+        const useAsync = !!this.activePolicy.isAsync?.();
+        let key: string;
+        if (useAsync && this.activePolicy.generateKey) {
+            key = this.activePolicy.generateKey(link);
+        } else if (useAsync) {
+            // Fallback for async-only policies
+            key = (link.resolvedFile?.path ?? link.realLink).toUpperCase();
+        } else {
+            key = this.activePolicy.generateKey!(link);
+        }
+        
         if (this.debugMode) {
             console.log(`Generating key for link: ${linkText}`);
             console.log(`  Resolved file: ${resolvedFile?.path || 'None'}`);
-            console.log(`  Generated key: ${this.activePolicy.generateKey(link)}`);
+            console.log(`  Generated key: ${key}`);
         }
         
-        return this.activePolicy.generateKey(link);
+        return key;
     }
 
     /**
@@ -340,7 +361,10 @@ export class ReferenceCountingPolicy {
                         sourceFile: file,
                     };
 
-                    const linkKey = this.activePolicy.generateKey(link);
+                    const useAsync = !!this.activePolicy.isAsync?.();
+                    const linkKey = useAsync
+                      ? await (this.activePolicy.generateKeyAsync!(link))
+                      : (this.activePolicy.generateKey!(link));
                     
                     if (logDebugInfo) {
                         console.log(`Link from ${file.path} -> ${tfileDestination.path}`);
@@ -367,7 +391,10 @@ export class ReferenceCountingPolicy {
                         sourceFile: file,
                     };
                     
-                    const linkKey = this.activePolicy.generateKey(ghostLink);
+                    const useAsync = !!this.activePolicy.isAsync?.();
+                    const linkKey = useAsync
+                      ? await (this.activePolicy.generateKeyAsync!(ghostLink))
+                      : (this.activePolicy.generateKey!(ghostLink));
                     
                     if (logDebugInfo) {
                         console.log(`Ghost link from ${file.path} -> ${path}.md`);

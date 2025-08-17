@@ -251,9 +251,13 @@ In [Chapter 1: ReferenceCountingPolicy](#chapter-1-referencecountingpolicy), we 
    interface WikilinkEquivalencePolicy {
      name: string;                    // e.g. "Case Insensitive"
      generateKey(link: Link): string; // normalization logic
+     isAsync?(): boolean;             // true for async policies
+     generateKeyAsync?(link: Link): Promise<string>; // async version
    }
    ```
    This interface ensures each policy can produce a consistent key for any link.
+
+   > **Note:** The policy system has been modularized. Each policy is now in its own file under `src/policies/policies/` for better maintainability. See [Policy System Documentation](../POLICY_SYSTEM.md) for details.
 
 2. **Built‑in Policies**  
    - **Case Insensitive**: Upper‑cases everything  
@@ -271,12 +275,15 @@ In [Chapter 1: ReferenceCountingPolicy](#chapter-1-referencecountingpolicy), we 
 You configure which policy to use in settings (Chapter 3), but here's how a policy looks:
 
 ```ts
-// src/policies/wikilink-equivalence.ts
-class CaseInsensitivePolicy implements WikilinkEquivalencePolicy {
+// src/policies/policies/CaseInsensitivePolicy.ts
+import { AbstractWikilinkEquivalencePolicy } from "../base/WikilinkEquivalencePolicy";
+import { normalizeBase } from "../linkKeyUtils";
+import { Link } from "../../types";
+
+export class CaseInsensitivePolicy extends AbstractWikilinkEquivalencePolicy {
   name = "Case Insensitive";
-  generateKey(link: Link): string {
-    return (link.resolvedFile?.path || link.reference.link)
-      .toUpperCase();
+  generateKey(link: Link): string { 
+    return normalizeBase(link); 
   }
 }
 ```
