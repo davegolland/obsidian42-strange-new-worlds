@@ -92,3 +92,18 @@ export type VirtualLinkProvider = (args: {
 	 */
 	makeLink: (linkText: string, displayText?: string, pos?: Pos) => Link;
 }) => Link[] | Promise<Link[]>;
+
+// Implicit Links Types
+export type TextSpan = { start: number; end: number };
+
+export type DetectedLink = {
+	span: TextSpan;
+	display: string;
+	targetPath: string;
+	source: "regex" | "dictionary";
+};
+
+export interface ImplicitLinkDetector {
+	name: string;
+	detect(file: TFile, text: string): Promise<DetectedLink[]>;
+}

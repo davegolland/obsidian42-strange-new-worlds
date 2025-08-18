@@ -404,5 +404,334 @@ export class SettingsTab extends PluginSettingTab {
 						this.plugin.referenceCountingPolicy.setDebugMode(debugEnabled);
 					});
 			});
+
+		// Implicit Links section
+		new Setting(containerEl).setHeading().setName("Implicit Links");
+
+		new Setting(containerEl)
+			.setName("Detection Mode")
+			.setDesc("Choose how implicit links are detected in your documents.")
+			.addDropdown((dropdown) => {
+				dropdown
+					.addOption("off", "Disabled")
+					.addOption("regex", "Regex Patterns")
+					.addOption("dictionary", "Dictionary (Notes & Aliases)")
+					.setValue(this.plugin.settings.autoLinks.detectionMode)
+					.onChange(async (value) => {
+						this.plugin.settings.autoLinks.detectionMode = value as "off" | "regex" | "dictionary";
+						await this.plugin.saveSettings();
+					});
+			});
+
+		// Regex Rules section (only show if detection mode is regex)
+		if (this.plugin.settings.autoLinks.detectionMode === "regex") {
+			new Setting(containerEl).setHeading().setName("Regex Rules");
+
+			// Add existing rules
+			this.plugin.settings.autoLinks.regexRules.forEach((rule, index) => {
+				this.createRegexRuleSetting(containerEl, index, rule);
+			});
+
+			// Add button to create new rule
+			new Setting(containerEl)
+				.setName("Add Regex Rule")
+				.setDesc("Add a new regex pattern to detect implicit links")
+				.addButton((button) => {
+					button
+						.setButtonText("Add Rule")
+						.onClick(async () => {
+							this.plugin.settings.autoLinks.regexRules.push({
+								pattern: "",
+								flags: "gi",
+								targetTemplate: "",
+								displayTemplate: ""
+							});
+							await this.plugin.saveSettings();
+							this.display(); // Refresh the settings tab
+						});
+				});
+		}
+
+		// Dictionary Configuration section (only show if detection mode is dictionary)
+		if (this.plugin.settings.autoLinks.detectionMode === "dictionary") {
+			new Setting(containerEl).setHeading().setName("Dictionary Configuration");
+
+			// Sources configuration
+			new Setting(containerEl)
+				.setName("Include Note Basenames")
+				.setDesc("Detect links to note filenames (e.g., 'My Note' links to 'My Note.md')")
+				.addToggle((toggle) => {
+					toggle
+						.setValue(this.plugin.settings.autoLinks.dictionary?.sources.basenames ?? true)
+						.onChange(async (value) => {
+							if (!this.plugin.settings.autoLinks.dictionary) {
+								this.plugin.settings.autoLinks.dictionary = {
+									sources: { basenames: true, aliases: true, headings: false, customList: false },
+									minPhraseLength: 3,
+									requireWordBoundaries: true,
+									customPhrases: [],
+								};
+							}
+							this.plugin.settings.autoLinks.dictionary.sources.basenames = value;
+							await this.plugin.saveSettings();
+						});
+				});
+
+			new Setting(containerEl)
+				.setName("Include Frontmatter Aliases")
+				.setDesc("Detect links to aliases defined in note frontmatter")
+				.addToggle((toggle) => {
+					toggle
+						.setValue(this.plugin.settings.autoLinks.dictionary?.sources.aliases ?? true)
+						.onChange(async (value) => {
+							if (!this.plugin.settings.autoLinks.dictionary) {
+								this.plugin.settings.autoLinks.dictionary = {
+									sources: { basenames: true, aliases: true, headings: false, customList: false },
+									minPhraseLength: 3,
+									requireWordBoundaries: true,
+									customPhrases: [],
+								};
+							}
+							this.plugin.settings.autoLinks.dictionary.sources.aliases = value;
+							await this.plugin.saveSettings();
+						});
+				});
+
+			new Setting(containerEl)
+				.setName("Include Note Headings")
+				.setDesc("Detect links to headings within notes (experimental)")
+				.addToggle((toggle) => {
+					toggle
+						.setValue(this.plugin.settings.autoLinks.dictionary?.sources.headings ?? false)
+						.onChange(async (value) => {
+							if (!this.plugin.settings.autoLinks.dictionary) {
+								this.plugin.settings.autoLinks.dictionary = {
+									sources: { basenames: true, aliases: true, headings: false, customList: false },
+									minPhraseLength: 3,
+									requireWordBoundaries: true,
+									customPhrases: [],
+								};
+							}
+							this.plugin.settings.autoLinks.dictionary.sources.headings = value;
+							await this.plugin.saveSettings();
+						});
+				});
+
+			// Min phrase length
+			new Setting(containerEl)
+				.setName("Minimum Phrase Length")
+				.setDesc(`Ignore phrases shorter than this many characters. Currently set to: ${this.plugin.settings.autoLinks.dictionary?.minPhraseLength ?? 3} characters.`)
+				.addSlider((slider) => {
+					slider
+						.setLimits(1, 10, 1)
+						.setValue(this.plugin.settings.autoLinks.dictionary?.minPhraseLength ?? 3)
+						.setDynamicTooltip()
+						.onChange(async (value) => {
+							if (!this.plugin.settings.autoLinks.dictionary) {
+								this.plugin.settings.autoLinks.dictionary = {
+									sources: { basenames: true, aliases: true, headings: false, customList: false },
+									minPhraseLength: 3,
+									requireWordBoundaries: true,
+									customPhrases: [],
+								};
+							}
+							this.plugin.settings.autoLinks.dictionary.minPhraseLength = value;
+							await this.plugin.saveSettings();
+						});
+				});
+
+			// Word boundaries
+			new Setting(containerEl)
+				.setName("Require Word Boundaries")
+				.setDesc("Only match complete words (prevents 'Language' from matching inside 'LanguageModel')")
+				.addToggle((toggle) => {
+					toggle
+						.setValue(this.plugin.settings.autoLinks.dictionary?.requireWordBoundaries ?? true)
+						.onChange(async (value) => {
+							if (!this.plugin.settings.autoLinks.dictionary) {
+								this.plugin.settings.autoLinks.dictionary = {
+									sources: { basenames: true, aliases: true, headings: false, customList: false },
+									minPhraseLength: 3,
+									requireWordBoundaries: true,
+									customPhrases: [],
+								};
+							}
+							this.plugin.settings.autoLinks.dictionary.requireWordBoundaries = value;
+							await this.plugin.saveSettings();
+						});
+				});
+
+			// Custom phrases section
+			new Setting(containerEl)
+				.setName("Include Custom Phrases")
+				.setDesc("Use a hardcoded list of phrases to detect (independent of your vault content)")
+				.addToggle((toggle) => {
+					toggle
+						.setValue(this.plugin.settings.autoLinks.dictionary?.sources.customList ?? false)
+						.onChange(async (value) => {
+							if (!this.plugin.settings.autoLinks.dictionary) {
+								this.plugin.settings.autoLinks.dictionary = {
+									sources: { basenames: true, aliases: true, headings: false, customList: false },
+									minPhraseLength: 3,
+									requireWordBoundaries: true,
+									customPhrases: [],
+								};
+							}
+							this.plugin.settings.autoLinks.dictionary.sources.customList = value;
+							await this.plugin.saveSettings();
+						});
+				});
+
+			// Custom phrases list (only show if custom list is enabled)
+			if (this.plugin.settings.autoLinks.dictionary?.sources.customList) {
+				new Setting(containerEl).setHeading().setName("Custom Phrases");
+
+				// Add existing custom phrases
+				const customPhrases = this.plugin.settings.autoLinks.dictionary?.customPhrases || [];
+				customPhrases.forEach((phrase, index) => {
+					this.createCustomPhraseSetting(containerEl, index, phrase);
+				});
+
+				// Add button to create new custom phrase
+				new Setting(containerEl)
+					.setName("Add Custom Phrase")
+					.setDesc("Add a new phrase to the hardcoded detection list")
+					.addButton((button) => {
+						button
+							.setButtonText("Add Phrase")
+							.onClick(async () => {
+								if (!this.plugin.settings.autoLinks.dictionary) {
+									this.plugin.settings.autoLinks.dictionary = {
+										sources: { basenames: true, aliases: true, headings: false, customList: false },
+										minPhraseLength: 3,
+										requireWordBoundaries: true,
+										customPhrases: [],
+									};
+								}
+								this.plugin.settings.autoLinks.dictionary.customPhrases.push("");
+								await this.plugin.saveSettings();
+								this.display(); // Refresh the settings tab
+							});
+					});
+			}
+		}
+	}
+
+	private createCustomPhraseSetting(containerEl: HTMLElement, index: number, phrase: string) {
+		const phraseContainer = containerEl.createDiv("custom-phrase-container");
+		phraseContainer.style.border = "1px solid var(--background-modifier-border)";
+		phraseContainer.style.padding = "10px";
+		phraseContainer.style.marginBottom = "10px";
+		phraseContainer.style.borderRadius = "4px";
+
+		// Phrase header with delete button
+		const headerContainer = phraseContainer.createDiv("custom-phrase-header");
+		headerContainer.style.display = "flex";
+		headerContainer.style.justifyContent = "space-between";
+		headerContainer.style.alignItems = "center";
+		headerContainer.style.marginBottom = "10px";
+
+		const phraseTitle = headerContainer.createDiv();
+		phraseTitle.textContent = `Custom Phrase ${index + 1}`;
+
+		const deleteButton = headerContainer.createEl("button");
+		deleteButton.textContent = "Delete";
+		deleteButton.onclick = async () => {
+			if (this.plugin.settings.autoLinks.dictionary?.customPhrases) {
+				this.plugin.settings.autoLinks.dictionary.customPhrases.splice(index, 1);
+				await this.plugin.saveSettings();
+				this.display(); // Refresh the settings tab
+			}
+		};
+
+		// Phrase text setting
+		new Setting(phraseContainer)
+			.setName("Phrase")
+			.setDesc("The exact phrase to detect (e.g., 'Natural Language Processing')")
+			.addText((text) => {
+				text
+					.setPlaceholder("Enter phrase here")
+					.setValue(phrase)
+					.onChange(async (value) => {
+						if (this.plugin.settings.autoLinks.dictionary?.customPhrases) {
+							this.plugin.settings.autoLinks.dictionary.customPhrases[index] = value;
+							await this.plugin.saveSettings();
+						}
+					});
+			});
+	}
+
+	private createRegexRuleSetting(containerEl: HTMLElement, index: number, rule: any) {
+		const ruleContainer = containerEl.createDiv("regex-rule-container");
+
+		// Rule header with delete button
+		const headerContainer = ruleContainer.createDiv("regex-rule-header");
+
+		const ruleTitle = headerContainer.createDiv();
+		ruleTitle.textContent = `Rule ${index + 1}`;
+
+		const deleteButton = headerContainer.createEl("button");
+		deleteButton.textContent = "Delete";
+		deleteButton.onclick = async () => {
+			this.plugin.settings.autoLinks.regexRules.splice(index, 1);
+			await this.plugin.saveSettings();
+			this.display(); // Refresh the settings tab
+		};
+
+		// Pattern setting
+		new Setting(ruleContainer)
+			.setName("Pattern")
+			.setDesc("Regex pattern to match (e.g., \\bNatural Language Programming\\b)")
+			.addText((text) => {
+				text
+					.setPlaceholder("\\b\\w+\\b")
+					.setValue(rule.pattern)
+					.onChange(async (value) => {
+						this.plugin.settings.autoLinks.regexRules[index].pattern = value;
+						await this.plugin.saveSettings();
+					});
+			});
+
+		// Flags setting
+		new Setting(ruleContainer)
+			.setName("Flags")
+			.setDesc("Regex flags (e.g., gi for global, case-insensitive)")
+			.addText((text) => {
+				text
+					.setPlaceholder("gi")
+					.setValue(rule.flags)
+					.onChange(async (value) => {
+						this.plugin.settings.autoLinks.regexRules[index].flags = value;
+						await this.plugin.saveSettings();
+					});
+			});
+
+		// Target template setting
+		new Setting(ruleContainer)
+			.setName("Target Template")
+			.setDesc("Target file path template (use ${0} for full match, ${1} for first group, etc.)")
+			.addText((text) => {
+				text
+					.setPlaceholder("Encyclopedia/${0}.md")
+					.setValue(rule.targetTemplate)
+					.onChange(async (value) => {
+						this.plugin.settings.autoLinks.regexRules[index].targetTemplate = value;
+						await this.plugin.saveSettings();
+					});
+			});
+
+		// Display template setting (optional)
+		new Setting(ruleContainer)
+			.setName("Display Template (Optional)")
+			.setDesc("Display text template (leave empty to use full match)")
+			.addText((text) => {
+				text
+					.setPlaceholder("${0}")
+					.setValue(rule.displayTemplate || "")
+					.onChange(async (value) => {
+						this.plugin.settings.autoLinks.regexRules[index].displayTemplate = value;
+						await this.plugin.saveSettings();
+					});
+			});
 	}
 }

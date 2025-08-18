@@ -26,6 +26,7 @@ import {
 } from "./ui/debounced-helpers";
 import { updateAllSnwLiveUpdateReferences } from "./view-extensions/htmlDecorations";
 import { FeatureManager } from "./FeatureManager";
+import { ImplicitLinksManager } from "./implicit-links";
 
 export const UPDATE_DEBOUNCE = 200;
 
@@ -61,6 +62,7 @@ export default class SNWPlugin extends Plugin {
 	commands: PluginCommands = new PluginCommands(this);
 	referenceCountingPolicy: ReferenceCountingPolicy = new ReferenceCountingPolicy(this);
 	featureManager!: FeatureManager;
+	implicitLinksManager!: ImplicitLinksManager;
 	
 	// Publicly accessible debounced versions of functions
 	updateHeadersDebounced: (() => void) | null = null;
@@ -76,6 +78,7 @@ export default class SNWPlugin extends Plugin {
 		uiInits.setPluginVariableForFrontmatterLinksRefCount,
 		uiInits.setPluginVariableForMarkdownPreviewProcessor,
 		uiInits.setPluginVariableForCM6InlineReferences,
+		uiInits.initImplicitLinksLivePreview,
 		uiInits.setPluginVariableForUIC,
 		uiInits.initDebouncedHelpers,
 	];
@@ -160,6 +163,10 @@ export default class SNWPlugin extends Plugin {
 		// Update feature manager with current settings and state
 		this.featureManager.updateSettings(this.settings);
 		this.featureManager.updateShowCountsActive(this.showCountsActive);
+		
+		// Initialize implicit links manager
+		this.implicitLinksManager = new ImplicitLinksManager(this, this.settings.autoLinks);
+		this.implicitLinksManager.registerProvider(this.snwAPI.registerVirtualLinkProvider.bind(this.snwAPI));
 	}
 
 	/**
@@ -374,6 +381,10 @@ export default class SNWPlugin extends Plugin {
 		await this.saveData(this.settings);
 		// Update the feature manager with the new settings
 		this.featureManager.updateSettings(this.settings);
+		// Update the implicit links manager with the new settings
+		if (this.implicitLinksManager) {
+			this.implicitLinksManager.updateSettings(this.settings.autoLinks);
+		}
 	}
 
 	onunload(): void {
@@ -381,6 +392,11 @@ export default class SNWPlugin extends Plugin {
 		try {
 			// Unload all features using the feature manager
 			this.featureManager.unloadAll();
+			
+			// Unload implicit links manager
+			if (this.implicitLinksManager) {
+				this.implicitLinksManager.unload();
+			}
 			
 			this.app.workspace.unregisterHoverLinkSource(this.appID);
 		} catch (error) {

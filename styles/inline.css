@@ -78,4 +78,20 @@ div:has(> .snw-reference),
   .snw-reference {
     display: none;
   }
+}
+
+/* visible even in dark themes */
+.cm-content .snw-implicit-link {
+  text-decoration: underline dotted;
+  text-underline-offset: 2px;
+  background: rgba(255, 200, 0, 0.14);
+}
+
+.cm-content .snw-implicit-link-badge {
+  margin-left: 2px;
+  font-size: 0.75em;
+  line-height: 1;
+  border-radius: 3px;
+  padding: 0 2px;
+  background: rgba(255, 200, 0, 0.45);
 } 

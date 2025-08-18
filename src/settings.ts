@@ -1,6 +1,29 @@
 export type SortOption = "name-asc" | "name-desc" | "mtime-asc" | "mtime-desc";
 export type { WikilinkEquivalencePolicyType } from "./policies/auto-types";
 
+export interface AutoLinkSettings {
+	enabledLivePreview: boolean;
+	enabledReadingView: boolean;
+	detectionMode: "off" | "regex" | "dictionary";
+	regexRules: Array<{
+		pattern: string;       // e.g. "\\bNatural Language Programming\\b"
+		flags: string;         // e.g. "gi"
+		targetTemplate: string; // e.g. "Encyclopedia/${0}.md"
+		displayTemplate?: string; // optional, e.g. "${0}"
+	}>;
+	dictionary?: {
+		sources: {
+			basenames: boolean;   // Note basenames (default: true)
+			aliases: boolean;     // frontmatter aliases[] (default: true)
+			headings: boolean;    // Markdown headings in each note (default: false)
+			customList: boolean;  // Use hardcoded custom phrases (default: false)
+		};
+		minPhraseLength: number; // characters; ignore very short keys (default: 3)
+		requireWordBoundaries: boolean; // only match as whole words (default: true)
+		customPhrases: string[]; // Hardcoded list of phrases to detect
+	};
+}
+
 export interface RenderSettings {
 	blockIdInMarkdown: boolean;
 	linksInMarkdown: boolean;
@@ -49,6 +72,7 @@ export interface Settings {
 	displayCustomPropertyList: string;
 	pluginSupportKanban: boolean;
 	wikilinkEquivalencePolicy: WikilinkEquivalencePolicyType;
+	autoLinks: AutoLinkSettings;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -89,6 +113,18 @@ export const DEFAULT_SETTINGS: Settings = {
 	displayCustomPropertyList: "",
 	pluginSupportKanban: false,
 	wikilinkEquivalencePolicy: "case-insensitive",
+	autoLinks: {
+		enabledLivePreview: false,
+		enabledReadingView: false,
+		detectionMode: "off",
+		regexRules: [],
+		dictionary: {
+			sources: { basenames: true, aliases: true, headings: false, customList: false },
+			minPhraseLength: 3,
+			requireWordBoundaries: true,
+			customPhrases: [],
+		},
+	},
 };
 
 // For backward compatibility with older settings format
@@ -162,5 +198,17 @@ export function migrateSettings(legacySettings: LegacySettings): Settings {
 		displayCustomPropertyList: legacySettings.displayCustomPropertyList,
 		pluginSupportKanban: legacySettings.pluginSupportKanban,
 		wikilinkEquivalencePolicy: legacySettings.wikilinkEquivalencePolicy,
+		autoLinks: {
+			enabledLivePreview: false,
+			enabledReadingView: false,
+			detectionMode: "off",
+			regexRules: [],
+			dictionary: {
+				sources: { basenames: true, aliases: true, headings: false, customList: false },
+				minPhraseLength: 3,
+				requireWordBoundaries: true,
+				customPhrases: [],
+			},
+		},
 	};
 }

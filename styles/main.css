@@ -7,4 +7,66 @@
 @import "inline.css";
 @import "gutter.css";
 @import "popover.css";
-@import "sidepane.css"; 
+@import "sidepane.css";
+
+/* Implicit Links Settings Styles */
+.regex-rule-container {
+	border: 1px solid var(--background-modifier-border);
+	padding: 10px;
+	margin-bottom: 10px;
+	border-radius: 4px;
+	background-color: var(--background-secondary);
+}
+
+.regex-rule-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 10px;
+	padding-bottom: 5px;
+	border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.regex-rule-header button {
+	margin-left: auto;
+	padding: 4px 8px;
+	border-radius: 3px;
+	background-color: var(--background-modifier-error);
+	color: var(--text-error);
+	border: 1px solid var(--background-modifier-error);
+}
+
+.regex-rule-header button:hover {
+	background-color: var(--background-modifier-error-hover);
+}
+
+/* Custom Phrases Settings Styles */
+.custom-phrase-container {
+	border: 1px solid var(--background-modifier-border);
+	padding: 10px;
+	margin-bottom: 10px;
+	border-radius: 4px;
+	background-color: var(--background-secondary);
+}
+
+.custom-phrase-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 10px;
+	padding-bottom: 5px;
+	border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.custom-phrase-header button {
+	margin-left: auto;
+	padding: 4px 8px;
+	border-radius: 3px;
+	background-color: var(--background-modifier-error);
+	color: var(--text-error);
+	border: 1px solid var(--background-modifier-error);
+}
+
+.custom-phrase-header button:hover {
+	background-color: var(--background-modifier-error-hover);
+} 

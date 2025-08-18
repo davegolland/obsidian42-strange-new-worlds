@@ -12,8 +12,14 @@ export { setPluginVariableForCM6Gutter } from "../view-extensions/gutters-cm6";
 export { setPluginVariableForHtmlDecorations } from "../view-extensions/htmlDecorations";
 export { setPluginVariableForCM6InlineReferences } from "../view-extensions/references-cm6";
 export { setPluginVariableForMarkdownPreviewProcessor } from "../view-extensions/references-preview";
+import { implicitLinksField, implicitLinksPlugin } from "../view-extensions/implicit-links-cm6";
 
 // Initialize the debounced helpers module
 export function initDebouncedHelpers(plugin: SNWPlugin) {
 	setDebouncedHelpersPlugin(plugin);
+}
+
+// Initialize implicit links Live Preview
+export function initImplicitLinksLivePreview(plugin: SNWPlugin) {
+	plugin.registerEditorExtension([implicitLinksField, implicitLinksPlugin]);
 } 

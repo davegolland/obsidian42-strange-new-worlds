@@ -54,6 +54,14 @@ export class ReferenceCountingPolicy {
      */
 
     /**
+     * Gets the currently active policy instance
+     * @returns The active WikilinkEquivalencePolicy instance
+     */
+    getActivePolicy(): WikilinkEquivalencePolicy {
+        return this.activePolicy;
+    }
+
+    /**
      * Generates a key from a path and link for UI components
      * This is a helper method for UI components that don't have a full Link object
      * @param filePath The path of the file containing the link
