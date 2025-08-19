@@ -59,12 +59,14 @@ export class DictionaryDetector implements ImplicitLinkDetector {
 
 		const mdFiles = this.app.vault.getMarkdownFiles();
 
+		// Collect source names
+		const names: string[] = [];
+
+		// Add file-based names
 		for (const f of mdFiles) {
 			const cache = this.app.metadataCache.getFileCache(f);
 			if (!cache) continue;
 
-			// Collect source names
-			const names: string[] = [];
 			if (this.settings.dictionary?.sources.basenames) {
 				names.push(f.basename);
 			}
@@ -80,37 +82,40 @@ export class DictionaryDetector implements ImplicitLinkDetector {
 					for (const h of headings) if (h?.heading) names.push(h.heading);
 				}
 			}
-			if (this.settings.dictionary?.sources.customList) {
-				const list = this.settings.dictionary.customPhrases || [];
-				for (const phrase of list) {
-					if (typeof phrase === "string" && phrase.trim().length) {
-						names.push(phrase);
-					}
-				}
+		}
+
+		// ✅ FIX: include custom phrases from settings
+		if (this.settings.dictionary?.sources.customList) {
+			const list = this.settings.dictionary.customPhrases || [];
+			for (const raw of list) {
+				if (typeof raw !== "string") continue;
+				const phrase = raw.trim();
+				if (!phrase) continue;
+				names.push(phrase);
 			}
+		}
 
-			// Add each name to dictionary
-			for (const name of names) {
-				const trimmed = name.trim();
-				if (!trimmed) continue;
-				if ((this.settings.dictionary?.minPhraseLength ?? 3) > trimmed.length) continue;
+		// Create targets + insert into map & trie using the SAME fold as scan:
+		for (const name of names) {
+			const trimmed = name.trim();
+			if (!trimmed) continue;
+			if ((this.settings.dictionary?.minPhraseLength ?? 3) > trimmed.length) continue;
 
-				// Policy normalization → canonical key
-				const key = this.policy.generateKey!({ 
-					realLink: trimmed,
-					reference: { link: trimmed, key: trimmed, displayText: trimmed, position: { start: { line: 0, col: 0, offset: 0 }, end: { line: 0, col: 0, offset: 0 } } },
-					resolvedFile: f,
-					sourceFile: null
-				});
-				
-				// Only store the first encountered target for a key; refine later if you want tiebreakers
-				if (!this.keyToTarget.has(key)) {
-					this.keyToTarget.set(key, { path: f.path, display: trimmed });
-					this.insertIntoTrie(trimmed, key);
-				} else {
-					// Optional: if multiple notes share same normalized key, you can define a preference:
-					// prefer exact title match, or shorter path, etc.
-				}
+			// Policy normalization → canonical key
+			const key = this.policy.generateKey!({ 
+				realLink: trimmed,
+				reference: { link: trimmed, key: trimmed, displayText: trimmed, position: { start: { line: 0, col: 0, offset: 0 }, end: { line: 0, col: 0, offset: 0 } } },
+				resolvedFile: null,
+				sourceFile: null
+			});
+			
+			// For custom phrases, create a default target if none exists
+			if (!this.keyToTarget.has(key)) {
+				// Try to find a matching file first
+				const dest = this.app.metadataCache.getFirstLinkpathDest(trimmed, "");
+				const target = dest ? { path: dest.path, display: trimmed } : { path: `${trimmed}.md`, display: trimmed };
+				this.keyToTarget.set(key, target);
+				this.insertIntoTrie(trimmed, key);
 			}
 		}
 

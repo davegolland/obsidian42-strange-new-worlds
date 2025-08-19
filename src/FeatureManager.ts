@@ -4,7 +4,7 @@ import { Settings } from "./settings";
 import markdownPreviewProcessor from "./view-extensions/references-preview";
 import { InlineReferenceExtension } from "./view-extensions/references-cm6";
 import ReferenceGutterExtension from "./view-extensions/gutters-cm6";
-import { implicitLinksField, implicitLinksPlugin } from "./view-extensions/implicit-links-cm6";
+// Implicit links are now handled by the virtual-badges system in main.ts
 
 // Define a Feature interface for toggling features
 export interface Feature {
@@ -67,12 +67,8 @@ export class FeatureManager {
                 register: () => this.updateCMExtensionState("gutter", true, ReferenceGutterExtension),
                 unregister: () => this.updateCMExtensionState("gutter", false, ReferenceGutterExtension)
             },
-            {
-                name: "implicitLinks",
-                check: (settings: Settings) => settings.autoLinks.detectionMode !== "off",
-                register: () => this.updateCMExtensionState("implicit-links", true, [implicitLinksField, implicitLinksPlugin]),
-                unregister: () => this.updateCMExtensionState("implicit-links", false, [implicitLinksField, implicitLinksPlugin])
-            }
+            // Implicit links are now handled by the virtual-badges system in main.ts
+            // No longer managed as a feature here
         ];
     }
     

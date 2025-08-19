@@ -58,9 +58,13 @@ export class ImplicitLinksManager {
 	/**
 	 * Update settings and recreate the detection manager
 	 */
-	updateSettings(settings: AutoLinkSettings): void {
+	async updateSettings(settings: AutoLinkSettings): Promise<void> {
 		this.settings = settings;
 		this.detectionManager.updateSettings(settings);
+		
+		// Rebuild the detector when settings change so new phrases appear without reload
+		await this.detectionManager?.rebuild?.();
+		
 		// Re-register the provider with updated settings
 		if (this.unregisterProvider) {
 			this.unregisterProvider();

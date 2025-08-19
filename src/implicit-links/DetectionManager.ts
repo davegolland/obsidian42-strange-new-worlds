@@ -55,4 +55,13 @@ export class DetectionManager {
 			this.detector = null;
 		}
 	}
+
+	/**
+	 * Rebuild the detector (useful when settings change)
+	 */
+	async rebuild(): Promise<void> {
+		if (this.detector && typeof this.detector.build === "function") {
+			await this.detector.build();
+		}
+	}
 }

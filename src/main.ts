@@ -383,7 +383,7 @@ export default class SNWPlugin extends Plugin {
 		this.featureManager.updateSettings(this.settings);
 		// Update the implicit links manager with the new settings
 		if (this.implicitLinksManager) {
-			this.implicitLinksManager.updateSettings(this.settings.autoLinks);
+			await this.implicitLinksManager.updateSettings(this.settings.autoLinks);
 		}
 	}
 
