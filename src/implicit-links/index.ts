@@ -9,3 +9,4 @@ export { createInferredLinksExtension } from "./manager";
 export { inferredCacheField, setInferredCache, type InferredCache, type PhraseInfo } from "./cache";
 export { buildPhraseRegexChunks, type PhraseRegexOpts } from "./regex";
 export { makeChunkPlugin } from "./decorators";
+export { generateReferenceKey, getReferenceCount, basenameNoExt } from "./shared-utils";

@@ -2,6 +2,7 @@ import { MatchDecorator, Decoration, ViewPlugin, EditorView, ViewUpdate, WidgetT
 import { RangeSetBuilder } from "@codemirror/state";
 import { inferredCacheField, PhraseInfo } from "./cache";
 import { bindReferenceHover } from "../view-extensions/references-preview";
+import { generateReferenceKey } from "./shared-utils";
 
 // Fast guards for contexts where we should NOT add inferred badges
 function isInsideWikiLink(doc: import("@codemirror/state").Text, from: number, to: number): boolean {
@@ -116,7 +117,8 @@ export function makeChunkPlugin(regex: RegExp, plugin: any) {
       if (!info || info.count <= 0) return;
 
       // Generate reference key for consistent behavior with native SNW
-      const key = generateReferenceKey(plugin, text, view.state);
+      const fromFile = plugin?.app?.workspace?.getActiveFile?.() ?? null;
+      const key = generateReferenceKey(plugin, text, fromFile);
       addLinkDecos(add, from, to, text, info, key, plugin);
     }
   });
@@ -133,37 +135,4 @@ export function makeChunkPlugin(regex: RegExp, plugin: any) {
   }, { decorations: v => (v as any).decorations });
 }
 
-// Helper function to generate reference key (copied from existing implementation)
-function generateReferenceKey(plugin: any, linktext: string, state: any): string {
-  try {
-    // Use the active policy's generateKey method for consistency
-    const activePolicy = plugin?.referenceCountingPolicy?.activePolicy;
-    if (activePolicy?.generateKey) {
-      // Create a Link object structure that matches what SNW uses
-      const fromFile = plugin?.app?.workspace?.getActiveFile?.() ?? null;
-      const dest = plugin?.app?.metadataCache?.getFirstLinkpathDest?.(linktext, fromFile?.path ?? "");
-      const linkObj = {
-        realLink: linktext,
-        reference: {
-          link: linktext,
-          key: `${(dest?.path ?? linktext).toUpperCase()}`,
-          displayText: linktext,
-          position: { start: { line: 0, col: 0, offset: 0 }, end: { line: 0, col: 0, offset: 0 } }
-        },
-        resolvedFile: dest || {
-          path: `${linktext}.md`,
-          name: `${linktext}.md`,
-          basename: linktext,
-          extension: "md",
-        } as any,
-        sourceFile: fromFile,
-      };
-      
-      return activePolicy.generateKey(linkObj);
-    }
-  } catch {}
-  
-  // Fallback to the old method if active policy is not available
-  const fold = plugin?.wikilinkEquivalencePolicy?.textFold;
-  return (typeof fold === "function" ? fold(linktext.trim()) : linktext.trim().toUpperCase());
-}
+// Helper function now imported from shared-utils.ts

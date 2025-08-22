@@ -4,6 +4,7 @@ import { inferredCacheField, setInferredCache, InferredCache, PhraseInfo } from 
 import { buildPhraseRegexChunks } from "./regex";
 import { makeChunkPlugin } from "./decorators";
 import type { TFile } from "obsidian";
+import { generateReferenceKey, getReferenceCount, basenameNoExt } from "./shared-utils";
 
 // Simple debounce
 const debounce = <F extends (...a:any[])=>void>(fn: F, ms: number): F => {
@@ -102,50 +103,7 @@ async function computePhraseInfo(text: string, plugin: any): Promise<Map<string,
   return byPhrase;
 }
 
-// Helper functions (copied from existing implementation)
-function generateReferenceKey(plugin: any, linktext: string, fromFile: TFile | null): string {
-  try {
-    const activePolicy = plugin?.referenceCountingPolicy?.activePolicy;
-    if (activePolicy?.generateKey) {
-      const dest = plugin?.app?.metadataCache?.getFirstLinkpathDest?.(linktext, fromFile?.path ?? "");
-      const linkObj = {
-        realLink: linktext,
-        reference: {
-          link: linktext,
-          key: `${(dest?.path ?? linktext).toUpperCase()}`,
-          displayText: linktext,
-          position: { start: { line: 0, col: 0, offset: 0 }, end: { line: 0, col: 0, offset: 0 } }
-        },
-        resolvedFile: dest || {
-          path: `${linktext}.md`,
-          name: `${linktext}.md`,
-          basename: linktext,
-          extension: "md",
-        } as any,
-        sourceFile: fromFile,
-      };
-      
-      return activePolicy.generateKey(linkObj);
-    }
-  } catch {}
-  
-  const fold = plugin?.wikilinkEquivalencePolicy?.textFold;
-  return (typeof fold === "function" ? fold(linktext.trim()) : linktext.trim().toUpperCase());
-}
-
-function getReferenceCount(plugin: any, key: string): number {
-  try {
-    const activePolicy = plugin?.referenceCountingPolicy?.activePolicy;
-    const indexedRefs = plugin?.referenceCountingPolicy?.indexedReferences;
-    const refs = indexedRefs?.get(key);
-    
-    if (Array.isArray(refs)) {
-      const filteredRefs = activePolicy?.filterReferences?.(refs) ?? refs;
-      return activePolicy?.countReferences?.(filteredRefs) ?? filteredRefs.length;
-    }
-  } catch {}
-  return 0;
-}
+// Helper functions now imported from shared-utils.ts
 
 /** Create + manage chunked decorators. Returns a CM6 extension array. */
 export function createInferredLinksExtension(plugin: any, opts?: {
