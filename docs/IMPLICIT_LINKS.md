@@ -133,3 +133,12 @@ This automatically detects mentions of note names and aliases in your text and c
 - More sophisticated conflict resolution
 - Persistent link materialization
 - Advanced text preprocessing
+
+## Related Documentation
+
+For detailed information about the architecture and extensibility:
+
+- **[Implicit Links Architecture & Extensibility Guide](IMPLICIT_LINKS_ARCHITECTURE.md)** - Comprehensive guide to the system architecture and how to extend it
+- **[Policy System Documentation](POLICY_SYSTEM.md)** - How implicit links integrate with the policy system
+- **[Flicker-Free Implementation](FLICKER_FREE_IMPLICIT_LINKS.md)** - Technical details of the UI implementation
+- **[Examples Directory](../examples/)** - Practical examples and demonstrations

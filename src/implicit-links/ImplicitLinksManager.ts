@@ -46,7 +46,7 @@ export class ImplicitLinksManager {
 				}
 			}
 
-			console.log("[ImplicitLinks] returning", links.length, links.slice(0, 3));
+			// Debug logging removed for production
 			return links;
 		};
 

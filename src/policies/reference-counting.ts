@@ -134,11 +134,7 @@ export class ReferenceCountingPolicy {
             key = this.activePolicy.generateKey!(link);
         }
         
-        if (this.debugMode) {
-            console.log(`Generating key for link: ${linkText}`);
-            console.log(`  Resolved file: ${resolvedFile?.path || 'None'}`);
-            console.log(`  Generated key: ${key}`);
-        }
+        // Debug logging removed for production
         
         return key;
     }
@@ -313,20 +309,12 @@ export class ReferenceCountingPolicy {
         for (const file of this.plugin.app.vault.getMarkdownFiles()) {
             const fileCache = this.plugin.app.metadataCache.getFileCache(file);
             if (fileCache) {
-                if (logDebugInfo) {
-                    console.log(`Processing file: ${file.path}`);
-                    if (fileCache.links) {
-                        console.log(`  Links found: ${fileCache.links.length}`);
-                    }
-                }
+                // Debug logging removed for production
                 await this.getLinkReferencesForFile(file, fileCache);
             }
         }
         
-        if (logDebugInfo) {
-            console.log(`Total references indexed: ${this.indexedReferences.size}`);
-            console.log(`Reference keys: ${Array.from(this.indexedReferences.keys()).slice(0, 10).join(', ')}${this.indexedReferences.size > 10 ? '...' : ''}`);
-        }
+        // Debug logging removed for production
 
         if (window.snwAPI) window.snwAPI.references = this.indexedReferences;
         this.lastUpdateToReferences = Date.now();
@@ -374,11 +362,7 @@ export class ReferenceCountingPolicy {
                       ? await (this.activePolicy.generateKeyAsync!(link))
                       : (this.activePolicy.generateKey!(link));
                     
-                    if (logDebugInfo) {
-                        console.log(`Link from ${file.path} -> ${tfileDestination.path}`);
-                        console.log(`  Original: ${ref.link}`);
-                        console.log(`  Key generated: ${linkKey}`);
-                    }
+                    // Debug logging removed for production
                     
                     this.indexedReferences.set(linkKey, [
                         ...(this.indexedReferences.get(linkKey) || []),
@@ -404,11 +388,7 @@ export class ReferenceCountingPolicy {
                       ? await (this.activePolicy.generateKeyAsync!(ghostLink))
                       : (this.activePolicy.generateKey!(ghostLink));
                     
-                    if (logDebugInfo) {
-                        console.log(`Ghost link from ${file.path} -> ${path}.md`);
-                        console.log(`  Original: ${ref.link}`);
-                        console.log(`  Key generated: ${linkKey}`);
-                    }
+                    // Debug logging removed for production
                     
                     this.indexedReferences.set(linkKey, [
                         ...(this.indexedReferences.get(linkKey) || []),
@@ -577,9 +557,7 @@ export class ReferenceCountingPolicy {
                     
                     // Log lookups for debugging
                     if (logDebugInfo) {
-                        console.log(`Looking up link: ${link.link}`);
-                        console.log(`  Generated key: ${key}`);
-                        console.log(`  Found references: ${this.indexedReferences.has(key) ? this.indexedReferences.get(key)?.length : 'none'}`);
+                                // Debug logging removed for production
                         
                         // Debug: find similar keys that might match
                         if (!this.indexedReferences.has(key)) {
@@ -589,7 +567,7 @@ export class ReferenceCountingPolicy {
                                 .slice(0, 5);
                             
                             if (similarKeys.length > 0) {
-                                console.log(`  Similar keys in index: ${similarKeys.join(', ')}`);
+                                // Debug logging removed for production
                             }
                         }
                     }
@@ -729,8 +707,7 @@ export class ReferenceCountingPolicy {
         
         // Log when in debug mode
         if (this.debugMode) {
-            console.log(`No references found for key: ${key}`);
-            console.log(`Trying fallbacks for: ${link.realLink}`);
+                    // Debug logging removed for production
             
             // Show available keys that might be similar
             const possibleMatches = Array.from(this.indexedReferences.keys())
@@ -745,7 +722,7 @@ export class ReferenceCountingPolicy {
                 .slice(0, 5);
                 
             if (possibleMatches.length > 0) {
-                console.log(`  Possible matching keys in index: ${possibleMatches.join(', ')}`);
+                // Debug logging removed for production
             }
         }
         
@@ -754,7 +731,7 @@ export class ReferenceCountingPolicy {
             const keyWithExt = key + ".MD";
             refs = this.indexedReferences.get(keyWithExt);
             if (refs && refs.length > 0) {
-                if (this.debugMode) console.log(`Found using extension fallback: ${keyWithExt}`);
+                // Debug logging removed for production
                 return refs;
             }
         }
@@ -764,7 +741,7 @@ export class ReferenceCountingPolicy {
             const fallbackKey = link.resolvedFile.path.toLocaleUpperCase();
             refs = this.indexedReferences.get(fallbackKey);
             if (refs && refs.length > 0) {
-                if (this.debugMode) console.log(`Found using fallback (path): ${fallbackKey}`);
+                // Debug logging removed for production
                 return refs;
             }
             
@@ -775,7 +752,7 @@ export class ReferenceCountingPolicy {
                     const fallbackKeyWithSubpath = (link.resolvedFile.path + subpath).toLocaleUpperCase();
                     refs = this.indexedReferences.get(fallbackKeyWithSubpath);
                     if (refs && refs.length > 0) {
-                        if (this.debugMode) console.log(`Found using fallback (path+subpath): ${fallbackKeyWithSubpath}`);
+                        // Debug logging removed for production
                         return refs;
                     }
                 }
@@ -786,7 +763,7 @@ export class ReferenceCountingPolicy {
         const fallbackKeyOriginal = link.realLink.toLocaleUpperCase();
         refs = this.indexedReferences.get(fallbackKeyOriginal);
         if (refs && refs.length > 0) {
-            if (this.debugMode) console.log(`Found using fallback (original): ${fallbackKeyOriginal}`);
+            // Debug logging removed for production
             return refs;
         }
         
@@ -795,13 +772,13 @@ export class ReferenceCountingPolicy {
             const fallbackWithExt = fallbackKeyOriginal + ".MD";
             refs = this.indexedReferences.get(fallbackWithExt);
             if (refs && refs.length > 0) {
-                if (this.debugMode) console.log(`Found using fallback (original+ext): ${fallbackWithExt}`);
+                // Debug logging removed for production
                 return refs;
             }
         }
         
         // No references found
-        if (this.debugMode) console.log(`No references found after all fallbacks`);
+        // Debug logging removed for production
         return undefined;
     }
 
@@ -810,7 +787,7 @@ export class ReferenceCountingPolicy {
      */
     setDebugMode(enabled: boolean): void {
         this.debugMode = enabled;
-        console.log(`Debug mode ${enabled ? 'enabled' : 'disabled'} for ReferenceCountingPolicy`);
+        // Debug logging removed for production
         
         if (enabled) {
             // Print a summary of the references when enabling debug mode
@@ -848,22 +825,7 @@ export class ReferenceCountingPolicy {
             }
             
             // Also list keys containing "project" to help find specific references
-            console.log(`Looking for keys containing "project":`);
-            const projectKeys = Array.from(this.indexedReferences.keys())
-                .filter(k => k.toLowerCase().includes("project"));
-                
-            if (projectKeys.length > 0) {
-                projectKeys.slice(0, 5).forEach(k => {
-                    const refs = this.indexedReferences.get(k) || [];
-                    console.log(`  ${k} (${refs.length} references)`);
-                });
-                
-                if (projectKeys.length > 5) {
-                    console.log(`  ... and ${projectKeys.length - 5} more`);
-                }
-            } else {
-                console.log(`  No keys containing "project" found`);
-            }
+            // Debug logging removed for production
         }
     }
 
@@ -883,9 +845,7 @@ export class ReferenceCountingPolicy {
      * @returns All references found for this link
      */
     public findAllReferencesForLink(filePath: string, linkText: string): Link[] {
-        if (this.debugMode) {
-            console.log(`Finding all references for link: ${linkText} in ${filePath}`);
-        }
+        // Debug logging removed for production
         
         // Generate key with current policy
         const key = this.generateKeyFromPathAndLink(filePath, linkText);
@@ -895,7 +855,7 @@ export class ReferenceCountingPolicy {
         const refsWithCurrentPolicy = this.indexedReferences.get(key);
         if (refsWithCurrentPolicy && refsWithCurrentPolicy.length > 0) {
             allRefs = allRefs.concat(refsWithCurrentPolicy);
-            if (this.debugMode) console.log(`  Found ${refsWithCurrentPolicy.length} refs with current policy key: ${key}`);
+            // Debug logging removed for production
         }
         
         // If Same File policy is active, we need to check for references across all source files
@@ -919,7 +879,7 @@ export class ReferenceCountingPolicy {
             if (alternateKey && alternateKey !== key) {
                 const altRefs = this.indexedReferences.get(alternateKey);
                 if (altRefs && altRefs.length > 0) {
-                    if (this.debugMode) console.log(`  Found ${altRefs.length} refs with alternate key: ${alternateKey}`);
+                    // Debug logging removed for production
                     allRefs = allRefs.concat(altRefs);
                 }
             }
@@ -933,7 +893,7 @@ export class ReferenceCountingPolicy {
                 if (matchKey !== key) {
                     const matchRefs = this.indexedReferences.get(matchKey);
                     if (matchRefs && matchRefs.length > 0) {
-                        if (this.debugMode) console.log(`  Found ${matchRefs.length} refs with related key: ${matchKey}`);
+                        // Debug logging removed for production
                         allRefs = allRefs.concat(matchRefs);
                     }
                 }
@@ -950,7 +910,7 @@ export class ReferenceCountingPolicy {
                 if (matchKey !== key) {
                     const matchRefs = this.indexedReferences.get(matchKey);
                     if (matchRefs && matchRefs.length > 0) {
-                        if (this.debugMode) console.log(`  Found ${matchRefs.length} refs with prefixed key: ${matchKey}`);
+                        // Debug logging removed for production
                         allRefs = allRefs.concat(matchRefs);
                     }
                 }
@@ -958,7 +918,7 @@ export class ReferenceCountingPolicy {
         }
         
         if (this.debugMode) {
-            console.log(`Total references found: ${allRefs.length}`);
+            // Debug logging removed for production
         }
         
         return allRefs;

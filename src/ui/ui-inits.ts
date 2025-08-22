@@ -41,24 +41,7 @@ export function initImplicitLinksLivePreview(plugin: SNWPlugin) {
 	});
 	const validExtensions = assertValidExtensions(implicitExt, "implicit-links");
 	
-	// Quick sanity print to confirm singletons
-	try {
-		// eslint-disable-next-line @typescript-eslint/no-var-requires
-		const cmStateA = require("@codemirror/state");
-		// eslint-disable-next-line @typescript-eslint/no-var-requires
-		const cmViewA  = require("@codemirror/view");
-		console.log("[implicit-links] CM6 singletons", {
-			stateVersion: cmStateA?.StateField?.toString?.().slice(0,40),
-			viewVersion: cmViewA?.EditorView?.toString?.().slice(0,40),
-		});
-	} catch {}
-	
-	// Sanity check: show which file paths Node resolved for CM6
-	try {
-		console.log("[implicit-links] CM6 paths:");
-		console.log("STATE PATH", require.resolve("@codemirror/state"));
-		console.log("VIEW PATH ", require.resolve("@codemirror/view"));
-	} catch {}
+	// Debug logging removed for production
 	
 	plugin.registerEditorExtension(validExtensions);
 } 
