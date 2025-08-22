@@ -1,4 +1,4 @@
-import { Compartment, StateEffect } from "@codemirror/state";
+import { Compartment, StateEffect, Transaction } from "@codemirror/state";
 import { EditorView, ViewPlugin, ViewUpdate } from "@codemirror/view";
 import { inferredCacheField, setInferredCache, InferredCache, PhraseInfo } from "./cache";
 import { buildPhraseRegexChunks } from "./regex";
@@ -157,6 +157,14 @@ export function createInferredLinksExtension(plugin: any, opts?: {
     constructor(readonly view: EditorView) { runRefresh(view); }
     update(u: ViewUpdate) {
       if (u.docChanged || u.viewportChanged) runRefresh(u.view);
+      
+      // Check for implicit links refresh trigger
+      const refreshTriggered = u.transactions?.some(tr => 
+        tr.annotation(Transaction.userEvent) === "implicit-links-refresh"
+      );
+      if (refreshTriggered) {
+        runRefresh(u.view);
+      }
     }
   }, {
     eventHandlers: {

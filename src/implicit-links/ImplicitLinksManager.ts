@@ -4,6 +4,7 @@ import type { AutoLinkSettings } from "../settings";
 import type SNWPlugin from "../main";
 import { DetectionManager } from "./DetectionManager";
 import { offsetRangeToPos, getCleanSegments } from "./utils";
+import { Transaction } from "@codemirror/state";
 
 export class ImplicitLinksManager {
 	private detectionManager: DetectionManager;
@@ -69,6 +70,27 @@ export class ImplicitLinksManager {
 		if (this.unregisterProvider) {
 			this.unregisterProvider();
 			this.registerProvider(this.plugin.snwAPI.registerVirtualLinkProvider.bind(this.plugin.snwAPI));
+		}
+	}
+
+	/**
+	 * Trigger a refresh of implicit links in all active editors
+	 * This should be called when the reference counting policy rebuilds
+	 */
+	triggerRefresh(): void {
+		// Get all markdown editor leaves
+		const leaves = this.plugin.app.workspace.getLeavesOfType("markdown");
+		for (const leaf of leaves) {
+			const mdView = leaf.view as any;
+			const cm = mdView?.editor?.cm;
+			if (cm) {
+				// Dispatch a transaction that will trigger the implicit links refresh
+				// This simulates a document change to force the implicit links extension to refresh
+				cm.dispatch({
+					// No actual changes, just a user event that the implicit links extension can watch for
+					annotations: Transaction.userEvent.of("implicit-links-refresh")
+				});
+			}
 		}
 	}
 

@@ -205,6 +205,8 @@ export default class SNWPlugin extends Plugin {
 					updateHeadersDebounce();
 					updatePropertiesDebounce();
 					updateAllSnwLiveUpdateReferencesDebounce();
+					// Trigger implicit links refresh to sync with updated reference counts
+					this.implicitLinksManager?.triggerRefresh();
 				},
 				delay: 3000,
 			},
@@ -218,6 +220,8 @@ export default class SNWPlugin extends Plugin {
 					updateHeadersDebounce();
 					updatePropertiesDebounce();
 					updateAllSnwLiveUpdateReferencesDebounce();
+					// Trigger implicit links refresh to sync with updated reference counts
+					this.implicitLinksManager?.triggerRefresh();
 				},
 				delay: 1000,
 			},
@@ -271,6 +275,8 @@ export default class SNWPlugin extends Plugin {
 						updateHeadersDebounce();
 						updatePropertiesDebounce();
 						updateAllSnwLiveUpdateReferencesDebounce(); // also triggers CM6 rescan internally
+						// Trigger implicit links refresh to sync with updated reference counts
+						this.implicitLinksManager?.triggerRefresh();
 					} catch (e) {
 						console.error("SNW: post-index UI refresh failed", e);
 					}
@@ -314,6 +320,8 @@ export default class SNWPlugin extends Plugin {
 		updateHeadersDebounce();
 		updatePropertiesDebounce();
 		updateAllSnwLiveUpdateReferencesDebounce();
+		// Trigger implicit links refresh to sync with updated reference counts
+		this.implicitLinksManager?.triggerRefresh();
 		
 		// Show notice
 		new Notice("SNW: References rebuilt successfully");
