@@ -138,4 +138,11 @@
 
 .snw-sort-dropdown-list-item-label .icon {
   margin-left: 5px;
+}
+
+/* Property snippet highlighting */
+.snw-ref-property-snippet mark.snw-ref-hit {
+  background: var(--text-highlight-bg, rgba(255, 235, 0, .35));
+  padding: 0 .1em;
+  border-radius: .15em;
 } 

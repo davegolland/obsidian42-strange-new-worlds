@@ -51,7 +51,78 @@ const grabChunkOfFile = async (ref: Link): Promise<HTMLElement> => {
 	container.setAttribute("uic", "uic"); //used to track if this is UIC element.
 
 	if (ref.reference?.key) {
-		container.innerText = `Used in property: ${ref.reference.key}`;
+		const key = ref.reference.key;
+		const pos = linkPosition; // CodeMirror position for the property/value
+		const fmPos = fileCache?.frontmatterPosition;
+		const isFrontmatter =
+			!!fmPos &&
+			pos &&
+			pos.start.line >= fmPos.start.line &&
+			pos.end.line <= fmPos.end.line;
+
+		// Extract a single "evidence" line (or YAML entry) containing the hit
+		const fullText = fileContents;
+		let lineStart = 0, lineEnd = fullText.length;
+		if (pos?.start) {
+			const startOff = pos.start.offset ?? 0;
+			lineStart = fullText.lastIndexOf("\n", startOff) + 1;
+			lineEnd = fullText.indexOf("\n", startOff);
+			if (lineEnd === -1) lineEnd = fullText.length;
+		}
+		let evidence = fullText.slice(lineStart, lineEnd);
+
+		// Fallback: try to find the "key:" line in YAML/frontmatter if pos is fuzzy
+		if (!evidence || !evidence.trim()) {
+			const keyRegex = new RegExp(`^\\s*${key}\\s*[:=]`, "mi");
+			const m = keyRegex.exec(fullText);
+			if (m) {
+				const s = m.index;
+				const ls = fullText.lastIndexOf("\n", s) + 1;
+				const le = fullText.indexOf("\n", s);
+				evidence = fullText.slice(ls, le === -1 ? fullText.length : le);
+			}
+		}
+
+		// If we still didn't get a line, synthesize one from the cached value
+		if (!evidence || !evidence.trim()) {
+			const valueFromPos = getTextAtPosition(fullText, pos) ?? "";
+			evidence = `${key}: ${valueFromPos}`.trim();
+		}
+
+		// Light highlighting of the matched portion
+		const valueText = getTextAtPosition(fullText, pos) ?? "";
+		const escaped = (s: string) =>
+			s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]!));
+		const highlighted =
+			valueText && evidence.includes(valueText)
+				? escaped(evidence).replace(
+						new RegExp(valueText.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")),
+						`<mark class="snw-ref-hit">$&</mark>`
+					)
+				: escaped(evidence);
+
+		// Render as YAML block if we're in frontmatter, otherwise as a simple code line
+		const md =
+			isFrontmatter
+				? "```yaml\n" + evidence + "\n```"
+				: "`" + evidence + "`";
+
+		// Use MarkdownRenderer for consistent Obsidian styling
+		const wrapper = container.createDiv({ cls: "snw-ref-property-snippet" });
+		await MarkdownRenderer.render(plugin.app, md, wrapper, ref.sourceFile.path, plugin);
+
+		// If we rendered a code block (frontmatter), add visual highlight overlay
+		if (!isFrontmatter) {
+			// For inline code, MarkdownRenderer already produced <code>…</code>,
+			// so we post-inject the <mark> highlight.
+			const code = wrapper.querySelector("code");
+			if (code) code.innerHTML = highlighted;
+		} else {
+			// For YAML blocks, highlight in the pre/code as well
+			const code = wrapper.querySelector("pre code");
+			if (code) code.innerHTML = highlighted;
+		}
+
 		return container;
 	}
 	const contextBuilder = new ContextBuilder(fileContents, fileCache);
