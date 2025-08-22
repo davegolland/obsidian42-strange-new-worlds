@@ -2,7 +2,7 @@
 
 # Define paths
 VAULT_PATH="$HOME/Documents/testvault/testvault"
-PLUGIN_PATH="$VAULT_PATH/.obsidian/plugins/obsidian-footprints-plugin"
+PLUGIN_PATH="$VAULT_PATH/.obsidian/plugins/obsidian42-strange-new-worlds-dev"
 
 # Build the plugin
 echo "Building plugin..."

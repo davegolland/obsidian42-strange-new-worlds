@@ -2,7 +2,6 @@ import esbuild from 'esbuild';
 import process from 'process';
 import builtins from 'builtin-modules';
 import fs from 'fs';
-import console from 'console';
 import path from 'path';
 
 fs.copyFile('manifest.json', 'build/manifest.json', (err) => {

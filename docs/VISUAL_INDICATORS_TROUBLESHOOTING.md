@@ -7,13 +7,13 @@ If you're not seeing visual indicators (reference counts) in your Obsidian vault
 ### 1. Automatic Fix Script
 Run this in the Obsidian console to automatically fix common issues:
 ```javascript
-// Copy and paste the contents of scripts/fix-visual-indicators.js
+// Copy and paste the contents of scripts/fix-cache-issue.js
 ```
 
 ### 2. Diagnostic Script
 Run this to get detailed information about what's wrong:
 ```javascript
-// Copy and paste the contents of scripts/debug-visual-indicators.js
+// Copy and paste the contents of scripts/fix-display-counts.js
 ```
 
 ## Common Issues and Solutions
