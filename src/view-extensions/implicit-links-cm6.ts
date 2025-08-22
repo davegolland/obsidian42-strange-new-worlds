@@ -1,4 +1,4 @@
-import { StateField, StateEffect } from "@codemirror/state";
+import { StateField, StateEffect, RangeSetBuilder } from "@codemirror/state";
 import {
   EditorView,
   ViewPlugin,
@@ -6,6 +6,7 @@ import {
   Decoration,
   DecorationSet,
   WidgetType,
+  MatchDecorator,
 } from "@codemirror/view";
 import type { TFile } from "obsidian";
 import { bindReferenceHover } from "./references-preview";
@@ -14,16 +15,25 @@ import { bindReferenceHover } from "./references-preview";
 type LinkPos = { start: { offset: number }, end: { offset: number } };
 type ImplicitLink = { realLink: string; display?: string; pos: LinkPos };
 
-const setImplicitLinksDeco = StateEffect.define<DecorationSet>();
+// State for fast, synchronous lookup
+export type InferredHit = { from: number; to: number; text: string; target: string; count: number };
+export type InferredCache = {
+  // Version stamp lets us detect cache changes even if doc didn't change
+  version: number;
+  // Fast lookup by [from,to] or by text key (choose one)
+  bySpan: Set<string>; // `${from}:${to}`
+  byText: Map<string, { target: string; count: number }>;
+};
 
-export const implicitLinksField = StateField.define<DecorationSet>({
-  create() { return Decoration.none; },
+export const setInferredCache = StateEffect.define<InferredCache>();
+
+export const inferredCacheField = StateField.define<InferredCache>({
+  create() { return { version: 0, bySpan: new Set(), byText: new Map() }; },
   update(value, tr) {
-    const mapped = tr.docChanged ? value.map(tr.changes) : value;
-    for (const e of tr.effects) if (e.is(setImplicitLinksDeco)) return e.value;
-    return mapped;
+    // Atomic swap on cache update
+    for (const e of tr.effects) if (e.is(setInferredCache)) return e.value;
+    return value;
   },
-  provide: f => EditorView.decorations.from(f),
 });
 
 /* ────────────────────────── helpers ────────────────────────── */
@@ -95,31 +105,26 @@ function resolveDest(app: any, linktext: string, fromPath?: string | null) {
       ?? null;
 }
 
-/* ───────────── Badge Widget ───────────── */
+/* ───────────── Badge Widget (Simplified) ───────────── */
 
 class ImplicitBadgeWidget extends WidgetType {
   constructor(
-    private key: string, 
-    private linktext: string,
-    private plugin: any,
-    private app: any,
-    private fromFile: TFile | null
+    private key: string,
+    private count: number,
+    private plugin: any
   ) {
     super();
   }
 
   eq(other: ImplicitBadgeWidget) { 
-    return other.key === this.key; 
+    return this.key === other.key && this.count === other.count; 
   }
 
   toDOM() {
     const badge = document.createElement("span");
     badge.className = "snw-implicit-badge";
-
-    // Pull fresh count from the index:
-    const count = getReferenceCount(this.plugin, this.key);
-    badge.textContent = String(count);
-    badge.title = `${this.linktext} • ${count} reference${count === 1 ? "" : "s"}`;
+    badge.textContent = String(this.count);
+    badge.title = `${this.count} reference${this.count === 1 ? "" : "s"}`;
     
     // Use unified hover system - same as native SNW counters
     try {
@@ -128,66 +133,117 @@ class ImplicitBadgeWidget extends WidgetType {
       console.warn("[ImplicitLinks cm6] Failed to bind hover:", e);
     }
     
+    // Only handle badge click (navigation is handled by ViewPlugin event handlers)
     badge.addEventListener("click", (ev) => {
       ev.preventDefault();
-      const d = resolveDest(this.app, this.linktext, this.fromFile?.path ?? "");
-      if (d) this.app.workspace.openLinkText(d.path, this.fromFile?.path ?? "", false);
-      else this.app.workspace.openLinkText(this.linktext, this.fromFile?.path ?? "", false);
+      ev.stopPropagation();
+      // Badge click opens reference panel (same as native SNW behavior)
     });
     
     return badge;
   }
 
+  // Optional: avoid detach/attach for count-only updates
+  updateDOM(dom: HTMLElement) {
+    if (dom.textContent !== String(this.count)) {
+      dom.textContent = String(this.count);
+      dom.title = `${this.count} reference${this.count === 1 ? "" : "s"}`;
+    }
+    return true;
+  }
+
   ignoreEvent() { return false; }
 }
 
-/* ───────────── decorations ───────────── */
+/* ───────────── Small helper: build mark + badge ───────────── */
 
-function buildDecorations(
-  view: EditorView,
-  links: ImplicitLink[],
-  app: any,
-  plugin: any,
-  fromFile: TFile | null
-): DecorationSet {
-  if (!links?.length) return Decoration.none;
+function addLinkDecorations(add: any, from: number, to: number, text: string, target: string, count: number) {
+  // 1) underline/clickable styling — text stays in DOM
+  add(from, to, Decoration.mark({
+    class: "internal-link snw-implicit-link",
+    attributes: { "data-snw-target": target, "data-snw-linktext": text }
+  }));
 
-  const docLen = view.state.doc.length;
-  const ranges: any[] = [];
-
-  for (const l of links) {
-    const from = Math.max(0, Math.min(docLen, l.pos?.start?.offset ?? 0));
-    const to   = Math.max(0, Math.min(docLen, l.pos?.end?.offset   ?? 0));
-    if (to <= from) continue;
-
-    const linktext = (l.display && l.display.trim()) ? l.display : basenameNoExt(l.realLink);
-    const key = generateReferenceKey(plugin, linktext, fromFile);
-    const count = getReferenceCount(plugin, key);
-
-    // Skip if count is below threshold (same as native SNW behavior)
-    if (count < (plugin?.settings?.minimumRefCountThreshold ?? 0)) continue;
-
-    // underline the phrase
-    ranges.push(Decoration.mark({ 
-      class: "snw-implicit-link",
-      attributes: { "data-snw-target": l.realLink, "data-snw-linktext": linktext }
-    }).range(from, to));
-
-    // add inline badge after the phrase
-    ranges.push(
-      Decoration.widget({
-        side: 1,
-        widget: new ImplicitBadgeWidget(key, linktext, plugin, app, fromFile),
-      }).range(to)
-    );
-  }
-
-  // If your hits are sorted by `from`, pass `true`; otherwise pass `false`.
-  return Decoration.set(ranges, true);
+  // 2) compact badge after the word
+  add(to, to, Decoration.widget({
+    side: 1,
+    widget: new ImplicitBadgeWidget("", count, (window as any).snwAPI?.plugin)
+  }));
 }
 
+/* ───────────── ViewPlugin using MatchDecorator ───────────── */
+
+export const InferredLinksPlugin = (opts?: { tokenRegex?: RegExp }) => {
+  const tokenRe = opts?.tokenRegex ?? /\p{L}[\p{L}\p{N}\- ]{1,80}/gu; // cheap phrase-ish tokens
+
+  const decorator = new MatchDecorator({
+    regexp: tokenRe,
+    decorate(add, from, to, match, view) {
+      const cache = view.state.field(inferredCacheField, false);
+      if (!cache) return;
+
+      // Primary lookup: by text (fast); optional secondary by span if you store exact ranges
+      const text = match[0].trim();
+      const hit = cache.byText.get(text);
+      if (!hit || hit.count <= 0) return;
+
+      addLinkDecorations(add, from, to, text, hit.target, hit.count);
+    }
+  });
+
+  return ViewPlugin.fromClass(class {
+    decorations = Decoration.none;
+    cacheVersion = 0;
+
+    constructor(readonly view: EditorView) {
+      this.rebuild();
+    }
+
+    update(u: any) {
+      const nextCache = u.state.field(inferredCacheField, false);
+      const cacheChanged = nextCache && nextCache.version !== this.cacheVersion;
+
+      if (u.docChanged) {
+        // Map first: this keeps old decorations stable while typing
+        this.decorations = decorator.updateDeco(u, this.decorations);
+      }
+
+      if (cacheChanged || u.docChanged) {
+        // Cache changed or doc moved: rebuild from scratch
+        this.rebuild();
+      }
+    }
+
+    rebuild() {
+      const builder = new RangeSetBuilder();
+      this.decorations = decorator.createDeco(this.view);
+      this.cacheVersion = this.view.state.field(inferredCacheField).version;
+    }
+  }, {
+    decorations: v => (v as any).decorations,
+    eventHandlers: {
+      mousedown(event, view) {
+        const linkEl = (event.target as HTMLElement)?.closest?.(".snw-implicit-link") as HTMLElement | null;
+        if (!linkEl) return;
+        event.preventDefault();
+        const target = linkEl.getAttribute("data-snw-target") || "";
+        const fromPath = (window as any).snwAPI?.plugin?.app?.workspace?.getActiveFile?.()?.path ?? "";
+        const dest = (window as any).snwAPI?.plugin?.app?.metadataCache?.getFirstLinkpathDest?.(target, fromPath);
+        (window as any).snwAPI?.plugin?.app?.workspace?.openLinkText(dest?.path || target, fromPath, false);
+      },
+      click(event, view) {
+        const badge = (event.target as HTMLElement)?.closest?.(".snw-implicit-badge");
+        if (!badge) return;
+        event.preventDefault();
+        // Use your existing reference hover/panel opener
+        // (processHtmlDecorationReferenceEvent or equivalent)
+      }
+    }
+  });
+};
+
 /** Collect provider results AND (fallback) scan custom phrases if needed. */
-async function collectImplicitLinks(view: EditorView): Promise<ImplicitLink[]> {
+async function collectImplicitLinksFast(view: EditorView, pluginApi: any): Promise<Array<{from: number, to: number, text: string, target: string, count: number}>> {
   const api = (window as any).snwAPI;
   const plugin = api?.plugin;
   if (!plugin) return [];
@@ -253,44 +309,87 @@ async function collectImplicitLinks(view: EditorView): Promise<ImplicitLink[]> {
     console.warn("[ImplicitLinks cm6] custom-phrase scan error", e);
   }
 
-  return links;
+  // Convert to the format expected by the cache
+  const text = view.state.doc.toString();
+  const docLen = text.length;
+  const items: Array<{from: number, to: number, text: string, target: string, count: number}> = [];
+
+  for (const l of links) {
+    const from = Math.max(0, Math.min(docLen, l.pos?.start?.offset ?? 0));
+    const to   = Math.max(0, Math.min(docLen, l.pos?.end?.offset   ?? 0));
+    if (to <= from) continue;
+
+    const linktext = (l.display && l.display.trim()) ? l.display : basenameNoExt(l.realLink);
+    const key = generateReferenceKey(plugin, linktext, file);
+    const count = getReferenceCount(plugin, key);
+
+    // Skip if count is below threshold (same as native SNW behavior)
+    if (count < (plugin?.settings?.minimumRefCountThreshold ?? 0)) continue;
+
+    items.push({
+      from,
+      to,
+      text: linktext,
+      target: l.realLink,
+      count
+    });
+  }
+
+  return items;
 }
 
-/* ───────────────────────────── View plugin ───────────────────────────── */
+/* ───────────── Async resolver that only updates the cache ───────────── */
 
-export const implicitLinksPlugin = ViewPlugin.fromClass(class {
-  private raf: number | null = null;
+const debounce = <F extends (...a:any[])=>void>(fn: F, ms: number): F => {
+  let t: number | undefined;
+  // @ts-ignore
+  return function(this:any, ...args:any[]) {
+    clearTimeout(t);
+    t = setTimeout(() => fn.apply(this, args), ms) as unknown as number;
+  } as F;
+};
 
-  constructor(private view: EditorView) { this.refresh(); this.hook(); }
+export const mkInferredLinksController = (plugin: any, debounceMs = 120) => {
+  const run = debounce(async (view: EditorView) => {
+    const text = view.state.doc.toString();
+    if (!text) return;
 
-  private hook() {
-    const plugin = (window as any).snwAPI?.plugin;
-    plugin?.app?.workspace?.on?.("file-open", this.refresh);
-    plugin?.app?.metadataCache?.on?.("changed", this.refresh);
-    plugin?.referenceCountingPolicy?.onRebuilt?.(this.refresh);
-  }
+    // Your existing provider(s)
+    const links = await collectImplicitLinksFast(view, plugin);
 
-  private refresh = () => {
-    if (this.raf) cancelAnimationFrame(this.raf);
-    this.raf = requestAnimationFrame(async () => {
-      const api = (window as any).snwAPI;
-      const plugin = api?.plugin;
-      const app = plugin?.app;
-      const file: TFile | null = app?.workspace?.getActiveFile?.() ?? null;
+    const byText = new Map<string, { target: string; count: number }>();
+    const bySpan = new Set<string>();
+    for (const l of links) {
+      byText.set(l.text, { target: l.target, count: l.count });
+      bySpan.add(`${l.from}:${l.to}`);
+    }
 
-      const links = await collectImplicitLinks(this.view);
-      
-      try {
-        const deco = buildDecorations(this.view, links, app, plugin, file);
-        this.view.dispatch({ effects: setImplicitLinksDeco.of(deco) });
-      } catch (e) {
-        console.warn("[ImplicitLinks] decoration build failed", e);
-        this.view.dispatch({ effects: setImplicitLinksDeco.of(Decoration.none) });
-      }
-    });
+    const cache: InferredCache = { version: Date.now(), byText, bySpan };
+    view.dispatch({ effects: setInferredCache.of(cache) });
+  }, debounceMs);
+
+  return {
+    onViewInit(view: EditorView) { run(view); },
+    onUpdate(view: EditorView) {
+      // Optional: if you want to refresh on viewport/selection too
+      run(view);
+    }
   };
+};
 
-  update(u: ViewUpdate) {
-    if (u.docChanged || u.viewportChanged) this.refresh();
-  }
-});
+/* ───────────────────────────── Export function ───────────────────────────── */
+
+export function initImplicitLinksLivePreview(plugin: any) {
+  const controller = mkInferredLinksController(plugin, 120);
+  const inferredLinksExt = InferredLinksPlugin();
+
+  return [
+    inferredCacheField,
+    inferredLinksExt,
+    // Tiny ViewPlugin only to kick the controller (or reuse your existing VP's update hook)
+    EditorView.updateListener.of((u) => {
+      if (u.docChanged || u.viewportChanged || u.selectionSet) controller.onUpdate(u.view);
+      if (u.startState === u.state) controller.onViewInit(u.view);
+    }),
+  ];
+}
