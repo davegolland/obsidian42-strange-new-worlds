@@ -2,7 +2,7 @@ import type { TFile, CachedMetadata } from "obsidian";
 import type { VirtualLinkProvider } from "../types";
 import type { AutoLinkSettings } from "../settings";
 import type SNWPlugin from "../main";
-import { DetectionManager } from "./DetectionManager";
+import { DetectionManager } from "./detection-compat";
 import { offsetRangeToPos, getCleanSegments } from "./utils";
 import { Transaction } from "@codemirror/state";
 

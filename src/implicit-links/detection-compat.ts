@@ -7,26 +7,30 @@ import type { TFile, App } from "obsidian";
 import type { DetectedLink } from "../types";
 import type { AutoLinkSettings } from "../settings";
 import type { WikilinkEquivalencePolicy } from "../policies/base/WikilinkEquivalencePolicy";
+import { RegexDetector } from "./RegexDetector";
+import { DictionaryDetector } from "./DictionaryDetector";
 
 // Re-export the old DetectionManager interface for compatibility
 export class DetectionManager {
-	private detector: any | null = null;
+	private detector: RegexDetector | DictionaryDetector | null = null;
 
 	constructor(
 		private app: App,
 		private settings: AutoLinkSettings,
 		private policy: WikilinkEquivalencePolicy,
 	) {
-		// For now, keep the old behavior but mark as deprecated
-		console.warn("[SNW] DetectionManager is deprecated. Use ImplicitLinksManager instead.");
-		
-		// Initialize with null detector for now
-		this.detector = null;
+		// Initialize detector based on settings
+		if (settings.detectionMode === "regex") {
+			this.detector = new RegexDetector(settings);
+		} else if (settings.detectionMode === "dictionary") {
+			this.detector = new DictionaryDetector(app, settings, policy);
+		}
 	}
 
 	async detect(file: TFile, text: string): Promise<DetectedLink[]> {
-		// Return empty array for now - functionality moved to new manager
-		return [];
+		if (!this.detector) return [];
+		const detected = await this.detector.detect(file, text);
+		return this.resolveConflicts(detected);
 	}
 
 	private resolveConflicts(items: DetectedLink[]): DetectedLink[] {
@@ -50,13 +54,21 @@ export class DetectionManager {
 
 	updateSettings(settings: AutoLinkSettings): void {
 		this.settings = settings;
-		// Settings update moved to new manager
+		if (settings.detectionMode === "regex") {
+			this.detector = new RegexDetector(settings);
+		} else if (settings.detectionMode === "dictionary") {
+			this.detector = new DictionaryDetector(this.app, settings, this.policy);
+		} else {
+			this.detector = null;
+		}
 	}
 
 	/**
 	 * Rebuild the detector (useful when settings change)
 	 */
 	async rebuild(): Promise<void> {
-		// Rebuild functionality moved to new manager
+		if (this.detector && typeof this.detector.build === "function") {
+			await this.detector.build();
+		}
 	}
 }
