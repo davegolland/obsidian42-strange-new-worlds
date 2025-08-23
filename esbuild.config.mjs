@@ -15,19 +15,17 @@ if (!fs.existsSync('build/styles')) {
 
 // Instead of just copying the files, let's combine all CSS files into one
 const concatenateCss = () => {
-  // Create a combined CSS file for build/styles.css
-  const commonCss = fs.readFileSync('styles/common.css', 'utf8');
-  const inlineCss = fs.readFileSync('styles/inline.css', 'utf8');
-  const gutterCss = fs.readFileSync('styles/gutter.css', 'utf8');
-  const popoverCss = fs.readFileSync('styles/popover.css', 'utf8');
-  const sidepaneCss = fs.readFileSync('styles/sidepane.css', 'utf8');
+  // Read the main CSS file which imports all modules
+  const mainCss = fs.readFileSync('styles/main.css', 'utf8');
+  
+  // Process the imports to get the actual content
+  const processedCss = mainCss.replace(/@import "([^"]+)";/g, (match, importPath) => {
+    const fullPath = path.join('styles', importPath);
+    return fs.readFileSync(fullPath, 'utf8');
+  });
   
   const combinedCss = `/* Combined modular CSS */
-${commonCss}
-${inlineCss}
-${gutterCss}
-${popoverCss}
-${sidepaneCss}`;
+${processedCss}`;
   
   fs.writeFileSync('build/styles.css', combinedCss);
   
