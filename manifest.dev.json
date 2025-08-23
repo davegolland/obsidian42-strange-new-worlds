@@ -1,7 +1,7 @@
 {
 	"id": "obsidian42-strange-new-worlds-dev",
 	"name": "Strange New Worlds (Dev)",
-	"version": "2.4.0",
+	"version": "2.3.2",
 	"minAppVersion": "1.7.2",
 	"description": "Help see how your vault is interconnected with visual indicators. (Development version with Virtual Links)",
 	"author": "dsg",

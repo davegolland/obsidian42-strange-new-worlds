@@ -50,36 +50,37 @@ async function computePhraseInfo(text: string, plugin: any): Promise<Map<string,
     let links = batches.flat();
 
     // Fallback: scan custom phrases from settings
-    try {
-      const s = plugin?.settings?.dictionary ?? plugin?.settings?.implicitLinks?.dictionary ?? plugin?.settings ?? {};
-      const include = !!(s.sources?.customList ?? s.includeCustomPhrases ?? s.includeCustom);
-      if (include) {
-        const list: string[] = s.customPhrases ?? s.customList ?? [];
-        const minLen = s.minimumPhraseLength ?? s.minPhraseLength ?? 3;
-        const requireWB = !!s.requireWordBoundaries;
+    // DISABLED: Using DetectionManager approach instead to avoid duplicates
+    // try {
+    //   const s = plugin?.settings?.dictionary ?? plugin?.settings?.implicitLinks?.dictionary ?? plugin?.settings ?? {};
+    //   const include = !!(s.sources?.customList ?? s.includeCustomPhrases ?? s.includeCustom);
+    //   if (include) {
+    //     const list: string[] = s.customPhrases ?? s.customList ?? [];
+    //     const minLen = s.minimumPhraseLength ?? s.minPhraseLength ?? 3;
+    //     const requireWB = !!s.requireWordBoundaries;
 
-        for (const raw of list) {
-          const phrase = String(raw || "").trim();
-          if (phrase.length < minLen) continue;
+    //     for (const raw of list) {
+    //       const phrase = String(raw || "").trim();
+    //       if (phrase.length < minLen) continue;
 
-          const q = phrase.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-          const body = requireWB ? `\\b${q}\\b` : q;
-          const re = new RegExp(body, "gi");
+    //       const q = phrase.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    //       const body = requireWB ? `\\b${q}\\b` : q;
+    //       const re = new RegExp(body, "gi");
           
-          for (const m of text.matchAll(re)) {
-            const start = m.index ?? 0;
-            const end = start + m[0].length;
-            links.push({ 
-              realLink: `${phrase}.md`, 
-              display: phrase, 
-              pos: { start: { offset: start }, end: { offset: end } } 
-            });
-          }
-        }
-      }
-    } catch (e) {
-      console.warn("[ImplicitLinks manager] custom-phrase scan error", e);
-    }
+    //       for (const m of text.matchAll(re)) {
+    //         const start = m.index ?? 0;
+    //         const end = start + m[0].length;
+    //         links.push({ 
+    //           realLink: `${phrase}.md`, 
+    //           display: phrase, 
+    //           pos: { start: { offset: start }, end: { offset: end } } 
+    //         });
+    //       }
+    //     }
+    //   }
+    // } catch (e) {
+    //   console.warn("[ImplicitLinks manager] custom-phrase scan error", e);
+    // }
 
     // Convert to phrase info map
     for (const l of links) {
