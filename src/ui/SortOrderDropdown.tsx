@@ -53,7 +53,7 @@ export const SortOrderDropdown: FunctionComponent<SortOrderDropdownProps> = ({ p
 	const buttonContent = <div dangerouslySetInnerHTML={{ __html: currentSortOption.icon }} />;
 
 	return (
-		<Dropdown 
+		<Dropdown
 			buttonContent={buttonContent}
 			isOpen={isOpen}
 			onToggle={handleToggle}

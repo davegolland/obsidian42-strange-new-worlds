@@ -10,24 +10,20 @@ import {
 	type WorkspaceLeaf,
 	debounce,
 } from "obsidian";
-import { DEFAULT_SETTINGS, type Settings, type LegacySettings, migrateSettings } from "./settings";
-import SnwAPI from "./snwApi";
+import { FeatureManager } from "./FeatureManager";
 import { setDiagnosticFlags } from "./diag";
+import { ImplicitLinksManager } from "./implicit-links";
 import { ReferenceCountingPolicy } from "./policies/reference-counting";
+import { DEFAULT_SETTINGS, type LegacySettings, type Settings, migrateSettings } from "./settings";
+import SnwAPI from "./snwApi";
 import PluginCommands from "./ui/PluginCommands";
 import { SettingsTab } from "./ui/SettingsTab";
 import { SideBarPaneView, VIEW_TYPE_SNW } from "./ui/SideBarPaneView";
-import * as uiInits from "./ui/ui-inits";
+import { updateAllSnwLiveUpdateReferencesDebounce, updateHeadersDebounce, updatePropertiesDebounce } from "./ui/debounced-helpers";
 import { updateProperties } from "./ui/frontmatterRefCount";
 import { updateHeaders } from "./ui/headerRefCount";
-import {
-	updateHeadersDebounce,
-	updatePropertiesDebounce,
-	updateAllSnwLiveUpdateReferencesDebounce
-} from "./ui/debounced-helpers";
+import * as uiInits from "./ui/ui-inits";
 import { updateAllSnwLiveUpdateReferences } from "./view-extensions/htmlDecorations";
-import { FeatureManager } from "./FeatureManager";
-import { ImplicitLinksManager } from "./implicit-links";
 
 export const UPDATE_DEBOUNCE = 200;
 
@@ -39,10 +35,10 @@ type EventTargetLike = {
 
 // Configuration for debounced event handlers
 interface DebounceEventConfig {
-	target: EventTargetLike;         // e.g. this.app.vault, this.app.metadataCache
-	events: string[];                // names of events to subscribe to
+	target: EventTargetLike; // e.g. this.app.vault, this.app.metadataCache
+	events: string[]; // names of events to subscribe to
 	handler: (...args: any[]) => any; // handler function for these events
-	delay: number;                   // debounce interval in ms
+	delay: number; // debounce interval in ms
 }
 
 export default class SNWPlugin extends Plugin {
@@ -64,7 +60,7 @@ export default class SNWPlugin extends Plugin {
 	referenceCountingPolicy: ReferenceCountingPolicy = new ReferenceCountingPolicy(this);
 	featureManager!: FeatureManager;
 	implicitLinksManager!: ImplicitLinksManager;
-	
+
 	// Publicly accessible debounced versions of functions
 	updateHeadersDebounced: (() => void) | null = null;
 	updatePropertiesDebounced: (() => void) | null = null;
@@ -101,10 +97,10 @@ export default class SNWPlugin extends Plugin {
 
 	async onload(): Promise<void> {
 		console.log(`loading ${this.appName}`);
-		
+
 		// Initialize feature manager
 		this.featureManager = new FeatureManager(this, this.settings, this.showCountsActive);
-		
+
 		// 1) Load settings and build the index FIRST so UI has data on first paint
 		await this.initSettings();
 		await this.referenceCountingPolicy.buildLinksAndReferences();
@@ -134,7 +130,7 @@ export default class SNWPlugin extends Plugin {
 	private async initAPI(): Promise<void> {
 		window.snwAPI = this.snwAPI; // API access to SNW for Templater, Dataviewjs and the console debugger
 		this.snwAPI.references = this.referenceCountingPolicy.indexedReferences;
-		
+
 		// Will be set after settings are loaded
 		// @ts-ignore
 		this.snwAPI.settings = this.settings;
@@ -145,16 +141,16 @@ export default class SNWPlugin extends Plugin {
 	 */
 	private async initSettings(): Promise<void> {
 		await this.loadSettings();
-		
+
 		// Initialize diagnostic flags
 		setDiagnosticFlags(this.settings.dev);
-		
+
 		// Ensure the reference counting policy is using the correct policy from settings
 		this.referenceCountingPolicy.setActivePolicy(this.settings.wikilinkEquivalencePolicy);
-		
+
 		// Build synchronously from caller so first render has data
 		// await this.referenceCountingPolicy.buildLinksAndReferences();
-		
+
 		this.addSettingTab(new SettingsTab(this.app, this));
 
 		// set current state based on startup parameters
@@ -163,11 +159,11 @@ export default class SNWPlugin extends Plugin {
 		} else {
 			this.showCountsActive = this.settings.startup.enableOnDesktop;
 		}
-		
+
 		// Update feature manager with current settings and state
 		this.featureManager.updateSettings(this.settings);
 		this.featureManager.updateShowCountsActive(this.showCountsActive);
-		
+
 		// Initialize implicit links manager
 		this.implicitLinksManager = new ImplicitLinksManager(this, this.settings.autoLinks);
 		this.implicitLinksManager.registerProvider(this.snwAPI.registerVirtualLinkProvider.bind(this.snwAPI));
@@ -178,12 +174,12 @@ export default class SNWPlugin extends Plugin {
 	 */
 	private async initViews(): Promise<void> {
 		this.registerView(VIEW_TYPE_SNW, (leaf) => new SideBarPaneView(leaf, this));
-		
+
 		this.app.workspace.registerHoverLinkSource(this.appID, {
 			display: this.appName,
 			defaultMod: true,
 		});
-		
+
 		// Get editor extensions from feature manager
 		this.editorExtensions = this.featureManager.getEditorExtensions();
 		this.registerEditorExtension(this.editorExtensions);
@@ -238,7 +234,7 @@ export default class SNWPlugin extends Plugin {
 					updatePropertiesDebounce();
 				},
 				delay: UPDATE_DEBOUNCE,
-			}
+			},
 		]);
 	}
 
@@ -252,7 +248,7 @@ export default class SNWPlugin extends Plugin {
 			name: "Rebuild all references",
 			callback: () => {
 				this.rebuildIndex();
-			}
+			},
 		});
 	}
 
@@ -273,7 +269,8 @@ export default class SNWPlugin extends Plugin {
 				await this.app.workspace.getRightLeaf(false)?.setViewState({ type: VIEW_TYPE_SNW, active: false });
 			}
 			// Build the index, then proactively refresh all UI so badges appear without edits
-			this.referenceCountingPolicy.buildLinksAndReferences()
+			this.referenceCountingPolicy
+				.buildLinksAndReferences()
 				.then(() => {
 					try {
 						updateHeadersDebounce();
@@ -296,7 +293,7 @@ export default class SNWPlugin extends Plugin {
 				} catch (e) {
 					console.error("SNW: leaf-change refresh failed", e);
 				}
-			})
+			}),
 		);
 	}
 
@@ -308,25 +305,25 @@ export default class SNWPlugin extends Plugin {
 		if (!this.referenceCountingPolicy.isDebugModeEnabled()) {
 			this.referenceCountingPolicy.setDebugMode(true);
 		}
-		
+
 		// Clear caches
 		this.referenceCountingPolicy.invalidateCache();
-		
+
 		// Reset to default policy then back to current to ensure clean state
 		const currentPolicy = this.settings.wikilinkEquivalencePolicy;
 		this.referenceCountingPolicy.setActivePolicy("case-insensitive");
 		this.referenceCountingPolicy.setActivePolicy(currentPolicy);
-		
+
 		// Completely rebuild index
 		this.referenceCountingPolicy.buildLinksAndReferences().catch(console.error);
-		
+
 		// Force UI updates using debounced helpers
 		updateHeadersDebounce();
 		updatePropertiesDebounce();
 		updateAllSnwLiveUpdateReferencesDebounce();
 		// Trigger implicit links refresh to sync with updated reference counts
 		this.implicitLinksManager?.triggerRefresh();
-		
+
 		// Show notice
 		new Notice("SNW: References rebuilt successfully");
 	}
@@ -379,9 +376,9 @@ export default class SNWPlugin extends Plugin {
 
 	async loadSettings(): Promise<void> {
 		const loadedData = await this.loadData();
-		
+
 		// Check if we need to migrate from legacy format
-		if (loadedData && 'enableOnStartupDesktop' in loadedData) {
+		if (loadedData && "enableOnStartupDesktop" in loadedData) {
 			console.log(`${this.appName}: Migrating settings from legacy format to new format`);
 			this.settings = migrateSettings(loadedData as unknown as LegacySettings);
 		} else {
@@ -404,12 +401,12 @@ export default class SNWPlugin extends Plugin {
 		try {
 			// Unload all features using the feature manager
 			this.featureManager.unloadAll();
-			
+
 			// Unload implicit links manager
 			if (this.implicitLinksManager) {
 				this.implicitLinksManager.unload();
 			}
-			
+
 			this.app.workspace.unregisterHoverLinkSource(this.appID);
 		} catch (error) {
 			/* don't do anything */

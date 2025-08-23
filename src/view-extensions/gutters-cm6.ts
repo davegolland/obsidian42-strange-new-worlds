@@ -3,7 +3,7 @@ import type { BlockInfo, EditorView } from "@codemirror/view";
 import { editorInfoField } from "obsidian";
 import type SNWPlugin from "src/main";
 import { htmlDecorationForReferencesElement } from "src/view-extensions/htmlDecorations";
-import { ReferenceCountingPolicy } from "../policies/reference-counting";
+import type { ReferenceCountingPolicy } from "../policies/reference-counting";
 
 let plugin: SNWPlugin;
 let referenceCountingPolicy: ReferenceCountingPolicy;
@@ -58,10 +58,10 @@ const ReferenceGutterExtension = gutter({
 		// @ts-ignore - Check if should show in source mode
 		if (mdView.currentMode?.sourceMode === true && plugin.settings.displayInlineReferencesInSourceMode === false) return null;
 
-		        if (!mdView.file) return null;
-        // For now, use a synchronous approach - this will be updated in a future version
-        // to properly handle virtual links
-        const transformedCache = referenceCountingPolicy.getSNWCacheByFile(mdView.file) as any;
+		if (!mdView.file) return null;
+		// For now, use a synchronous approach - this will be updated in a future version
+		// to properly handle virtual links
+		const transformedCache = referenceCountingPolicy.getSNWCacheByFile(mdView.file) as any;
 
 		// check if the page is to be ignored
 		if (transformedCache?.cacheMetaData?.frontmatter?.["snw-file-exclude"] === true) return null;
@@ -75,10 +75,7 @@ const ReferenceGutterExtension = gutter({
 			if (embed.position.start.line + 1 === lineNumberInFile) {
 				for (const ref of transformedCache?.embeds ?? []) {
 					const refCount = referenceCountingPolicy.countReferences(ref?.references);
-					if (
-						refCount >= Math.max(2, plugin.settings.minimumRefCountThreshold) &&
-						ref?.pos.start.line + 1 === lineNumberInFile
-					) {
+					if (refCount >= Math.max(2, plugin.settings.minimumRefCountThreshold) && ref?.pos.start.line + 1 === lineNumberInFile) {
 						const lineToAnalyze = editorView.state.doc.lineAt(line.from).text.trim();
 						if (lineToAnalyze.startsWith("!")) {
 							// Remove  [[ and ]] and split by | to get the link text if aliased

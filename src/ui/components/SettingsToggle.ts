@@ -8,25 +8,19 @@ export interface SettingsToggleProps {
 	onChange: (value: boolean) => Promise<void>;
 }
 
-export function createSettingsToggle({
-	containerEl,
-	name,
-	description,
-	value,
-	onChange,
-}: SettingsToggleProps): Setting {
+export function createSettingsToggle({ containerEl, name, description, value, onChange }: SettingsToggleProps): Setting {
 	const setting = new Setting(containerEl).setName(name);
-	
+
 	if (description) {
 		setting.setDesc(description);
 	}
-	
+
 	setting.addToggle((cb: ToggleComponent) => {
 		cb.setValue(value);
 		cb.onChange(async (newValue: boolean) => {
 			await onChange(newValue);
 		});
 	});
-	
+
 	return setting;
-} 
+}

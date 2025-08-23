@@ -28,7 +28,7 @@ function createReferenceElementJsx(params: {
 	count: number;
 }) {
 	const { referenceType, realLink, key, filePath, attachCSSClass, lineNu, count } = params;
-	
+
 	return (
 		<div
 			className={`snw-reference snw-${referenceType} ${attachCSSClass}`}
@@ -125,7 +125,7 @@ export function htmlDecorationForReferencesElement(
 		filePath,
 		attachCSSClass,
 		lineNu,
-		count
+		count,
 	});
 
 	const refenceElement = createDiv();
@@ -134,7 +134,7 @@ export function htmlDecorationForReferencesElement(
 
 	// Attach click handler
 	attachClickHandler(refCountBox);
-	
+
 	// Add tippy tooltip
 	addTippyToElement(refCountBox);
 
@@ -160,12 +160,12 @@ function extractReferenceAttributes(target: HTMLElement) {
  * Activates the view with the extracted reference attributes
  * @param attributes Object containing reference attributes
  */
-function activateReferenceView(attributes: { 
-	refType: string; 
-	realLink: string; 
-	key: string; 
-	filePath: string; 
-	lineNu: string; 
+function activateReferenceView(attributes: {
+	refType: string;
+	realLink: string;
+	key: string;
+	filePath: string;
+	lineNu: string;
 }) {
 	const { refType, realLink, key, filePath, lineNu } = attributes;
 	plugin.activateView(refType, realLink, key, filePath, Number(lineNu));
@@ -193,5 +193,7 @@ export function updateAllSnwLiveUpdateReferences() {
 	}
 	// Ensure CM6 decorations are created for links that didn't have a widget yet
 	// (e.g., when the index finished building/rebuilt).
-	try { rescanAllInlineEditorsAfterIndexUpdate(); } catch {}
+	try {
+		rescanAllInlineEditorsAfterIndexUpdate();
+	} catch {}
 }

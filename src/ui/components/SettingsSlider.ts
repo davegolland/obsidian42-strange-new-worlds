@@ -11,16 +11,7 @@ export interface SettingsSliderProps {
 	onChange: (value: number) => Promise<void>;
 }
 
-export function createSettingsSlider({
-	containerEl,
-	name,
-	description,
-	min,
-	max,
-	step,
-	value,
-	onChange,
-}: SettingsSliderProps): Setting {
+export function createSettingsSlider({ containerEl, name, description, min, max, step, value, onChange }: SettingsSliderProps): Setting {
 	const setting = new Setting(containerEl)
 		.setName(name)
 		.setDesc(description)
@@ -31,8 +22,8 @@ export function createSettingsSlider({
 				.onChange(async (newValue) => {
 					await onChange(newValue);
 				})
-				.setDynamicTooltip()
+				.setDynamicTooltip(),
 		);
-	
+
 	return setting;
-} 
+}

@@ -1,926 +1,921 @@
-import type { Link, TransformedCache, TransformedCachedItem, VirtualLinkProvider } from "../types";
+import { type TFile, parseLinktext, stripHeading } from "obsidian";
 import type SNWPlugin from "../main";
-import { stripHeading, type TFile, parseLinktext } from "obsidian";
+import type { Link, TransformedCache, TransformedCachedItem, VirtualLinkProvider } from "../types";
 import type { WikilinkEquivalencePolicy } from "./base/WikilinkEquivalencePolicy";
 import { getPolicyByType } from "./index";
 
 export class ReferenceCountingPolicy {
-    private plugin: SNWPlugin;
-    private cacheCurrentPages: Map<string, TransformedCache>;
-    private lastUpdateToReferences: number;
-    /** 
-     * The map of all indexed references. Public for direct access, with getter
-     * method maintained for backwards compatibility.
-     */
-    public indexedReferences: Map<string, Link[]>;
-    private activePolicy: WikilinkEquivalencePolicy = getPolicyByType('case-insensitive');
-    private debugMode: boolean = false; // Can be toggled for diagnostics
-    /** Registered virtual link providers */
-    private virtualLinkProviders: Set<VirtualLinkProvider> = new Set();
+	private plugin: SNWPlugin;
+	private cacheCurrentPages: Map<string, TransformedCache>;
+	private lastUpdateToReferences: number;
+	/**
+	 * The map of all indexed references. Public for direct access, with getter
+	 * method maintained for backwards compatibility.
+	 */
+	public indexedReferences: Map<string, Link[]>;
+	private activePolicy: WikilinkEquivalencePolicy = getPolicyByType("case-insensitive");
+	private debugMode = false; // Can be toggled for diagnostics
+	/** Registered virtual link providers */
+	private virtualLinkProviders: Set<VirtualLinkProvider> = new Set();
 
-    constructor(plugin: SNWPlugin) {
-        this.plugin = plugin;
-        this.cacheCurrentPages = new Map<string, TransformedCache>();
-        this.lastUpdateToReferences = 0;
-        this.indexedReferences = new Map();
-        this.setActivePolicyFromSettings();
-    }
+	constructor(plugin: SNWPlugin) {
+		this.plugin = plugin;
+		this.cacheCurrentPages = new Map<string, TransformedCache>();
+		this.lastUpdateToReferences = 0;
+		this.indexedReferences = new Map();
+		this.setActivePolicyFromSettings();
+	}
 
-    /**
-     * Sets the active equivalence policy based on the current settings
-     */
-    private setActivePolicyFromSettings(): void {
-        this.activePolicy = getPolicyByType(this.plugin.settings.wikilinkEquivalencePolicy);
-    }
+	/**
+	 * Sets the active equivalence policy based on the current settings
+	 */
+	private setActivePolicyFromSettings(): void {
+		this.activePolicy = getPolicyByType(this.plugin.settings.wikilinkEquivalencePolicy);
+	}
 
-    /**
-     * Updates the active policy and rebuilds the reference index
-     * @param policyType The policy type to set as active
-     */
-    setActivePolicy(policyType: string): void {
-        if (this.plugin.settings.wikilinkEquivalencePolicy !== policyType) {
-            this.plugin.settings.wikilinkEquivalencePolicy = policyType as any;
-            this.plugin.saveSettings();
-        }
-        
-        this.setActivePolicyFromSettings();
-        this.invalidateCache();
-        this.buildLinksAndReferences().catch(console.error);
-    }
+	/**
+	 * Updates the active policy and rebuilds the reference index
+	 * @param policyType The policy type to set as active
+	 */
+	setActivePolicy(policyType: string): void {
+		if (this.plugin.settings.wikilinkEquivalencePolicy !== policyType) {
+			this.plugin.settings.wikilinkEquivalencePolicy = policyType as any;
+			this.plugin.saveSettings();
+		}
 
-    /**
-     * NOTE: The generateKey method has been inlined throughout the code.
-     * All calls now directly use this.activePolicy.generateKey(link)
-     */
+		this.setActivePolicyFromSettings();
+		this.invalidateCache();
+		this.buildLinksAndReferences().catch(console.error);
+	}
 
-    /**
-     * Gets the currently active policy instance
-     * @returns The active WikilinkEquivalencePolicy instance
-     */
-    getActivePolicy(): WikilinkEquivalencePolicy {
-        return this.activePolicy;
-    }
+	/**
+	 * NOTE: The generateKey method has been inlined throughout the code.
+	 * All calls now directly use this.activePolicy.generateKey(link)
+	 */
 
-    /**
-     * Generates a key from a path and link for UI components
-     * This is a helper method for UI components that don't have a full Link object
-     * @param filePath The path of the file containing the link
-     * @param linkText The text of the link
-     * @returns The key for this link according to the active policy
-     */
-    public generateKeyFromPathAndLink(filePath: string, linkText: string): string {
-        const { path, subpath } = parseLinktext(linkText);
-        
-        // Get the resolved file if possible
-        let resolvedFile = this.plugin.app.metadataCache.getFirstLinkpathDest(path, filePath);
-        
-        // Handle ghost links - if no resolved file but looks like a file reference
-        if (!resolvedFile && !linkText.startsWith("#") && path) {
-            // Add .md extension if not present for comparison with indexed keys
-            const ghostPath = path.toLowerCase().endsWith('.md') ? path : `${path}.md`;
-            
-            // Create a temporary Link object for ghost files
-            const ghostLink: Link = {
-                realLink: linkText,
-                reference: {
-                    link: linkText,
-                    key: `${filePath}${linkText}`,
-                    displayText: linkText,
-                    position: { start: { line: 0, col: 0, offset: 0 }, end: { line: 0, col: 0, offset: 0 } }
-                },
-                resolvedFile: {
-                    path: ghostPath,
-                    name: ghostPath.split('/').pop() || ghostPath,
-                    basename: path,
-                    extension: "md",
-                } as TFile,
-                sourceFile: null
-            };
-            
-            // For async policies, we need to fall back to sync method in UI context
-            const useAsync = !!this.activePolicy.isAsync?.();
-            if (useAsync && this.activePolicy.generateKey) {
-                return this.activePolicy.generateKey(ghostLink);
-            } else if (useAsync) {
-                // Fallback for async-only policies
-                return (ghostLink.resolvedFile?.path ?? ghostLink.realLink).toUpperCase();
-            } else {
-                return this.activePolicy.generateKey!(ghostLink);
-            }
-        }
-        
-        // Create a temporary Link object with resolved file
-        const link: Link = {
-            realLink: linkText,
-            reference: {
-                link: linkText,
-                key: `${filePath}${linkText}`,
-                displayText: linkText,
-                position: { start: { line: 0, col: 0, offset: 0 }, end: { line: 0, col: 0, offset: 0 } }
-            },
-            resolvedFile: resolvedFile,
-            sourceFile: null
-        };
-        
-        // For async policies, we need to fall back to sync method in UI context
-        const useAsync = !!this.activePolicy.isAsync?.();
-        let key: string;
-        if (useAsync && this.activePolicy.generateKey) {
-            key = this.activePolicy.generateKey(link);
-        } else if (useAsync) {
-            // Fallback for async-only policies
-            key = (link.resolvedFile?.path ?? link.realLink).toUpperCase();
-        } else {
-            key = this.activePolicy.generateKey!(link);
-        }
-        
-        // Debug logging removed for production
-        
-        return key;
-    }
+	/**
+	 * Gets the currently active policy instance
+	 * @returns The active WikilinkEquivalencePolicy instance
+	 */
+	getActivePolicy(): WikilinkEquivalencePolicy {
+		return this.activePolicy;
+	}
 
-    /**
-     * Invalidates all cached pages, forcing a rebuild on next access
-     */
-    public invalidateCache(): void {
-        this.cacheCurrentPages.clear();
-    }
+	/**
+	 * Generates a key from a path and link for UI components
+	 * This is a helper method for UI components that don't have a full Link object
+	 * @param filePath The path of the file containing the link
+	 * @param linkText The text of the link
+	 * @returns The key for this link according to the active policy
+	 */
+	public generateKeyFromPathAndLink(filePath: string, linkText: string): string {
+		const { path, subpath } = parseLinktext(linkText);
 
-    /**
-     * Utility to convert a link text to a full path for searching in the indexed references
-     * @param link The link text to convert
-     * @returns The full path
-     */
-    parseLinkTextToFullPath(link: string): string {
-        const resolvedFilePath = parseLinktext(link);
-        if (resolvedFilePath && resolvedFilePath.path) {
-            const tfileDestination = this.plugin.app.metadataCache.getFirstLinkpathDest(resolvedFilePath.path, "/");
-            if (tfileDestination) {
-                return tfileDestination.path + (resolvedFilePath.subpath || "");
-            }
-        }
-        return link;
-    }
+		// Get the resolved file if possible
+		const resolvedFile = this.plugin.app.metadataCache.getFirstLinkpathDest(path, filePath);
 
-    /**
-     * Get the indexed references map
-     * @returns The map of indexed references
-     */
-    getIndexedReferences(): Map<string, Link[]> {
-        return this.indexedReferences;
-    }
+		// Handle ghost links - if no resolved file but looks like a file reference
+		if (!resolvedFile && !linkText.startsWith("#") && path) {
+			// Add .md extension if not present for comparison with indexed keys
+			const ghostPath = path.toLowerCase().endsWith(".md") ? path : `${path}.md`;
 
-    /**
-     * Set the plugin variable for the policy
-     * @param snwPlugin The SNWPlugin instance
-     */
-    setPluginVariable(snwPlugin: SNWPlugin): void {
-        this.plugin = snwPlugin;
-        this.setActivePolicyFromSettings();
-    }
+			// Create a temporary Link object for ghost files
+			const ghostLink: Link = {
+				realLink: linkText,
+				reference: {
+					link: linkText,
+					key: `${filePath}${linkText}`,
+					displayText: linkText,
+					position: { start: { line: 0, col: 0, offset: 0 }, end: { line: 0, col: 0, offset: 0 } },
+				},
+				resolvedFile: {
+					path: ghostPath,
+					name: ghostPath.split("/").pop() || ghostPath,
+					basename: path,
+					extension: "md",
+				} as TFile,
+				sourceFile: null,
+			};
 
-    /**
-     * Get the last update timestamp for references
-     * @returns The timestamp of the last update
-     */
-    getLastUpdateToReferences(): number {
-        return this.lastUpdateToReferences;
-    }
+			// For async policies, we need to fall back to sync method in UI context
+			const useAsync = !!this.activePolicy.isAsync?.();
+			if (useAsync && this.activePolicy.generateKey) {
+				return this.activePolicy.generateKey(ghostLink);
+			} else if (useAsync) {
+				// Fallback for async-only policies
+				return (ghostLink.resolvedFile?.path ?? ghostLink.realLink).toUpperCase();
+			} else {
+				return this.activePolicy.generateKey!(ghostLink);
+			}
+		}
 
-    /**
-     * Counts references based on the current policy
-     * @param references Array of Link objects to count
-     * @returns The number of references according to the current policy
-     */
-    countReferences(references: Link[] | undefined): number {
-        if (!references) return 0;
+		// Create a temporary Link object with resolved file
+		const link: Link = {
+			realLink: linkText,
+			reference: {
+				link: linkText,
+				key: `${filePath}${linkText}`,
+				displayText: linkText,
+				position: { start: { line: 0, col: 0, offset: 0 }, end: { line: 0, col: 0, offset: 0 } },
+			},
+			resolvedFile: resolvedFile,
+			sourceFile: null,
+		};
 
-        // Delegate counting to the active policy
-        return this.activePolicy.countReferences(references);
-    }
+		// For async policies, we need to fall back to sync method in UI context
+		const useAsync = !!this.activePolicy.isAsync?.();
+		let key: string;
+		if (useAsync && this.activePolicy.generateKey) {
+			key = this.activePolicy.generateKey(link);
+		} else if (useAsync) {
+			// Fallback for async-only policies
+			key = (link.resolvedFile?.path ?? link.realLink).toUpperCase();
+		} else {
+			key = this.activePolicy.generateKey!(link);
+		}
 
-    /**
-     * Filters references based on the current policy
-     * @param references Array of Link objects to filter
-     * @returns Filtered array of references according to the current policy
-     */
-    filterReferences(references: Link[] | undefined): Link[] {
-        if (!references) return [];
+		// Debug logging removed for production
 
-        // Delegate filtering to the active policy
-        return this.activePolicy.filterReferences(references);
-    }
+		return key;
+	}
 
-    /**
-     * Register a provider that supplies additional (virtual) links per file.
-     * Returns an unregister function.
-     */
-    registerVirtualLinkProvider(provider: VirtualLinkProvider): () => void {
-        this.virtualLinkProviders.add(provider);
-        // Rebuild so new links are visible immediately
-        this.invalidateCache();
-        this.buildLinksAndReferences().catch(console.error);
-        return () => {
-            this.virtualLinkProviders.delete(provider);
-            this.invalidateCache();
-            this.buildLinksAndReferences().catch(console.error);
-        };
-    }
+	/**
+	 * Invalidates all cached pages, forcing a rebuild on next access
+	 */
+	public invalidateCache(): void {
+		this.cacheCurrentPages.clear();
+	}
 
-    /**
-     * Small helper for providers to build a fully-formed Link from link text.
-     */
-    private makeLinkFor(file: TFile, linkText: string, displayText = "", pos?: { start: any; end: any }): Link {
-        const parsed = parseLinktext(linkText);
-        // Resolve destination (may be null → ghost file handling below)
-        const dest = this.plugin.app.metadataCache.getFirstLinkpathDest(parsed.path, file.path);
-        const real = parsed.subpath ? `${parsed.path}#${parsed.subpath}` : parsed.path;
-        const reference = {
-            link: parsed.subpath ? `#${parsed.subpath}` : parsed.path,
-            key: `${(dest?.path ?? parsed.path).toUpperCase()}${parsed.subpath ? `#${parsed.subpath}` : ""}`,
-            displayText: displayText || parsed.path,
-            // Pos is optional; when missing we synthesize a harmless zero-length range
-            position: (pos as any) ?? ({ start: { line: 0, col: 0, offset: 0 }, end: { line: 0, col: 0, offset: 0 } }),
-        } as Link["reference"];
-        if (dest) {
-            return {
-                realLink: real,
-                reference,
-                resolvedFile: dest,
-                sourceFile: file,
-            };
-        }
-        // Ghost destination: synthesize a TFile-like shape enough for keying
-        return {
-            realLink: real,
-            reference,
-            resolvedFile: {
-                path: `${parsed.path}.md`,
-                name: `${parsed.path}.md`,
-                basename: parsed.path,
-                extension: "md",
-            } as unknown as TFile,
-            sourceFile: file,
-        };
-    }
+	/**
+	 * Utility to convert a link text to a full path for searching in the indexed references
+	 * @param link The link text to convert
+	 * @returns The full path
+	 */
+	parseLinkTextToFullPath(link: string): string {
+		const resolvedFilePath = parseLinktext(link);
+		if (resolvedFilePath && resolvedFilePath.path) {
+			const tfileDestination = this.plugin.app.metadataCache.getFirstLinkpathDest(resolvedFilePath.path, "/");
+			if (tfileDestination) {
+				return tfileDestination.path + (resolvedFilePath.subpath || "");
+			}
+		}
+		return link;
+	}
 
-    /**
-     * Invoke all providers for a file and merge their links into the index.
-     */
-    private async applyVirtualProviders(file: TFile, cache: any): Promise<void> {
-        if (this.virtualLinkProviders.size === 0) return;
-        const makeLink = (lt: string, dt?: string, p?: any) => this.makeLinkFor(file, lt, dt, p);
-        for (const provider of this.virtualLinkProviders) {
-            try {
-                const links = await Promise.resolve(provider({ file, cache, makeLink }));
-                for (const link of links || []) {
-                    const k = this.activePolicy.generateKey(link);
-                    this.indexedReferences.set(k, [ ...(this.indexedReferences.get(k) || []), link ]);
-                }
-            } catch (e) {
-                console.warn("SNW: VirtualLinkProvider error", e);
-            }
-        }
-    }
+	/**
+	 * Get the indexed references map
+	 * @returns The map of indexed references
+	 */
+	getIndexedReferences(): Map<string, Link[]> {
+		return this.indexedReferences;
+	}
 
-    /**
-     * Ensures virtual links are included whenever we scan a file.
-     * Hook this at the end of any per-file indexing pass.
-     */
-    private async finalizeFileIndexing(file: TFile, cache: any): Promise<void> {
-        await this.applyVirtualProviders(file, cache);
-        this.lastUpdateToReferences = Date.now();
-    }
+	/**
+	 * Set the plugin variable for the policy
+	 * @param snwPlugin The SNWPlugin instance
+	 */
+	setPluginVariable(snwPlugin: SNWPlugin): void {
+		this.plugin = snwPlugin;
+		this.setActivePolicyFromSettings();
+	}
 
-    /**
-     * Builds a list of cache references for resolving the block count
-     */
-    async buildLinksAndReferences(): Promise<void> {
-        if (this.plugin.showCountsActive !== true) return;
+	/**
+	 * Get the last update timestamp for references
+	 * @returns The timestamp of the last update
+	 */
+	getLastUpdateToReferences(): number {
+		return this.lastUpdateToReferences;
+	}
 
-        // Clear existing references
-        this.indexedReferences = new Map();
-        
-        // Debug flags
-        const logDebugInfo = this.debugMode;
-        let totalLinks = 0;
-        const keysByType = new Map<string, Set<string>>();
-        
-        for (const file of this.plugin.app.vault.getMarkdownFiles()) {
-            const fileCache = this.plugin.app.metadataCache.getFileCache(file);
-            if (fileCache) {
-                // Debug logging removed for production
-                await this.getLinkReferencesForFile(file, fileCache);
-            }
-        }
-        
-        // Debug logging removed for production
+	/**
+	 * Counts references based on the current policy
+	 * @param references Array of Link objects to count
+	 * @returns The number of references according to the current policy
+	 */
+	countReferences(references: Link[] | undefined): number {
+		if (!references) return 0;
 
-        if (window.snwAPI) window.snwAPI.references = this.indexedReferences;
-        this.lastUpdateToReferences = Date.now();
-    }
+		// Delegate counting to the active policy
+		return this.activePolicy.countReferences(references);
+	}
 
-    /**
-     * Adds to the indexedReferences map all outgoing links from a given file
-     * @param file The file to process
-     * @param cache The cached metadata for the file
-     */
-    async getLinkReferencesForFile(file: TFile, cache: any): Promise<void> {
-        // Debug flags
-        const logDebugInfo = this.debugMode;
-        
-        if (this.plugin.settings.enableIgnoreObsExcludeFoldersLinksFrom && file?.path && this.plugin.app.metadataCache.isUserIgnored(file?.path)) {
-            return;
-        }
-        for (const item of [cache?.links, cache?.embeds, cache?.frontmatterLinks]) {
-            if (!item) continue;
-            for (const ref of item) {
-                const { path, subpath } = ref.link.startsWith("#") // if link is pointing to itself, create a full path
-                    ? parseLinktext(file.path.replace(`.${file.extension}`, "") + ref.link)
-                    : parseLinktext(ref.link);
-                const tfileDestination = this.plugin.app.metadataCache.getFirstLinkpathDest(path, "/");
-                if (tfileDestination) {
-                    if (
-                        this.plugin.settings.enableIgnoreObsExcludeFoldersLinksTo &&
-                        tfileDestination?.path &&
-                        this.plugin.app.metadataCache.isUserIgnored(tfileDestination.path)
-                    ) {
-                        continue;
-                    }
-                    // if the file has a property snw-index-exclude set to true, exclude it from the index
-                    if (this.plugin.app.metadataCache.getFileCache(tfileDestination)?.frontmatter?.["snw-index-exclude"] === true) continue;
+	/**
+	 * Filters references based on the current policy
+	 * @param references Array of Link objects to filter
+	 * @returns Filtered array of references according to the current policy
+	 */
+	filterReferences(references: Link[] | undefined): Link[] {
+		if (!references) return [];
 
-                    const link: Link = {
-                        realLink: ref.link,
-                        reference: ref,
-                        resolvedFile: tfileDestination,
-                        sourceFile: file,
-                    };
+		// Delegate filtering to the active policy
+		return this.activePolicy.filterReferences(references);
+	}
 
-                    const useAsync = !!this.activePolicy.isAsync?.();
-                    const linkKey = useAsync
-                      ? await (this.activePolicy.generateKeyAsync!(link))
-                      : (this.activePolicy.generateKey!(link));
-                    
-                    // Debug logging removed for production
-                    
-                    this.indexedReferences.set(linkKey, [
-                        ...(this.indexedReferences.get(linkKey) || []),
-                        link,
-                    ]);
-                } else {
-                    // Null if it is a ghost file link, Create Ghost link
-                    const ghostLink: Link = {
-                        realLink: ref.link,
-                        reference: ref,
-                        // mock up ghost file for linking
-                        resolvedFile: {
-                            path: `${path}.md`,
-                            name: `${path}.md`,
-                            basename: path,
-                            extension: "md",
-                        } as TFile,
-                        sourceFile: file,
-                    };
-                    
-                    const useAsync = !!this.activePolicy.isAsync?.();
-                    const linkKey = useAsync
-                      ? await (this.activePolicy.generateKeyAsync!(ghostLink))
-                      : (this.activePolicy.generateKey!(ghostLink));
-                    
-                    // Debug logging removed for production
-                    
-                    this.indexedReferences.set(linkKey, [
-                        ...(this.indexedReferences.get(linkKey) || []),
-                        ghostLink,
-                    ]);
-                }
-            }
-        }
-        
-        // Include virtual links before reporting "done"
-        await this.finalizeFileIndexing(file, cache);
-    }
+	/**
+	 * Register a provider that supplies additional (virtual) links per file.
+	 * Returns an unregister function.
+	 */
+	registerVirtualLinkProvider(provider: VirtualLinkProvider): () => void {
+		this.virtualLinkProviders.add(provider);
+		// Rebuild so new links are visible immediately
+		this.invalidateCache();
+		this.buildLinksAndReferences().catch(console.error);
+		return () => {
+			this.virtualLinkProviders.delete(provider);
+			this.invalidateCache();
+			this.buildLinksAndReferences().catch(console.error);
+		};
+	}
 
-    /**
-     * Removes existing references from the map
-     * @param file The file to remove references for
-     */
-    removeLinkReferencesForFile(file: TFile): void {
-        for (const [key, items] of this.indexedReferences.entries()) {
-            const filtered = items.filter((item: Link) => item?.sourceFile?.path !== file.path);
-            filtered.length === 0 ? this.indexedReferences.delete(key) : this.indexedReferences.set(key, filtered);
-        }
-    }
+	/**
+	 * Small helper for providers to build a fully-formed Link from link text.
+	 */
+	private makeLinkFor(file: TFile, linkText: string, displayText = "", pos?: { start: any; end: any }): Link {
+		const parsed = parseLinktext(linkText);
+		// Resolve destination (may be null → ghost file handling below)
+		const dest = this.plugin.app.metadataCache.getFirstLinkpathDest(parsed.path, file.path);
+		const real = parsed.subpath ? `${parsed.path}#${parsed.subpath}` : parsed.path;
+		const reference = {
+			link: parsed.subpath ? `#${parsed.subpath}` : parsed.path,
+			key: `${(dest?.path ?? parsed.path).toUpperCase()}${parsed.subpath ? `#${parsed.subpath}` : ""}`,
+			displayText: displayText || parsed.path,
+			// Pos is optional; when missing we synthesize a harmless zero-length range
+			position: (pos as any) ?? { start: { line: 0, col: 0, offset: 0 }, end: { line: 0, col: 0, offset: 0 } },
+		} as Link["reference"];
+		if (dest) {
+			return {
+				realLink: real,
+				reference,
+				resolvedFile: dest,
+				sourceFile: file,
+			};
+		}
+		// Ghost destination: synthesize a TFile-like shape enough for keying
+		return {
+			realLink: real,
+			reference,
+			resolvedFile: {
+				path: `${parsed.path}.md`,
+				name: `${parsed.path}.md`,
+				basename: parsed.path,
+				extension: "md",
+			} as unknown as TFile,
+			sourceFile: file,
+		};
+	}
 
-    /**
-     * Provides an optimized view of the cache for determining the block count for references in a given page
-     * @param file The file to get cache for
-     * @returns The transformed cache
-     */
-    getSNWCacheByFile(file: TFile): TransformedCache {
-        // Debug flags
-        const logDebugInfo = this.debugMode;
-        
-        if (this.plugin.showCountsActive !== true) return {};
+	/**
+	 * Invoke all providers for a file and merge their links into the index.
+	 */
+	private async applyVirtualProviders(file: TFile, cache: any): Promise<void> {
+		if (this.virtualLinkProviders.size === 0) return;
+		const makeLink = (lt: string, dt?: string, p?: any) => this.makeLinkFor(file, lt, dt, p);
+		for (const provider of this.virtualLinkProviders) {
+			try {
+				const links = await Promise.resolve(provider({ file, cache, makeLink }));
+				for (const link of links || []) {
+					const k = this.activePolicy.generateKey(link);
+					this.indexedReferences.set(k, [...(this.indexedReferences.get(k) || []), link]);
+				}
+			} catch (e) {
+				console.warn("SNW: VirtualLinkProvider error", e);
+			}
+		}
+	}
 
-        // Check if references have been updated since last cache update, and if cache is old
-        const cachedPage = this.cacheCurrentPages.get(file.path.toLocaleUpperCase());
-        if (cachedPage) {
-            const cachedPageCreateDate = cachedPage.createDate ?? 0;
-            if (this.lastUpdateToReferences < cachedPageCreateDate && cachedPageCreateDate + 1000 > Date.now()) {
-                return cachedPage;
-            }
-        }
+	/**
+	 * Ensures virtual links are included whenever we scan a file.
+	 * Hook this at the end of any per-file indexing pass.
+	 */
+	private async finalizeFileIndexing(file: TFile, cache: any): Promise<void> {
+		await this.applyVirtualProviders(file, cache);
+		this.lastUpdateToReferences = Date.now();
+	}
 
-        const transformedCache: TransformedCache = {};
-        const cachedMetaData = this.plugin.app.metadataCache.getFileCache(file);
-        if (!cachedMetaData) return transformedCache;
-        const filePathInUppercase = file.path.toLocaleUpperCase();
+	/**
+	 * Builds a list of cache references for resolving the block count
+	 */
+	async buildLinksAndReferences(): Promise<void> {
+		if (this.plugin.showCountsActive !== true) return;
 
-        // Keep this synchronous for callers (CM6/preview). The index is guaranteed
-        // to be built up front by main.ts onload()/initSettings().
-        if (!this.indexedReferences.size) this.buildLinksAndReferences();
+		// Clear existing references
+		this.indexedReferences = new Map();
 
-        if (cachedMetaData?.headings) {
-            // Create a heading link object that can be used with the policy
-            const createHeadingLink = (header: any, filePath: string) => {
-                return {
-                    realLink: `#${stripHeading(header.heading)}`,
-                    reference: {
-                        link: `#${stripHeading(header.heading)}`,
-                        key: `${filePath}#${stripHeading(header.heading)}`,
-                        displayText: header.heading,
-                        position: header.position
-                    },
-                    resolvedFile: file,
-                    sourceFile: file
-                } as Link;
-            };
+		// Debug flags
+		const logDebugInfo = this.debugMode;
+		const totalLinks = 0;
+		const keysByType = new Map<string, Set<string>>();
 
-            // Filter and map headings
-            const tempCacheHeadings = cachedMetaData.headings
-                .map(header => {
-                    const headingLink = createHeadingLink(header, file.path);
-                    const key = this.activePolicy.generateKey(headingLink);
-                    
-                    // Check if we have references with this key
-                    const refs = this.findReferencesWithFallback(key, headingLink);
-                    if (!refs || refs.length === 0) return null;
-                    
-                    return {
-                        original: "#".repeat(header.level) + header.heading,
-                        key,
-                        headerMatch: header.heading.replace(/\[|\]/g, ""),
-                        pos: header.position,
-                        page: file.basename,
-                        type: "heading" as const,
-                        references: refs
-                    };
-                })
-                .filter(Boolean) as TransformedCachedItem[]; // Type cast to remove null entries
-                
-            if (tempCacheHeadings.length > 0) transformedCache.headings = tempCacheHeadings;
-        }
+		for (const file of this.plugin.app.vault.getMarkdownFiles()) {
+			const fileCache = this.plugin.app.metadataCache.getFileCache(file);
+			if (fileCache) {
+				// Debug logging removed for production
+				await this.getLinkReferencesForFile(file, fileCache);
+			}
+		}
 
-        if (cachedMetaData?.blocks) {
-            // Create a block link object that can be used with the policy
-            const createBlockLink = (block: any, filePath: string) => {
-                return {
-                    realLink: `#^${block.id}`,
-                    reference: {
-                        link: `#^${block.id}`,
-                        key: `${filePath}#^${block.id}`,
-                        displayText: block.id,
-                        position: block.position
-                    },
-                    resolvedFile: file,
-                    sourceFile: file
-                } as Link;
-            };
-            
-            // Filter and map blocks
-            const tempCacheBlocks = Object.values(cachedMetaData.blocks)
-                .map(block => {
-                    const blockLink = createBlockLink(block, file.path);
-                    const key = this.activePolicy.generateKey(blockLink);
-                    
-                    // Check if we have references with this key
-                    const refs = this.findReferencesWithFallback(key, blockLink);
-                    if (!refs || refs.length === 0) return null;
-                    
-                    return {
-                        key,
-                        pos: block.position,
-                        page: file.basename,
-                        type: "block" as const,
-                        references: refs
-                    };
-                })
-                .filter(Boolean) as TransformedCachedItem[]; // Type cast to remove null entries
-                
-            if (tempCacheBlocks.length > 0) transformedCache.blocks = tempCacheBlocks;
-        }
+		// Debug logging removed for production
 
-        if (cachedMetaData?.links) {
-            // Create a link object that can be used with the policy
-            const createLinkObject = (link: any, filePath: string) => {
-                // If link starts with #, it's an internal link to the current file
-                let resolvedFile = null;
-                let realPath = "";
-                
-                if (link.link.startsWith("#")) {
-                    // Internal link to a section in the current file
-                    const { path, subpath } = parseLinktext(filePath.replace(`.${file.extension}`, "") + link.link);
-                    resolvedFile = file;
-                    realPath = file.path + (subpath || "");
-                } else {
-                    // External link to another file
-                    const { path, subpath } = parseLinktext(link.link);
-                    resolvedFile = this.plugin.app.metadataCache.getFirstLinkpathDest(path, "/");
-                    realPath = resolvedFile ? (resolvedFile.path + (subpath || "")) : link.link;
-                }
-                
-                return {
-                    realLink: link.link,
-                    reference: link,
-                    resolvedFile: resolvedFile,
-                    sourceFile: file
-                } as Link;
-            };
-            
-            // Filter and map links
-            const tempCacheLinks = cachedMetaData.links
-                .map(link => {
-                    const linkObj = createLinkObject(link, file.path);
-                    const key = this.activePolicy.generateKey(linkObj);
-                    
-                    // Log lookups for debugging
-                    if (logDebugInfo) {
-                                // Debug logging removed for production
-                        
-                        // Debug: find similar keys that might match
-                        if (!this.indexedReferences.has(key)) {
-                            const similarKeys = Array.from(this.indexedReferences.keys())
-                                .filter(k => k.includes(link.link.toLocaleUpperCase()) || 
-                                            (linkObj.resolvedFile && k.includes(linkObj.resolvedFile.path.toLocaleUpperCase())))
-                                .slice(0, 5);
-                            
-                            if (similarKeys.length > 0) {
-                                // Debug logging removed for production
-                            }
-                        }
-                    }
-                    
-                    // Check if we have references with this key
-                    const refs = this.findReferencesWithFallback(key, linkObj);
-                    if (!refs || refs.length === 0) return null;
-                    
-                    const result = {
-                        key,
-                        original: link.original,
-                        type: "link" as const,
-                        pos: link.position,
-                        page: file.basename,
-                        references: refs
-                    };
+		if (window.snwAPI) window.snwAPI.references = this.indexedReferences;
+		this.lastUpdateToReferences = Date.now();
+	}
 
-                    // Handle heading references in one pass
-                    if (key.includes("#") && !key.includes("#^")) {
-                        result.original = key.split("#")[1];
-                    }
+	/**
+	 * Adds to the indexedReferences map all outgoing links from a given file
+	 * @param file The file to process
+	 * @param cache The cached metadata for the file
+	 */
+	async getLinkReferencesForFile(file: TFile, cache: any): Promise<void> {
+		// Debug flags
+		const logDebugInfo = this.debugMode;
 
-                    return result;
-                })
-                .filter(Boolean) as TransformedCachedItem[]; // Type cast to remove null entries
-                
-            if (tempCacheLinks.length > 0) transformedCache.links = tempCacheLinks;
-        }
+		if (
+			this.plugin.settings.enableIgnoreObsExcludeFoldersLinksFrom &&
+			file?.path &&
+			this.plugin.app.metadataCache.isUserIgnored(file?.path)
+		) {
+			return;
+		}
+		for (const item of [cache?.links, cache?.embeds, cache?.frontmatterLinks]) {
+			if (!item) continue;
+			for (const ref of item) {
+				const { path, subpath } = ref.link.startsWith("#") // if link is pointing to itself, create a full path
+					? parseLinktext(file.path.replace(`.${file.extension}`, "") + ref.link)
+					: parseLinktext(ref.link);
+				const tfileDestination = this.plugin.app.metadataCache.getFirstLinkpathDest(path, "/");
+				if (tfileDestination) {
+					if (
+						this.plugin.settings.enableIgnoreObsExcludeFoldersLinksTo &&
+						tfileDestination?.path &&
+						this.plugin.app.metadataCache.isUserIgnored(tfileDestination.path)
+					) {
+						continue;
+					}
+					// if the file has a property snw-index-exclude set to true, exclude it from the index
+					if (this.plugin.app.metadataCache.getFileCache(tfileDestination)?.frontmatter?.["snw-index-exclude"] === true) continue;
 
-        if (cachedMetaData?.embeds) {
-            // Create an embed link object that can be used with the policy
-            const createEmbedLink = (embed: any, filePath: string) => {
-                // If embed starts with #, it's an internal link to the current file
-                let resolvedFile = null;
-                let realPath = "";
-                
-                if (embed.link.startsWith("#")) {
-                    // Internal link to a section in the current file
-                    const { path, subpath } = parseLinktext(filePath.replace(`.${file.extension}`, "") + embed.link);
-                    resolvedFile = file;
-                    realPath = file.path + (subpath || "");
-                } else {
-                    // External link to another file
-                    const { path, subpath } = parseLinktext(embed.link);
-                    resolvedFile = this.plugin.app.metadataCache.getFirstLinkpathDest(path, "/");
-                    realPath = resolvedFile ? (resolvedFile.path + (subpath || "")) : embed.link;
-                }
-                
-                return {
-                    realLink: embed.link,
-                    reference: embed,
-                    resolvedFile: resolvedFile,
-                    sourceFile: file
-                } as Link;
-            };
-            
-            // Filter and map embeds
-            const tempCacheEmbeds = cachedMetaData.embeds
-                .map(embed => {
-                    const embedLink = createEmbedLink(embed, file.path);
-                    const key = this.activePolicy.generateKey(embedLink);
-                    
-                    // Check if we have references with this key
-                    const refs = this.findReferencesWithFallback(key, embedLink);
-                    if (!refs || refs.length === 0) return null;
-                    
-                    const [_, original] = key.includes("#") && !key.includes("#^") ? key.split("#") : [];
-                    
-                    return {
-                        key,
-                        page: file.basename,
-                        type: "embed" as const,
-                        pos: embed.position,
-                        references: refs,
-                        ...(original && { original }),
-                    };
-                })
-                .filter(Boolean) as TransformedCachedItem[]; // Type cast to remove null entries
-                
-            if (tempCacheEmbeds.length > 0) transformedCache.embeds = tempCacheEmbeds;
-        }
+					const link: Link = {
+						realLink: ref.link,
+						reference: ref,
+						resolvedFile: tfileDestination,
+						sourceFile: file,
+					};
 
-        if (cachedMetaData?.frontmatterLinks) {
-            // Create a frontmatter link object that can be used with the policy
-            const createFrontmatterLink = (link: any) => {
-                const { path, subpath } = parseLinktext(link.link);
-                const resolvedFile = this.plugin.app.metadataCache.getFirstLinkpathDest(path, "/");
-                
-                return {
-                    realLink: link.link,
-                    reference: link,
-                    resolvedFile: resolvedFile,
-                    sourceFile: file
-                } as Link;
-            };
-            
-            // Filter and map frontmatter links
-            const tempCacheFrontmatter = cachedMetaData.frontmatterLinks
-                .map(link => {
-                    const frontmatterLink = createFrontmatterLink(link);
-                    const key = this.activePolicy.generateKey(frontmatterLink);
-                    
-                    // Check if we have references with this key
-                    const refs = this.findReferencesWithFallback(key, frontmatterLink);
-                    if (!refs || refs.length === 0) return null;
-                    
-                    return {
-                        key,
-                        original: link.original,
-                        type: "frontmatterLink" as const,
-                        pos: { start: { line: -1, col: -1, offset: -1 }, end: { line: -1, col: -1, offset: -1 } },
-                        displayText: link.displayText,
-                        page: file.basename,
-                        references: refs
-                    };
-                })
-                .filter(Boolean) as TransformedCachedItem[]; // Type cast to remove null entries
-                
-            if (tempCacheFrontmatter.length > 0) transformedCache.frontmatterLinks = tempCacheFrontmatter;
-        }
+					const useAsync = !!this.activePolicy.isAsync?.();
+					const linkKey = useAsync ? await this.activePolicy.generateKeyAsync!(link) : this.activePolicy.generateKey!(link);
 
-        transformedCache.cacheMetaData = cachedMetaData;
-        transformedCache.createDate = Date.now();
-        this.cacheCurrentPages.set(file.path.toLocaleUpperCase(), transformedCache);
+					// Debug logging removed for production
 
-        return transformedCache;
-    }
+					this.indexedReferences.set(linkKey, [...(this.indexedReferences.get(linkKey) || []), link]);
+				} else {
+					// Null if it is a ghost file link, Create Ghost link
+					const ghostLink: Link = {
+						realLink: ref.link,
+						reference: ref,
+						// mock up ghost file for linking
+						resolvedFile: {
+							path: `${path}.md`,
+							name: `${path}.md`,
+							basename: path,
+							extension: "md",
+						} as TFile,
+						sourceFile: file,
+					};
 
-    /**
-     * Attempts to find references using alternative lookup methods if the primary lookup fails
-     * This helps with backward compatibility and transitioning between policies
-     */
-    private findReferencesWithFallback(key: string, link: any): Link[] | undefined {
-        // First, try the direct lookup with the generated key
-        let refs = this.indexedReferences.get(key);
-        if (refs && refs.length > 0) return refs;
-        
-        // Log when in debug mode
-        if (this.debugMode) {
-                    // Debug logging removed for production
-            
-            // Show available keys that might be similar
-            const possibleMatches = Array.from(this.indexedReferences.keys())
-                .filter(k => {
-                    const simplifiedKey = key.replace(/\.\w+$/, '').toLocaleUpperCase();
-                    const simplifiedK = k.replace(/\.\w+$/, '').toLocaleUpperCase();
-                    return k.includes(key) || 
-                           key.includes(k) || 
-                           simplifiedK === simplifiedKey ||
-                           (link.resolvedFile && k.includes(link.resolvedFile.path.toLocaleUpperCase()));
-                })
-                .slice(0, 5);
-                
-            if (possibleMatches.length > 0) {
-                // Debug logging removed for production
-            }
-        }
-        
-        // Try adding .MD extension if missing
-        if (!key.includes("#") && !key.endsWith(".MD")) {
-            const keyWithExt = key + ".MD";
-            refs = this.indexedReferences.get(keyWithExt);
-            if (refs && refs.length > 0) {
-                // Debug logging removed for production
-                return refs;
-            }
-        }
-        
-        // Fallback 1: Try with the original uppercase method
-        if (link.resolvedFile) {
-            const fallbackKey = link.resolvedFile.path.toLocaleUpperCase();
-            refs = this.indexedReferences.get(fallbackKey);
-            if (refs && refs.length > 0) {
-                // Debug logging removed for production
-                return refs;
-            }
-            
-            // If the link has a subpath, try with that too
-            if (link.realLink.includes("#")) {
-                const { subpath } = parseLinktext(link.realLink);
-                if (subpath) {
-                    const fallbackKeyWithSubpath = (link.resolvedFile.path + subpath).toLocaleUpperCase();
-                    refs = this.indexedReferences.get(fallbackKeyWithSubpath);
-                    if (refs && refs.length > 0) {
-                        // Debug logging removed for production
-                        return refs;
-                    }
-                }
-            }
-        }
-        
-        // Fallback 2: Try with the original link
-        const fallbackKeyOriginal = link.realLink.toLocaleUpperCase();
-        refs = this.indexedReferences.get(fallbackKeyOriginal);
-        if (refs && refs.length > 0) {
-            // Debug logging removed for production
-            return refs;
-        }
-        
-        // Fallback 3: Try with the original link + .MD extension
-        if (!fallbackKeyOriginal.includes("#") && !fallbackKeyOriginal.endsWith(".MD")) {
-            const fallbackWithExt = fallbackKeyOriginal + ".MD";
-            refs = this.indexedReferences.get(fallbackWithExt);
-            if (refs && refs.length > 0) {
-                // Debug logging removed for production
-                return refs;
-            }
-        }
-        
-        // No references found
-        // Debug logging removed for production
-        return undefined;
-    }
+					const useAsync = !!this.activePolicy.isAsync?.();
+					const linkKey = useAsync ? await this.activePolicy.generateKeyAsync!(ghostLink) : this.activePolicy.generateKey!(ghostLink);
 
-    /**
-     * Enables or disables debug mode for diagnostics
-     */
-    setDebugMode(enabled: boolean): void {
-        this.debugMode = enabled;
-        // Debug logging removed for production
-        
-        if (enabled) {
-            // Print a summary of the references when enabling debug mode
-            this.dumpReferencesSummary();
-        }
-    }
-    
-    /**
-     * Dumps a summary of all indexed references for debugging
-     */
-    dumpReferencesSummary(): void {
-        if (!this.debugMode) return;
-        
-        const total = this.indexedReferences.size;
-        console.log(`Total indexed references: ${total}`);
-        
-        if (total > 0) {
-            console.log(`First 10 reference keys:`);
-            let count = 0;
-            for (const key of this.indexedReferences.keys()) {
-                if (count++ < 10) {
-                    const refs = this.indexedReferences.get(key) || [];
-                    console.log(`  ${key} (${refs.length} references)`);
-                    
-                    // Show first reference's details
-                    if (refs.length > 0) {
-                        const firstRef = refs[0];
-                        console.log(`    From: ${firstRef.sourceFile?.path || 'unknown'}`);
-                        console.log(`    To: ${firstRef.resolvedFile?.path || 'unknown'}`);
-                        console.log(`    RealLink: ${firstRef.realLink}`);
-                    }
-                } else {
-                    break;
-                }
-            }
-            
-            // Also list keys containing "project" to help find specific references
-            // Debug logging removed for production
-        }
-    }
+					// Debug logging removed for production
 
-    /**
-     * Checks if debug mode is enabled
-     */
-    isDebugModeEnabled(): boolean {
-        return this.debugMode;
-    }
+					this.indexedReferences.set(linkKey, [...(this.indexedReferences.get(linkKey) || []), ghostLink]);
+				}
+			}
+		}
 
-    /**
-     * Finds all references for a link across all source files, regardless of the active policy
-     * This is important for UI components that need to work with any policy
-     * 
-     * @param filePath The path of the file containing the link
-     * @param linkText The text of the link to find references for
-     * @returns All references found for this link
-     */
-    public findAllReferencesForLink(filePath: string, linkText: string): Link[] {
-        // Debug logging removed for production
-        
-        // Generate key with current policy
-        const key = this.generateKeyFromPathAndLink(filePath, linkText);
-        let allRefs: Link[] = [];
-        
-        // First check with the current policy's key
-        const refsWithCurrentPolicy = this.indexedReferences.get(key);
-        if (refsWithCurrentPolicy && refsWithCurrentPolicy.length > 0) {
-            allRefs = allRefs.concat(refsWithCurrentPolicy);
-            // Debug logging removed for production
-        }
-        
-        // If Same File policy is active, we need to check for references across all source files
-        const sameFilePolicy = getPolicyByType('same-file');
-        if (this.activePolicy.name === sameFilePolicy.name) {
-            // Try without the source file prefix to find CaseInsensitive-style keys
-            const { path, subpath } = parseLinktext(linkText);
-            const resolvedFile = this.plugin.app.metadataCache.getFirstLinkpathDest(path, filePath);
-            
-            let alternateKey = "";
-            if (resolvedFile) {
-                alternateKey = resolvedFile.path.toLocaleUpperCase();
-                if (subpath) alternateKey += subpath.toLocaleUpperCase();
-            } else if (path) {
-                // Handle ghost links
-                alternateKey = path.toLowerCase().endsWith('.md') ? 
-                    path.toLocaleUpperCase() : 
-                    path.toLocaleUpperCase() + ".MD";
-            }
-            
-            if (alternateKey && alternateKey !== key) {
-                const altRefs = this.indexedReferences.get(alternateKey);
-                if (altRefs && altRefs.length > 0) {
-                    // Debug logging removed for production
-                    allRefs = allRefs.concat(altRefs);
-                }
-            }
-            
-            // Also search for any keys that might be prefixed with other source files
-            const sourceFilePrefix = filePath.toLocaleUpperCase() + ":";
-            const matchingKeys = Array.from(this.indexedReferences.keys())
-                .filter(k => k.includes(":") && k.split(":")[1] === alternateKey);
-                
-            for (const matchKey of matchingKeys) {
-                if (matchKey !== key) {
-                    const matchRefs = this.indexedReferences.get(matchKey);
-                    if (matchRefs && matchRefs.length > 0) {
-                        // Debug logging removed for production
-                        allRefs = allRefs.concat(matchRefs);
-                    }
-                }
-            }
-        }
-        
-        // If we're using Case Insensitive or other policy, but Same File style keys exist
-        if (this.activePolicy.name !== sameFilePolicy.name) {
-            // Look for any Same File style keys (file:target format)
-            const potentialKeys = Array.from(this.indexedReferences.keys())
-                .filter(k => k.includes(":") && k.endsWith(":" + key));
-                
-            for (const matchKey of potentialKeys) {
-                if (matchKey !== key) {
-                    const matchRefs = this.indexedReferences.get(matchKey);
-                    if (matchRefs && matchRefs.length > 0) {
-                        // Debug logging removed for production
-                        allRefs = allRefs.concat(matchRefs);
-                    }
-                }
-            }
-        }
-        
-        if (this.debugMode) {
-            // Debug logging removed for production
-        }
-        
-        return allRefs;
-    }
-} 
+		// Include virtual links before reporting "done"
+		await this.finalizeFileIndexing(file, cache);
+	}
+
+	/**
+	 * Removes existing references from the map
+	 * @param file The file to remove references for
+	 */
+	removeLinkReferencesForFile(file: TFile): void {
+		for (const [key, items] of this.indexedReferences.entries()) {
+			const filtered = items.filter((item: Link) => item?.sourceFile?.path !== file.path);
+			filtered.length === 0 ? this.indexedReferences.delete(key) : this.indexedReferences.set(key, filtered);
+		}
+	}
+
+	/**
+	 * Provides an optimized view of the cache for determining the block count for references in a given page
+	 * @param file The file to get cache for
+	 * @returns The transformed cache
+	 */
+	getSNWCacheByFile(file: TFile): TransformedCache {
+		// Debug flags
+		const logDebugInfo = this.debugMode;
+
+		if (this.plugin.showCountsActive !== true) return {};
+
+		// Check if references have been updated since last cache update, and if cache is old
+		const cachedPage = this.cacheCurrentPages.get(file.path.toLocaleUpperCase());
+		if (cachedPage) {
+			const cachedPageCreateDate = cachedPage.createDate ?? 0;
+			if (this.lastUpdateToReferences < cachedPageCreateDate && cachedPageCreateDate + 1000 > Date.now()) {
+				return cachedPage;
+			}
+		}
+
+		const transformedCache: TransformedCache = {};
+		const cachedMetaData = this.plugin.app.metadataCache.getFileCache(file);
+		if (!cachedMetaData) return transformedCache;
+		const filePathInUppercase = file.path.toLocaleUpperCase();
+
+		// Keep this synchronous for callers (CM6/preview). The index is guaranteed
+		// to be built up front by main.ts onload()/initSettings().
+		if (!this.indexedReferences.size) this.buildLinksAndReferences();
+
+		if (cachedMetaData?.headings) {
+			// Create a heading link object that can be used with the policy
+			const createHeadingLink = (header: any, filePath: string) => {
+				return {
+					realLink: `#${stripHeading(header.heading)}`,
+					reference: {
+						link: `#${stripHeading(header.heading)}`,
+						key: `${filePath}#${stripHeading(header.heading)}`,
+						displayText: header.heading,
+						position: header.position,
+					},
+					resolvedFile: file,
+					sourceFile: file,
+				} as Link;
+			};
+
+			// Filter and map headings
+			const tempCacheHeadings = cachedMetaData.headings
+				.map((header) => {
+					const headingLink = createHeadingLink(header, file.path);
+					const key = this.activePolicy.generateKey(headingLink);
+
+					// Check if we have references with this key
+					const refs = this.findReferencesWithFallback(key, headingLink);
+					if (!refs || refs.length === 0) return null;
+
+					return {
+						original: "#".repeat(header.level) + header.heading,
+						key,
+						headerMatch: header.heading.replace(/\[|\]/g, ""),
+						pos: header.position,
+						page: file.basename,
+						type: "heading" as const,
+						references: refs,
+					};
+				})
+				.filter(Boolean) as TransformedCachedItem[]; // Type cast to remove null entries
+
+			if (tempCacheHeadings.length > 0) transformedCache.headings = tempCacheHeadings;
+		}
+
+		if (cachedMetaData?.blocks) {
+			// Create a block link object that can be used with the policy
+			const createBlockLink = (block: any, filePath: string) => {
+				return {
+					realLink: `#^${block.id}`,
+					reference: {
+						link: `#^${block.id}`,
+						key: `${filePath}#^${block.id}`,
+						displayText: block.id,
+						position: block.position,
+					},
+					resolvedFile: file,
+					sourceFile: file,
+				} as Link;
+			};
+
+			// Filter and map blocks
+			const tempCacheBlocks = Object.values(cachedMetaData.blocks)
+				.map((block) => {
+					const blockLink = createBlockLink(block, file.path);
+					const key = this.activePolicy.generateKey(blockLink);
+
+					// Check if we have references with this key
+					const refs = this.findReferencesWithFallback(key, blockLink);
+					if (!refs || refs.length === 0) return null;
+
+					return {
+						key,
+						pos: block.position,
+						page: file.basename,
+						type: "block" as const,
+						references: refs,
+					};
+				})
+				.filter(Boolean) as TransformedCachedItem[]; // Type cast to remove null entries
+
+			if (tempCacheBlocks.length > 0) transformedCache.blocks = tempCacheBlocks;
+		}
+
+		if (cachedMetaData?.links) {
+			// Create a link object that can be used with the policy
+			const createLinkObject = (link: any, filePath: string) => {
+				// If link starts with #, it's an internal link to the current file
+				let resolvedFile = null;
+				let realPath = "";
+
+				if (link.link.startsWith("#")) {
+					// Internal link to a section in the current file
+					const { path, subpath } = parseLinktext(filePath.replace(`.${file.extension}`, "") + link.link);
+					resolvedFile = file;
+					realPath = file.path + (subpath || "");
+				} else {
+					// External link to another file
+					const { path, subpath } = parseLinktext(link.link);
+					resolvedFile = this.plugin.app.metadataCache.getFirstLinkpathDest(path, "/");
+					realPath = resolvedFile ? resolvedFile.path + (subpath || "") : link.link;
+				}
+
+				return {
+					realLink: link.link,
+					reference: link,
+					resolvedFile: resolvedFile,
+					sourceFile: file,
+				} as Link;
+			};
+
+			// Filter and map links
+			const tempCacheLinks = cachedMetaData.links
+				.map((link) => {
+					const linkObj = createLinkObject(link, file.path);
+					const key = this.activePolicy.generateKey(linkObj);
+
+					// Log lookups for debugging
+					if (logDebugInfo) {
+						// Debug logging removed for production
+
+						// Debug: find similar keys that might match
+						if (!this.indexedReferences.has(key)) {
+							const similarKeys = Array.from(this.indexedReferences.keys())
+								.filter(
+									(k) =>
+										k.includes(link.link.toLocaleUpperCase()) ||
+										(linkObj.resolvedFile && k.includes(linkObj.resolvedFile.path.toLocaleUpperCase())),
+								)
+								.slice(0, 5);
+
+							if (similarKeys.length > 0) {
+								// Debug logging removed for production
+							}
+						}
+					}
+
+					// Check if we have references with this key
+					const refs = this.findReferencesWithFallback(key, linkObj);
+					if (!refs || refs.length === 0) return null;
+
+					const result = {
+						key,
+						original: link.original,
+						type: "link" as const,
+						pos: link.position,
+						page: file.basename,
+						references: refs,
+					};
+
+					// Handle heading references in one pass
+					if (key.includes("#") && !key.includes("#^")) {
+						result.original = key.split("#")[1];
+					}
+
+					return result;
+				})
+				.filter(Boolean) as TransformedCachedItem[]; // Type cast to remove null entries
+
+			if (tempCacheLinks.length > 0) transformedCache.links = tempCacheLinks;
+		}
+
+		if (cachedMetaData?.embeds) {
+			// Create an embed link object that can be used with the policy
+			const createEmbedLink = (embed: any, filePath: string) => {
+				// If embed starts with #, it's an internal link to the current file
+				let resolvedFile = null;
+				let realPath = "";
+
+				if (embed.link.startsWith("#")) {
+					// Internal link to a section in the current file
+					const { path, subpath } = parseLinktext(filePath.replace(`.${file.extension}`, "") + embed.link);
+					resolvedFile = file;
+					realPath = file.path + (subpath || "");
+				} else {
+					// External link to another file
+					const { path, subpath } = parseLinktext(embed.link);
+					resolvedFile = this.plugin.app.metadataCache.getFirstLinkpathDest(path, "/");
+					realPath = resolvedFile ? resolvedFile.path + (subpath || "") : embed.link;
+				}
+
+				return {
+					realLink: embed.link,
+					reference: embed,
+					resolvedFile: resolvedFile,
+					sourceFile: file,
+				} as Link;
+			};
+
+			// Filter and map embeds
+			const tempCacheEmbeds = cachedMetaData.embeds
+				.map((embed) => {
+					const embedLink = createEmbedLink(embed, file.path);
+					const key = this.activePolicy.generateKey(embedLink);
+
+					// Check if we have references with this key
+					const refs = this.findReferencesWithFallback(key, embedLink);
+					if (!refs || refs.length === 0) return null;
+
+					const [_, original] = key.includes("#") && !key.includes("#^") ? key.split("#") : [];
+
+					return {
+						key,
+						page: file.basename,
+						type: "embed" as const,
+						pos: embed.position,
+						references: refs,
+						...(original && { original }),
+					};
+				})
+				.filter(Boolean) as TransformedCachedItem[]; // Type cast to remove null entries
+
+			if (tempCacheEmbeds.length > 0) transformedCache.embeds = tempCacheEmbeds;
+		}
+
+		if (cachedMetaData?.frontmatterLinks) {
+			// Create a frontmatter link object that can be used with the policy
+			const createFrontmatterLink = (link: any) => {
+				const { path, subpath } = parseLinktext(link.link);
+				const resolvedFile = this.plugin.app.metadataCache.getFirstLinkpathDest(path, "/");
+
+				return {
+					realLink: link.link,
+					reference: link,
+					resolvedFile: resolvedFile,
+					sourceFile: file,
+				} as Link;
+			};
+
+			// Filter and map frontmatter links
+			const tempCacheFrontmatter = cachedMetaData.frontmatterLinks
+				.map((link) => {
+					const frontmatterLink = createFrontmatterLink(link);
+					const key = this.activePolicy.generateKey(frontmatterLink);
+
+					// Check if we have references with this key
+					const refs = this.findReferencesWithFallback(key, frontmatterLink);
+					if (!refs || refs.length === 0) return null;
+
+					return {
+						key,
+						original: link.original,
+						type: "frontmatterLink" as const,
+						pos: { start: { line: -1, col: -1, offset: -1 }, end: { line: -1, col: -1, offset: -1 } },
+						displayText: link.displayText,
+						page: file.basename,
+						references: refs,
+					};
+				})
+				.filter(Boolean) as TransformedCachedItem[]; // Type cast to remove null entries
+
+			if (tempCacheFrontmatter.length > 0) transformedCache.frontmatterLinks = tempCacheFrontmatter;
+		}
+
+		transformedCache.cacheMetaData = cachedMetaData;
+		transformedCache.createDate = Date.now();
+		this.cacheCurrentPages.set(file.path.toLocaleUpperCase(), transformedCache);
+
+		return transformedCache;
+	}
+
+	/**
+	 * Attempts to find references using alternative lookup methods if the primary lookup fails
+	 * This helps with backward compatibility and transitioning between policies
+	 */
+	private findReferencesWithFallback(key: string, link: any): Link[] | undefined {
+		// First, try the direct lookup with the generated key
+		let refs = this.indexedReferences.get(key);
+		if (refs && refs.length > 0) return refs;
+
+		// Log when in debug mode
+		if (this.debugMode) {
+			// Debug logging removed for production
+
+			// Show available keys that might be similar
+			const possibleMatches = Array.from(this.indexedReferences.keys())
+				.filter((k) => {
+					const simplifiedKey = key.replace(/\.\w+$/, "").toLocaleUpperCase();
+					const simplifiedK = k.replace(/\.\w+$/, "").toLocaleUpperCase();
+					return (
+						k.includes(key) ||
+						key.includes(k) ||
+						simplifiedK === simplifiedKey ||
+						(link.resolvedFile && k.includes(link.resolvedFile.path.toLocaleUpperCase()))
+					);
+				})
+				.slice(0, 5);
+
+			if (possibleMatches.length > 0) {
+				// Debug logging removed for production
+			}
+		}
+
+		// Try adding .MD extension if missing
+		if (!key.includes("#") && !key.endsWith(".MD")) {
+			const keyWithExt = key + ".MD";
+			refs = this.indexedReferences.get(keyWithExt);
+			if (refs && refs.length > 0) {
+				// Debug logging removed for production
+				return refs;
+			}
+		}
+
+		// Fallback 1: Try with the original uppercase method
+		if (link.resolvedFile) {
+			const fallbackKey = link.resolvedFile.path.toLocaleUpperCase();
+			refs = this.indexedReferences.get(fallbackKey);
+			if (refs && refs.length > 0) {
+				// Debug logging removed for production
+				return refs;
+			}
+
+			// If the link has a subpath, try with that too
+			if (link.realLink.includes("#")) {
+				const { subpath } = parseLinktext(link.realLink);
+				if (subpath) {
+					const fallbackKeyWithSubpath = (link.resolvedFile.path + subpath).toLocaleUpperCase();
+					refs = this.indexedReferences.get(fallbackKeyWithSubpath);
+					if (refs && refs.length > 0) {
+						// Debug logging removed for production
+						return refs;
+					}
+				}
+			}
+		}
+
+		// Fallback 2: Try with the original link
+		const fallbackKeyOriginal = link.realLink.toLocaleUpperCase();
+		refs = this.indexedReferences.get(fallbackKeyOriginal);
+		if (refs && refs.length > 0) {
+			// Debug logging removed for production
+			return refs;
+		}
+
+		// Fallback 3: Try with the original link + .MD extension
+		if (!fallbackKeyOriginal.includes("#") && !fallbackKeyOriginal.endsWith(".MD")) {
+			const fallbackWithExt = fallbackKeyOriginal + ".MD";
+			refs = this.indexedReferences.get(fallbackWithExt);
+			if (refs && refs.length > 0) {
+				// Debug logging removed for production
+				return refs;
+			}
+		}
+
+		// No references found
+		// Debug logging removed for production
+		return undefined;
+	}
+
+	/**
+	 * Enables or disables debug mode for diagnostics
+	 */
+	setDebugMode(enabled: boolean): void {
+		this.debugMode = enabled;
+		// Debug logging removed for production
+
+		if (enabled) {
+			// Print a summary of the references when enabling debug mode
+			this.dumpReferencesSummary();
+		}
+	}
+
+	/**
+	 * Dumps a summary of all indexed references for debugging
+	 */
+	dumpReferencesSummary(): void {
+		if (!this.debugMode) return;
+
+		const total = this.indexedReferences.size;
+		console.log(`Total indexed references: ${total}`);
+
+		if (total > 0) {
+			console.log(`First 10 reference keys:`);
+			let count = 0;
+			for (const key of this.indexedReferences.keys()) {
+				if (count++ < 10) {
+					const refs = this.indexedReferences.get(key) || [];
+					console.log(`  ${key} (${refs.length} references)`);
+
+					// Show first reference's details
+					if (refs.length > 0) {
+						const firstRef = refs[0];
+						console.log(`    From: ${firstRef.sourceFile?.path || "unknown"}`);
+						console.log(`    To: ${firstRef.resolvedFile?.path || "unknown"}`);
+						console.log(`    RealLink: ${firstRef.realLink}`);
+					}
+				} else {
+					break;
+				}
+			}
+
+			// Also list keys containing "project" to help find specific references
+			// Debug logging removed for production
+		}
+	}
+
+	/**
+	 * Checks if debug mode is enabled
+	 */
+	isDebugModeEnabled(): boolean {
+		return this.debugMode;
+	}
+
+	/**
+	 * Finds all references for a link across all source files, regardless of the active policy
+	 * This is important for UI components that need to work with any policy
+	 *
+	 * @param filePath The path of the file containing the link
+	 * @param linkText The text of the link to find references for
+	 * @returns All references found for this link
+	 */
+	public findAllReferencesForLink(filePath: string, linkText: string): Link[] {
+		// Debug logging removed for production
+
+		// Generate key with current policy
+		const key = this.generateKeyFromPathAndLink(filePath, linkText);
+		let allRefs: Link[] = [];
+
+		// First check with the current policy's key
+		const refsWithCurrentPolicy = this.indexedReferences.get(key);
+		if (refsWithCurrentPolicy && refsWithCurrentPolicy.length > 0) {
+			allRefs = allRefs.concat(refsWithCurrentPolicy);
+			// Debug logging removed for production
+		}
+
+		// If Same File policy is active, we need to check for references across all source files
+		const sameFilePolicy = getPolicyByType("same-file");
+		if (this.activePolicy.name === sameFilePolicy.name) {
+			// Try without the source file prefix to find CaseInsensitive-style keys
+			const { path, subpath } = parseLinktext(linkText);
+			const resolvedFile = this.plugin.app.metadataCache.getFirstLinkpathDest(path, filePath);
+
+			let alternateKey = "";
+			if (resolvedFile) {
+				alternateKey = resolvedFile.path.toLocaleUpperCase();
+				if (subpath) alternateKey += subpath.toLocaleUpperCase();
+			} else if (path) {
+				// Handle ghost links
+				alternateKey = path.toLowerCase().endsWith(".md") ? path.toLocaleUpperCase() : path.toLocaleUpperCase() + ".MD";
+			}
+
+			if (alternateKey && alternateKey !== key) {
+				const altRefs = this.indexedReferences.get(alternateKey);
+				if (altRefs && altRefs.length > 0) {
+					// Debug logging removed for production
+					allRefs = allRefs.concat(altRefs);
+				}
+			}
+
+			// Also search for any keys that might be prefixed with other source files
+			const sourceFilePrefix = filePath.toLocaleUpperCase() + ":";
+			const matchingKeys = Array.from(this.indexedReferences.keys()).filter((k) => k.includes(":") && k.split(":")[1] === alternateKey);
+
+			for (const matchKey of matchingKeys) {
+				if (matchKey !== key) {
+					const matchRefs = this.indexedReferences.get(matchKey);
+					if (matchRefs && matchRefs.length > 0) {
+						// Debug logging removed for production
+						allRefs = allRefs.concat(matchRefs);
+					}
+				}
+			}
+		}
+
+		// If we're using Case Insensitive or other policy, but Same File style keys exist
+		if (this.activePolicy.name !== sameFilePolicy.name) {
+			// Look for any Same File style keys (file:target format)
+			const potentialKeys = Array.from(this.indexedReferences.keys()).filter((k) => k.includes(":") && k.endsWith(":" + key));
+
+			for (const matchKey of potentialKeys) {
+				if (matchKey !== key) {
+					const matchRefs = this.indexedReferences.get(matchKey);
+					if (matchRefs && matchRefs.length > 0) {
+						// Debug logging removed for production
+						allRefs = allRefs.concat(matchRefs);
+					}
+				}
+			}
+		}
+
+		if (this.debugMode) {
+			// Debug logging removed for production
+		}
+
+		return allRefs;
+	}
+}

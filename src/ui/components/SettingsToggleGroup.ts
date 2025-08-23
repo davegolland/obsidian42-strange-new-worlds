@@ -1,6 +1,6 @@
 import { Setting } from "obsidian";
 import { createSettingsHeading } from "./SettingsHeading";
-import { createSettingsToggle, type SettingsToggleProps } from "./SettingsToggle";
+import { type SettingsToggleProps, createSettingsToggle } from "./SettingsToggle";
 
 export interface ToggleItem {
 	name: string;
@@ -16,19 +16,14 @@ export interface SettingsToggleGroupProps {
 	toggles: ToggleItem[];
 }
 
-export function createSettingsToggleGroup({
-	containerEl,
-	headingText,
-	description,
-	toggles,
-}: SettingsToggleGroupProps): void {
+export function createSettingsToggleGroup({ containerEl, headingText, description, toggles }: SettingsToggleGroupProps): void {
 	// Create heading
 	createSettingsHeading({
 		containerEl,
 		headingText,
 		description,
 	});
-	
+
 	// Create toggles
 	toggles.forEach((toggle) => {
 		createSettingsToggle({
@@ -39,4 +34,4 @@ export function createSettingsToggleGroup({
 			onChange: toggle.onChange,
 		});
 	});
-} 
+}

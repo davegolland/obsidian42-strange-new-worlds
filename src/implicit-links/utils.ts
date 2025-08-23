@@ -7,23 +7,23 @@ import type { TextSpan } from "../types";
 export function offsetRangeToPos(fullText: string, span: TextSpan): { start: Pos; end: Pos } {
 	const lineStarts: number[] = [0];
 	for (let i = 0; i < fullText.length; i++) {
-		if (fullText[i] === '\n') {
+		if (fullText[i] === "\n") {
 			lineStarts.push(i + 1);
 		}
 	}
-	
+
 	const toLC = (offset: number): Pos => {
-		let line = upperBound(lineStarts, offset) - 1;
-		return { 
-			line, 
-			col: offset - lineStarts[line], 
-			offset 
+		const line = upperBound(lineStarts, offset) - 1;
+		return {
+			line,
+			col: offset - lineStarts[line],
+			offset,
 		};
 	};
-	
-	return { 
-		start: toLC(span.start), 
-		end: toLC(span.end) 
+
+	return {
+		start: toLC(span.start),
+		end: toLC(span.end),
 	};
 }
 
@@ -31,7 +31,8 @@ export function offsetRangeToPos(fullText: string, span: TextSpan): { start: Pos
  * Binary search to find the upper bound in a sorted array
  */
 function upperBound(arr: number[], target: number): number {
-	let lo = 0, hi = arr.length;
+	let lo = 0,
+		hi = arr.length;
 	while (lo < hi) {
 		const mid = (lo + hi) >> 1;
 		if (arr[mid] <= target) {
@@ -50,22 +51,22 @@ export function stripCodeBlocksAndLinks(text: string, cache: any): string {
 	// This is a simplified version - in a full implementation,
 	// you'd want to use the cache.sections to identify code blocks
 	// and existing links to exclude them from detection
-	
+
 	// For now, we'll just strip basic markdown code blocks
 	let stripped = text;
-	
+
 	// Remove code blocks (```...```)
-	stripped = stripped.replace(/```[\s\S]*?```/g, '');
-	
+	stripped = stripped.replace(/```[\s\S]*?```/g, "");
+
 	// Remove inline code (`...`)
-	stripped = stripped.replace(/`[^`]*`/g, '');
-	
+	stripped = stripped.replace(/`[^`]*`/g, "");
+
 	// Remove existing markdown links [text](url)
-	stripped = stripped.replace(/\[([^\]]*)\]\([^)]*\)/g, '$1');
-	
+	stripped = stripped.replace(/\[([^\]]*)\]\([^)]*\)/g, "$1");
+
 	// Remove existing wikilinks [[text]]
-	stripped = stripped.replace(/\[\[([^\]]*)\]\]/g, '$1');
-	
+	stripped = stripped.replace(/\[\[([^\]]*)\]\]/g, "$1");
+
 	return stripped;
 }
 
@@ -85,7 +86,7 @@ export function getCleanSegments(text: string, cache: any): Array<{ text: string
 	addAll(/`[^`]*`/g);
 	addAll(/\[[^\]]*\]\([^)]*\)/g);
 	addAll(/\[\[[^\]]*\]\]/g);
-	excludes.sort((a,b)=>a.start-b.start);
+	excludes.sort((a, b) => a.start - b.start);
 
 	const segments: Array<{ text: string; baseOffset: number }> = [];
 	let cursor = 0;

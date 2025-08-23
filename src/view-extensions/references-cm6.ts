@@ -1,15 +1,15 @@
+import { Transaction } from "@codemirror/state";
 /**
  * Codemirror extension - hook into the CM editor
  * CM will call update as the doc updates.
  */
 import { Decoration, type DecorationSet, type EditorView, MatchDecorator, ViewPlugin, type ViewUpdate, WidgetType } from "@codemirror/view";
-import { Transaction } from "@codemirror/state";
-import { editorInfoField, parseLinktext, stripHeading, TFile } from "obsidian";
+import { type TFile, editorInfoField, parseLinktext, stripHeading } from "obsidian";
 import type SNWPlugin from "src/main";
+import SnwAPI from "src/snwApi";
+import type { ReferenceCountingPolicy } from "../policies/reference-counting";
 import type { TransformedCachedItem } from "../types";
 import { htmlDecorationForReferencesElement } from "./htmlDecorations";
-import SnwAPI from "src/snwApi";
-import { ReferenceCountingPolicy } from "../policies/reference-counting";
 
 let plugin: SNWPlugin;
 let referenceCountingPolicy: ReferenceCountingPolicy;
@@ -32,7 +32,7 @@ export const InlineReferenceExtension = ViewPlugin.fromClass(
 			// The constructor seems to be called only once when a file is viewed. The decorator is called multipe times.
 			if (plugin.settings.render.blockIdInLivePreview) this.regxPattern = "(\\s\\^)(\\S+)$";
 			if (plugin.settings.render.embedsInLivePreview) this.regxPattern += `${this.regxPattern !== "" ? "|" : ""}!\\[\\[[^\\]]+?\\]\\]`;
-			if (plugin.settings.render.linksInLivePreview)  this.regxPattern += `${this.regxPattern !== "" ? "|" : ""}\\[\\[[^\\]]+?\\]\\]`;
+			if (plugin.settings.render.linksInLivePreview) this.regxPattern += `${this.regxPattern !== "" ? "|" : ""}\\[\\[[^\\]]+?\\]\\]`;
 			if (plugin.settings.render.headersInLivePreview) this.regxPattern += `${this.regxPattern !== "" ? "|" : ""}^#+\\s.+`;
 
 			//if there is no regex pattern, then don't go further
@@ -208,9 +208,7 @@ export const InlineReferenceExtension = ViewPlugin.fromClass(
 
 			// If we receive our "snw-refresh" userEvent, force a full rebuild even
 			// when the doc/viewport haven't changed (index became ready).
-			const refreshed = update.transactions?.some(tr =>
-				tr.annotation(Transaction.userEvent) === "snw-refresh"
-			);
+			const refreshed = update.transactions?.some((tr) => tr.annotation(Transaction.userEvent) === "snw-refresh");
 			if (refreshed) {
 				this.refresh(update.view);
 			}

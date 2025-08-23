@@ -3,12 +3,12 @@
  * Provides detection functionality for regex and dictionary-based implicit links
  */
 
-import type { TFile, App } from "obsidian";
-import type { DetectedLink } from "../types";
-import type { AutoLinkSettings } from "../settings";
+import type { App, TFile } from "obsidian";
 import type { WikilinkEquivalencePolicy } from "../policies/base/WikilinkEquivalencePolicy";
-import { RegexDetector } from "./RegexDetector";
+import type { AutoLinkSettings } from "../settings";
+import type { DetectedLink } from "../types";
 import { DictionaryDetector } from "./DictionaryDetector";
+import { RegexDetector } from "./RegexDetector";
 
 export class DetectionManager {
 	private detector: RegexDetector | DictionaryDetector | null = null;

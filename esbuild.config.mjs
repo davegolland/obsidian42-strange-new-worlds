@@ -87,6 +87,15 @@ if (prod) {
     process.exit(1);
   }
   
+  // Run version consistency check
+  try {
+    console.log('🔍 Checking version consistency...');
+    execSync('node scripts/check-version-consistency.js', { stdio: 'inherit' });
+  } catch (error) {
+    console.error('❌ Version consistency check failed');
+    process.exit(1);
+  }
+  
   process.exit(0);
 } else {
   await context.watch();

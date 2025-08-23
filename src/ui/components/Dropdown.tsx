@@ -1,4 +1,4 @@
-import { type FunctionComponent, type ComponentChildren } from "preact";
+import type { ComponentChildren, FunctionComponent } from "preact";
 import { useEffect, useRef, useState } from "preact/hooks";
 
 export interface DropdownProps {
@@ -22,7 +22,7 @@ export const Dropdown: FunctionComponent<DropdownProps> = ({
 }) => {
 	const [internalIsOpen, setInternalIsOpen] = useState(false);
 	const menuRef = useRef<HTMLDivElement>(null);
-	
+
 	// Determine if component is controlled or uncontrolled
 	const isControlled = externalIsOpen !== undefined;
 	const isOpen = isControlled ? externalIsOpen : internalIsOpen;
@@ -36,7 +36,7 @@ export const Dropdown: FunctionComponent<DropdownProps> = ({
 
 	useEffect(() => {
 		if (!isOpen) return;
-		
+
 		const handleClickOutside = (event: MouseEvent) => {
 			if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
 				if (!isControlled) {
@@ -61,4 +61,4 @@ export const Dropdown: FunctionComponent<DropdownProps> = ({
 			{isOpen && <ul className={listClassName}>{children}</ul>}
 		</div>
 	);
-}; 
+};

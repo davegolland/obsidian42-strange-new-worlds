@@ -1,6 +1,6 @@
 import type { TFile } from "obsidian";
-import type { ImplicitLinkDetector, DetectedLink, TextSpan } from "../types";
 import type { AutoLinkSettings } from "../settings";
+import type { DetectedLink, ImplicitLinkDetector, TextSpan } from "../types";
 
 function tmpl(s: string, match: RegExpMatchArray): string {
 	return s.replace(/\$\{(\d+)\}/g, (_, g) => match[Number(g)] ?? "");
@@ -11,7 +11,7 @@ export class RegexDetector implements ImplicitLinkDetector {
 	private rules: { re: RegExp; targetTemplate: string; displayTemplate?: string }[];
 
 	constructor(private settings: AutoLinkSettings) {
-		this.rules = settings.regexRules.map(r => ({
+		this.rules = settings.regexRules.map((r) => ({
 			re: new RegExp(r.pattern, r.flags),
 			targetTemplate: r.targetTemplate,
 			displayTemplate: r.displayTemplate,

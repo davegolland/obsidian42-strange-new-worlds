@@ -14,7 +14,7 @@ export default class PluginCommands {
 				let msg = `SNW toggled ${this.plugin.showCountsActive ? "ON\n\n" : "OFF\n\n"}`;
 				msg += "Tabs may require reloading for this change to take effect.";
 				new Notice(msg);
-				
+
 				// Toggle all features with the new global state
 				// We can still use the individual toggle methods as they now call our DRY implementation
 				this.plugin.toggleStateSNWMarkdownPreview();

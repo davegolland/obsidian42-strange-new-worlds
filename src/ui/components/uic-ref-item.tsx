@@ -54,15 +54,12 @@ const grabChunkOfFile = async (ref: Link): Promise<HTMLElement> => {
 		const key = ref.reference.key;
 		const pos = linkPosition; // CodeMirror position for the property/value
 		const fmPos = fileCache?.frontmatterPosition;
-		const isFrontmatter =
-			!!fmPos &&
-			pos &&
-			pos.start.line >= fmPos.start.line &&
-			pos.end.line <= fmPos.end.line;
+		const isFrontmatter = !!fmPos && pos && pos.start.line >= fmPos.start.line && pos.end.line <= fmPos.end.line;
 
 		// Extract a single "evidence" line (or YAML entry) containing the hit
 		const fullText = fileContents;
-		let lineStart = 0, lineEnd = fullText.length;
+		let lineStart = 0,
+			lineEnd = fullText.length;
 		if (pos?.start) {
 			const startOff = pos.start.offset ?? 0;
 			lineStart = fullText.lastIndexOf("\n", startOff) + 1;
@@ -92,20 +89,14 @@ const grabChunkOfFile = async (ref: Link): Promise<HTMLElement> => {
 		// Light highlighting of the matched portion
 		const valueText = getTextAtPosition(fullText, pos) ?? "";
 		const escaped = (s: string) =>
-			s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]!));
+			s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
 		const highlighted =
 			valueText && evidence.includes(valueText)
-				? escaped(evidence).replace(
-						new RegExp(valueText.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")),
-						`<mark class="snw-ref-hit">$&</mark>`
-					)
+				? escaped(evidence).replace(new RegExp(valueText.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")), `<mark class="snw-ref-hit">$&</mark>`)
 				: escaped(evidence);
 
 		// Render as YAML block if we're in frontmatter, otherwise as a simple code line
-		const md =
-			isFrontmatter
-				? "```yaml\n" + evidence + "\n```"
-				: "`" + evidence + "`";
+		const md = isFrontmatter ? "```yaml\n" + evidence + "\n```" : "`" + evidence + "`";
 
 		// Use MarkdownRenderer for consistent Obsidian styling
 		const wrapper = container.createDiv({ cls: "snw-ref-property-snippet" });

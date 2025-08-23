@@ -105,30 +105,30 @@ export type DetectedLink = {
 
 /**
  * Interface for custom implicit link detectors.
- * 
+ *
  * Detectors analyze text content to find potential links that should be created
  * as virtual links in the SNW sidebar.
  */
 export interface ImplicitLinkDetector {
-	/** 
+	/**
 	 * Unique identifier for this detector (e.g., "regex", "dictionary", "custom")
 	 */
 	name: string;
-	
+
 	/**
 	 * Analyze text content to detect potential links.
-	 * 
+	 *
 	 * @param file - The Obsidian file being analyzed
 	 * @param text - The raw text content of the file (excluding code blocks and existing links)
 	 * @returns Promise resolving to array of detected links
-	 * 
+	 *
 	 * The text parameter contains the file's content that should be scanned for patterns.
 	 * This text has already been preprocessed to exclude:
 	 * - Code blocks (```...```)
 	 * - Inline code (`...`)
 	 * - Existing wikilinks ([[...]])
 	 * - Markdown links ([...](...))
-	 * 
+	 *
 	 * Your detector should scan this clean text for patterns and return any matches
 	 * that should become virtual links.
 	 */

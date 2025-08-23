@@ -1,7 +1,7 @@
-import type { App, TFile, CachedMetadata } from "obsidian";
-import type { DetectedLink, ImplicitLinkDetector, TextSpan } from "../types";
-import type { AutoLinkSettings } from "../settings";
+import type { App, CachedMetadata, TFile } from "obsidian";
 import type { WikilinkEquivalencePolicy } from "../policies/base/WikilinkEquivalencePolicy";
+import type { AutoLinkSettings } from "../settings";
+import type { DetectedLink, ImplicitLinkDetector, TextSpan } from "../types";
 
 // Target entry
 type Target = { path: string; display: string };
@@ -102,13 +102,18 @@ export class DictionaryDetector implements ImplicitLinkDetector {
 			if ((this.settings.dictionary?.minPhraseLength ?? 3) > trimmed.length) continue;
 
 			// Policy normalization → canonical key
-			const key = this.policy.generateKey!({ 
+			const key = this.policy.generateKey!({
 				realLink: trimmed,
-				reference: { link: trimmed, key: trimmed, displayText: trimmed, position: { start: { line: 0, col: 0, offset: 0 }, end: { line: 0, col: 0, offset: 0 } } },
+				reference: {
+					link: trimmed,
+					key: trimmed,
+					displayText: trimmed,
+					position: { start: { line: 0, col: 0, offset: 0 }, end: { line: 0, col: 0, offset: 0 } },
+				},
 				resolvedFile: null,
-				sourceFile: null
+				sourceFile: null,
 			});
-			
+
 			// For custom phrases, create a default target if none exists
 			if (!this.keyToTarget.has(key)) {
 				// Try to find a matching file first
@@ -150,16 +155,27 @@ export class DictionaryDetector implements ImplicitLinkDetector {
 
 		let i = 0;
 		while (i < n) {
-			let node = this.trieRoot, j = i, lastKey: string | null = null, lastEnd = i;
+			let node = this.trieRoot,
+				j = i,
+				lastKey: string | null = null,
+				lastEnd = i;
 			while (j < n) {
 				const next = node.next.get(foldedText[j]);
 				if (!next) break;
-				node = next; j++;
-				if (node.key) { lastKey = node.key; lastEnd = j; }
+				node = next;
+				j++;
+				if (node.key) {
+					lastKey = node.key;
+					lastEnd = j;
+				}
 			}
 			if (lastKey && lastEnd > i) {
 				const wbOK = !requireWB || (isBoundary(foldedText, i - 1) && isBoundary(foldedText, lastEnd));
-				if (wbOK) { out.push({ span: { start: i, end: lastEnd }, key: lastKey }); i = lastEnd; continue; }
+				if (wbOK) {
+					out.push({ span: { start: i, end: lastEnd }, key: lastKey });
+					i = lastEnd;
+					continue;
+				}
 			}
 			i++;
 		}

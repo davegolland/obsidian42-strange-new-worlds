@@ -32,7 +32,7 @@ export function getDiagnosticFlags(): DiagnosticFlags {
  */
 export function logDecoration(event: string, span: { from: number; to: number }, kind: string): void {
 	if (!diagnosticFlags.diagDecorations) return;
-	
+
 	console.log(`[SNW-DIAG] ${event}:`, {
 		span,
 		kind,

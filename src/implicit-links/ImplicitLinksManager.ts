@@ -1,22 +1,21 @@
-import type { TFile, CachedMetadata } from "obsidian";
-import type { VirtualLinkProvider } from "../types";
-import type { AutoLinkSettings } from "../settings";
-import type SNWPlugin from "../main";
-import { DetectionManager } from "./DetectionManager";
-import { offsetRangeToPos, getCleanSegments } from "./utils";
 import { Transaction } from "@codemirror/state";
+import type { CachedMetadata, TFile } from "obsidian";
+import type SNWPlugin from "../main";
+import type { AutoLinkSettings } from "../settings";
+import type { VirtualLinkProvider } from "../types";
+import { DetectionManager } from "./DetectionManager";
+import { getCleanSegments, offsetRangeToPos } from "./utils";
 
 export class ImplicitLinksManager {
 	private detectionManager: DetectionManager;
 	private unregisterProvider: (() => void) | null = null;
 	public providers: VirtualLinkProvider[] = [];
 
-	constructor(private plugin: SNWPlugin, private settings: AutoLinkSettings) {
-		this.detectionManager = new DetectionManager(
-			plugin.app,
-			settings,
-			plugin.referenceCountingPolicy.getActivePolicy()
-		);
+	constructor(
+		private plugin: SNWPlugin,
+		private settings: AutoLinkSettings,
+	) {
+		this.detectionManager = new DetectionManager(plugin.app, settings, plugin.referenceCountingPolicy.getActivePolicy());
 	}
 
 	/**
@@ -29,7 +28,7 @@ export class ImplicitLinksManager {
 
 		const provider: VirtualLinkProvider = async ({ file, cache, makeLink }) => {
 			if (this.settings.detectionMode === "off") return [];
-			
+
 			const fullText = await this.plugin.app.vault.read(file);
 			// NEW: get "clean" *segments* of the full text instead of mutating the string
 			const segments = getCleanSegments(fullText, cache); // [{ text, baseOffset }]
@@ -62,10 +61,10 @@ export class ImplicitLinksManager {
 	async updateSettings(settings: AutoLinkSettings): Promise<void> {
 		this.settings = settings;
 		this.detectionManager.updateSettings(settings);
-		
+
 		// Rebuild the detector when settings change so new phrases appear without reload
 		await this.detectionManager?.rebuild?.();
-		
+
 		// Re-register the provider with updated settings
 		if (this.unregisterProvider) {
 			this.unregisterProvider();
@@ -88,7 +87,7 @@ export class ImplicitLinksManager {
 				// This simulates a document change to force the implicit links extension to refresh
 				cm.dispatch({
 					// No actual changes, just a user event that the implicit links extension can watch for
-					annotations: Transaction.userEvent.of("implicit-links-refresh")
+					annotations: Transaction.userEvent.of("implicit-links-refresh"),
 				});
 			}
 		}

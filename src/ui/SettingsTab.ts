@@ -1,12 +1,7 @@
 import { type App, PluginSettingTab, Setting, type ToggleComponent } from "obsidian";
 import type SNWPlugin from "../main";
 import { getPolicyOptions } from "../policies/index";
-import { 
-	createSettingsHeading, 
-	createSettingsSlider, 
-	createSettingsToggle, 
-	createSettingsToggleGroup 
-} from "./components";
+import { createSettingsHeading, createSettingsSlider, createSettingsToggle, createSettingsToggleGroup } from "./components";
 
 export class SettingsTab extends PluginSettingTab {
 	plugin: SNWPlugin;
@@ -31,7 +26,7 @@ export class SettingsTab extends PluginSettingTab {
 					onChange: async (value: boolean) => {
 						this.plugin.settings.startup.enableOnDesktop = value;
 						await this.plugin.saveSettings();
-					}
+					},
 				},
 				{
 					name: "On mobile devices enable SNW at startup",
@@ -39,34 +34,33 @@ export class SettingsTab extends PluginSettingTab {
 					onChange: async (value: boolean) => {
 						this.plugin.settings.startup.enableOnMobile = value;
 						await this.plugin.saveSettings();
-					}
-				}
-			]
+					},
+				},
+			],
 		});
 
 		// SNW Activation section
 		createSettingsHeading({
 			containerEl,
-			headingText: "SNW Activation"
+			headingText: "SNW Activation",
 		});
 
 		createSettingsToggle({
 			containerEl,
 			name: "Require modifier key to activate SNW",
-			description: 
-				`If enabled, SNW will only activate when the modifier key is pressed when hovering the mouse over an SNW counter.  
+			description: `If enabled, SNW will only activate when the modifier key is pressed when hovering the mouse over an SNW counter.  
 				Otherwise, SNW will activate on a mouse hover. May require reopening open files to take effect.`,
 			value: this.plugin.settings.requireModifierKeyToActivateSNWView,
 			onChange: async (value: boolean) => {
 				this.plugin.settings.requireModifierKeyToActivateSNWView = value;
 				await this.plugin.saveSettings();
-			}
+			},
 		});
 
 		// Thresholds section
 		createSettingsHeading({
 			containerEl,
-			headingText: "Thresholds"
+			headingText: "Thresholds",
 		});
 
 		createSettingsSlider({
@@ -81,7 +75,7 @@ export class SettingsTab extends PluginSettingTab {
 			onChange: async (value) => {
 				this.plugin.settings.minimumRefCountThreshold = value;
 				await this.plugin.saveSettings();
-			}
+			},
 		});
 
 		createSettingsSlider({
@@ -96,7 +90,7 @@ export class SettingsTab extends PluginSettingTab {
 			onChange: async (value) => {
 				this.plugin.settings.maxFileCountToDisplay = value;
 				await this.plugin.saveSettings();
-			}
+			},
 		});
 
 		// Use Obsidian's Excluded Files section
@@ -106,23 +100,25 @@ export class SettingsTab extends PluginSettingTab {
 			toggles: [
 				{
 					name: "Outgoing links",
-					description: "If enabled, links FROM files in the excluded folder will not be included in SNW's reference counters. May require restarting Obsidian.",
+					description:
+						"If enabled, links FROM files in the excluded folder will not be included in SNW's reference counters. May require restarting Obsidian.",
 					value: this.plugin.settings.ignore.obsExcludeFoldersLinksFrom,
 					onChange: async (value: boolean) => {
 						this.plugin.settings.ignore.obsExcludeFoldersLinksFrom = value;
 						await this.plugin.saveSettings();
-					}
+					},
 				},
 				{
 					name: "Incoming links",
-					description: "If enabled, links TO files in the excluded folder will not be included in SNW's reference counters. May require restarting Obsidian.",
+					description:
+						"If enabled, links TO files in the excluded folder will not be included in SNW's reference counters. May require restarting Obsidian.",
 					value: this.plugin.settings.ignore.obsExcludeFoldersLinksTo,
 					onChange: async (value: boolean) => {
 						this.plugin.settings.ignore.obsExcludeFoldersLinksTo = value;
 						await this.plugin.saveSettings();
-					}
-				}
-			]
+					},
+				},
+			],
 		});
 
 		// Properties section
@@ -136,7 +132,7 @@ export class SettingsTab extends PluginSettingTab {
 					onChange: async (value: boolean) => {
 						this.plugin.settings.display.propertyReferences = value;
 						await this.plugin.saveSettings();
-					}
+					},
 				},
 				{
 					name: "Show references in properties on mobile",
@@ -144,9 +140,9 @@ export class SettingsTab extends PluginSettingTab {
 					onChange: async (value: boolean) => {
 						this.plugin.settings.display.propertyReferencesMobile = value;
 						await this.plugin.saveSettings();
-					}
-				}
-			]
+					},
+				},
+			],
 		});
 
 		new Setting(containerEl).setHeading().setName("View Modes");
@@ -370,22 +366,18 @@ export class SettingsTab extends PluginSettingTab {
 
 		new Setting(containerEl)
 			.setName("Wikilink equivalence policy")
-			.setDesc(
-				"Choose how wikilinks are grouped when counting references. This determines when different links are considered equivalent."
-			)
+			.setDesc("Choose how wikilinks are grouped when counting references. This determines when different links are considered equivalent.")
 			.addDropdown((dropdown) => {
 				const policyOptions = getPolicyOptions();
-				policyOptions.forEach(option => {
+				policyOptions.forEach((option) => {
 					dropdown.addOption(option.value, option.name);
 				});
-				
-				dropdown
-					.setValue(this.plugin.settings.wikilinkEquivalencePolicy)
-					.onChange(async (value) => {
-						this.plugin.settings.wikilinkEquivalencePolicy = value as any;
-						this.plugin.referenceCountingPolicy.setActivePolicy(value);
-						await this.plugin.saveSettings();
-					});
+
+				dropdown.setValue(this.plugin.settings.wikilinkEquivalencePolicy).onChange(async (value) => {
+					this.plugin.settings.wikilinkEquivalencePolicy = value as any;
+					this.plugin.referenceCountingPolicy.setActivePolicy(value);
+					await this.plugin.saveSettings();
+				});
 			})
 			.addButton((button) => {
 				button
@@ -437,18 +429,16 @@ export class SettingsTab extends PluginSettingTab {
 				.setName("Add Regex Rule")
 				.setDesc("Add a new regex pattern to detect implicit links")
 				.addButton((button) => {
-					button
-						.setButtonText("Add Rule")
-						.onClick(async () => {
-							this.plugin.settings.autoLinks.regexRules.push({
-								pattern: "",
-								flags: "gi",
-								targetTemplate: "",
-								displayTemplate: ""
-							});
-							await this.plugin.saveSettings();
-							this.display(); // Refresh the settings tab
+					button.setButtonText("Add Rule").onClick(async () => {
+						this.plugin.settings.autoLinks.regexRules.push({
+							pattern: "",
+							flags: "gi",
+							targetTemplate: "",
+							displayTemplate: "",
 						});
+						await this.plugin.saveSettings();
+						this.display(); // Refresh the settings tab
+					});
 				});
 		}
 
@@ -461,66 +451,62 @@ export class SettingsTab extends PluginSettingTab {
 				.setName("Include Note Basenames")
 				.setDesc("Detect links to note filenames (e.g., 'My Note' links to 'My Note.md')")
 				.addToggle((toggle) => {
-					toggle
-						.setValue(this.plugin.settings.autoLinks.dictionary?.sources.basenames ?? true)
-						.onChange(async (value) => {
-							if (!this.plugin.settings.autoLinks.dictionary) {
-								this.plugin.settings.autoLinks.dictionary = {
-									sources: { basenames: true, aliases: true, headings: false, customList: false },
-									minPhraseLength: 3,
-									requireWordBoundaries: true,
-									customPhrases: [],
-								};
-							}
-							this.plugin.settings.autoLinks.dictionary.sources.basenames = value;
-							await this.plugin.saveSettings();
-						});
+					toggle.setValue(this.plugin.settings.autoLinks.dictionary?.sources.basenames ?? true).onChange(async (value) => {
+						if (!this.plugin.settings.autoLinks.dictionary) {
+							this.plugin.settings.autoLinks.dictionary = {
+								sources: { basenames: true, aliases: true, headings: false, customList: false },
+								minPhraseLength: 3,
+								requireWordBoundaries: true,
+								customPhrases: [],
+							};
+						}
+						this.plugin.settings.autoLinks.dictionary.sources.basenames = value;
+						await this.plugin.saveSettings();
+					});
 				});
 
 			new Setting(containerEl)
 				.setName("Include Frontmatter Aliases")
 				.setDesc("Detect links to aliases defined in note frontmatter")
 				.addToggle((toggle) => {
-					toggle
-						.setValue(this.plugin.settings.autoLinks.dictionary?.sources.aliases ?? true)
-						.onChange(async (value) => {
-							if (!this.plugin.settings.autoLinks.dictionary) {
-								this.plugin.settings.autoLinks.dictionary = {
-									sources: { basenames: true, aliases: true, headings: false, customList: false },
-									minPhraseLength: 3,
-									requireWordBoundaries: true,
-									customPhrases: [],
-								};
-							}
-							this.plugin.settings.autoLinks.dictionary.sources.aliases = value;
-							await this.plugin.saveSettings();
-						});
+					toggle.setValue(this.plugin.settings.autoLinks.dictionary?.sources.aliases ?? true).onChange(async (value) => {
+						if (!this.plugin.settings.autoLinks.dictionary) {
+							this.plugin.settings.autoLinks.dictionary = {
+								sources: { basenames: true, aliases: true, headings: false, customList: false },
+								minPhraseLength: 3,
+								requireWordBoundaries: true,
+								customPhrases: [],
+							};
+						}
+						this.plugin.settings.autoLinks.dictionary.sources.aliases = value;
+						await this.plugin.saveSettings();
+					});
 				});
 
 			new Setting(containerEl)
 				.setName("Include Note Headings")
 				.setDesc("Detect links to headings within notes (experimental)")
 				.addToggle((toggle) => {
-					toggle
-						.setValue(this.plugin.settings.autoLinks.dictionary?.sources.headings ?? false)
-						.onChange(async (value) => {
-							if (!this.plugin.settings.autoLinks.dictionary) {
-								this.plugin.settings.autoLinks.dictionary = {
-									sources: { basenames: true, aliases: true, headings: false, customList: false },
-									minPhraseLength: 3,
-									requireWordBoundaries: true,
-									customPhrases: [],
-								};
-							}
-							this.plugin.settings.autoLinks.dictionary.sources.headings = value;
-							await this.plugin.saveSettings();
-						});
+					toggle.setValue(this.plugin.settings.autoLinks.dictionary?.sources.headings ?? false).onChange(async (value) => {
+						if (!this.plugin.settings.autoLinks.dictionary) {
+							this.plugin.settings.autoLinks.dictionary = {
+								sources: { basenames: true, aliases: true, headings: false, customList: false },
+								minPhraseLength: 3,
+								requireWordBoundaries: true,
+								customPhrases: [],
+							};
+						}
+						this.plugin.settings.autoLinks.dictionary.sources.headings = value;
+						await this.plugin.saveSettings();
+					});
 				});
 
 			// Min phrase length
 			new Setting(containerEl)
 				.setName("Minimum Phrase Length")
-				.setDesc(`Ignore phrases shorter than this many characters. Currently set to: ${this.plugin.settings.autoLinks.dictionary?.minPhraseLength ?? 3} characters.`)
+				.setDesc(
+					`Ignore phrases shorter than this many characters. Currently set to: ${this.plugin.settings.autoLinks.dictionary?.minPhraseLength ?? 3} characters.`,
+				)
 				.addSlider((slider) => {
 					slider
 						.setLimits(1, 10, 1)
@@ -545,20 +531,18 @@ export class SettingsTab extends PluginSettingTab {
 				.setName("Require Word Boundaries")
 				.setDesc("Only match complete words (prevents 'Language' from matching inside 'LanguageModel')")
 				.addToggle((toggle) => {
-					toggle
-						.setValue(this.plugin.settings.autoLinks.dictionary?.requireWordBoundaries ?? true)
-						.onChange(async (value) => {
-							if (!this.plugin.settings.autoLinks.dictionary) {
-								this.plugin.settings.autoLinks.dictionary = {
-									sources: { basenames: true, aliases: true, headings: false, customList: false },
-									minPhraseLength: 3,
-									requireWordBoundaries: true,
-									customPhrases: [],
-								};
-							}
-							this.plugin.settings.autoLinks.dictionary.requireWordBoundaries = value;
-							await this.plugin.saveSettings();
-						});
+					toggle.setValue(this.plugin.settings.autoLinks.dictionary?.requireWordBoundaries ?? true).onChange(async (value) => {
+						if (!this.plugin.settings.autoLinks.dictionary) {
+							this.plugin.settings.autoLinks.dictionary = {
+								sources: { basenames: true, aliases: true, headings: false, customList: false },
+								minPhraseLength: 3,
+								requireWordBoundaries: true,
+								customPhrases: [],
+							};
+						}
+						this.plugin.settings.autoLinks.dictionary.requireWordBoundaries = value;
+						await this.plugin.saveSettings();
+					});
 				});
 
 			// Custom phrases section
@@ -566,20 +550,18 @@ export class SettingsTab extends PluginSettingTab {
 				.setName("Include Custom Phrases")
 				.setDesc("Use a hardcoded list of phrases to detect (independent of your vault content)")
 				.addToggle((toggle) => {
-					toggle
-						.setValue(this.plugin.settings.autoLinks.dictionary?.sources.customList ?? false)
-						.onChange(async (value) => {
-							if (!this.plugin.settings.autoLinks.dictionary) {
-								this.plugin.settings.autoLinks.dictionary = {
-									sources: { basenames: true, aliases: true, headings: false, customList: false },
-									minPhraseLength: 3,
-									requireWordBoundaries: true,
-									customPhrases: [],
-								};
-							}
-							this.plugin.settings.autoLinks.dictionary.sources.customList = value;
-							await this.plugin.saveSettings();
-						});
+					toggle.setValue(this.plugin.settings.autoLinks.dictionary?.sources.customList ?? false).onChange(async (value) => {
+						if (!this.plugin.settings.autoLinks.dictionary) {
+							this.plugin.settings.autoLinks.dictionary = {
+								sources: { basenames: true, aliases: true, headings: false, customList: false },
+								minPhraseLength: 3,
+								requireWordBoundaries: true,
+								customPhrases: [],
+							};
+						}
+						this.plugin.settings.autoLinks.dictionary.sources.customList = value;
+						await this.plugin.saveSettings();
+					});
 				});
 
 			// Custom phrases list (only show if custom list is enabled)
@@ -597,21 +579,19 @@ export class SettingsTab extends PluginSettingTab {
 					.setName("Add Custom Phrase")
 					.setDesc("Add a new phrase to the hardcoded detection list")
 					.addButton((button) => {
-						button
-							.setButtonText("Add Phrase")
-							.onClick(async () => {
-								if (!this.plugin.settings.autoLinks.dictionary) {
-									this.plugin.settings.autoLinks.dictionary = {
-										sources: { basenames: true, aliases: true, headings: false, customList: false },
-										minPhraseLength: 3,
-										requireWordBoundaries: true,
-										customPhrases: [],
-									};
-								}
-								this.plugin.settings.autoLinks.dictionary.customPhrases.push("");
-								await this.plugin.saveSettings();
-								this.display(); // Refresh the settings tab
-							});
+						button.setButtonText("Add Phrase").onClick(async () => {
+							if (!this.plugin.settings.autoLinks.dictionary) {
+								this.plugin.settings.autoLinks.dictionary = {
+									sources: { basenames: true, aliases: true, headings: false, customList: false },
+									minPhraseLength: 3,
+									requireWordBoundaries: true,
+									customPhrases: [],
+								};
+							}
+							this.plugin.settings.autoLinks.dictionary.customPhrases.push("");
+							await this.plugin.saveSettings();
+							this.display(); // Refresh the settings tab
+						});
 					});
 			}
 		}

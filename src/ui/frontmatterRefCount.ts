@@ -1,8 +1,8 @@
-import { MarkdownView, Platform, View, type WorkspaceLeaf } from "obsidian";
+import { type MarkdownView, Platform, type View, type WorkspaceLeaf } from "obsidian";
 import { htmlDecorationForReferencesElement } from "src/view-extensions/htmlDecorations";
 import type SNWPlugin from "../main";
+import type { ReferenceCountingPolicy } from "../policies/reference-counting";
 import type { TransformedCachedItem } from "../types";
-import { ReferenceCountingPolicy } from "../policies/reference-counting";
 
 let plugin: SNWPlugin;
 let referenceCountingPolicy: ReferenceCountingPolicy;
@@ -26,14 +26,16 @@ function setFrontmatterLinksReferenceCounts() {
 function processFrontmatterLinks(mdView: View) {
 	if (!plugin.showCountsActive) return;
 	const state =
-		Platform.isMobile || Platform.isMobileApp ? plugin.settings.display.propertyReferencesMobile : plugin.settings.display.propertyReferences;
+		Platform.isMobile || Platform.isMobileApp
+			? plugin.settings.display.propertyReferencesMobile
+			: plugin.settings.display.propertyReferences;
 
 	const markdownView = mdView as MarkdownView;
 	if (!state || !markdownView?.rawFrontmatter) return;
 
 	// For now, use a synchronous approach - this will be updated in a future version
 	// to properly handle virtual links
-	const transformedCache = markdownView.file ? referenceCountingPolicy.getSNWCacheByFile(markdownView.file) as any : {};
+	const transformedCache = markdownView.file ? (referenceCountingPolicy.getSNWCacheByFile(markdownView.file) as any) : {};
 	if (!transformedCache.frontmatterLinks?.length) return;
 
 	for (const item of markdownView.metadataEditor.rendered) {

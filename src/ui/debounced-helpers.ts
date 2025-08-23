@@ -8,32 +8,32 @@ let plugin: SNWPlugin;
  * @param snwPlugin The plugin instance
  */
 export function setPluginVariableForDebouncedHelpers(snwPlugin: SNWPlugin) {
-    plugin = snwPlugin;
+	plugin = snwPlugin;
 }
 
 /**
  * Update header reference counts (debounced)
  */
 export function updateHeadersDebounce() {
-    if (plugin?.updateHeadersDebounced) {
-        plugin.updateHeadersDebounced();
-    }
+	if (plugin?.updateHeadersDebounced) {
+		plugin.updateHeadersDebounced();
+	}
 }
 
 /**
  * Update frontmatter properties reference counts (debounced)
  */
 export function updatePropertiesDebounce() {
-    if (plugin?.updatePropertiesDebounced) {
-        plugin.updatePropertiesDebounced();
-    }
+	if (plugin?.updatePropertiesDebounced) {
+		plugin.updatePropertiesDebounced();
+	}
 }
 
 /**
  * Update all live references in the document (debounced)
  */
 export function updateAllSnwLiveUpdateReferencesDebounce() {
-    if (plugin?.updateAllSnwLiveUpdateReferencesDebounced) {
-        plugin.updateAllSnwLiveUpdateReferencesDebounced();
-    }
-} 
+	if (plugin?.updateAllSnwLiveUpdateReferencesDebounced) {
+		plugin.updateAllSnwLiveUpdateReferencesDebounced();
+	}
+}

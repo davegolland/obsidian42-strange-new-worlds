@@ -5,8 +5,8 @@ import tippy from "tippy.js";
 import type SNWPlugin from "../main";
 import { processHtmlDecorationReferenceEvent } from "../view-extensions/htmlDecorations";
 import "tippy.js/dist/tippy.css";
+import type { Link } from "../types";
 import { getUIC_Hoverview } from "./components/uic-ref--parent";
-import { type Link } from "../types";
 
 let plugin: SNWPlugin;
 
@@ -31,7 +31,7 @@ function setHeaderWithReferenceCounts() {
 function countIncomingLinks(mdViewFile: TFile) {
 	const allLinks = plugin.referenceCountingPolicy.getIndexedReferences();
 	let incomingLinksCount = 0;
-	
+
 	// Calculate the incoming links count
 	for (const items of allLinks.values()) {
 		for (const item of items) {
@@ -46,14 +46,14 @@ function countIncomingLinks(mdViewFile: TFile) {
 	// to properly handle virtual links
 	const transformedCache = plugin.referenceCountingPolicy.getSNWCacheByFile(mdViewFile) as any;
 	if (transformedCache?.cacheMetaData?.frontmatter?.["snw-file-exclude"] === true) incomingLinksCount = 0;
-	
+
 	return incomingLinksCount;
 }
 
 // Creates or updates the header element in the view
 function createHeaderElement(mdView: MarkdownView, mdViewFile: TFile, incomingLinksCount: number) {
 	let snwTitleRefCountDisplayCountEl: HTMLElement | null = mdView.contentEl.querySelector(".snw-header-count");
-	
+
 	// header count is already displayed, just update information.
 	if (snwTitleRefCountDisplayCountEl && snwTitleRefCountDisplayCountEl.dataset.snwKey === mdViewFile.basename) {
 		snwTitleRefCountDisplayCountEl.innerText = ` ${incomingLinksCount.toString()} `;
@@ -74,7 +74,7 @@ function createHeaderElement(mdView: MarkdownView, mdViewFile: TFile, incomingLi
 	}
 
 	if (snwTitleRefCountDisplayCountEl) snwTitleRefCountDisplayCountEl.innerText = ` ${incomingLinksCount.toString()} `;
-	
+
 	wrapper.setAttribute("data-snw-reallink", mdViewFile.basename);
 	wrapper.setAttribute("data-snw-key", mdViewFile.basename);
 	wrapper.setAttribute("data-snw-type", "File");
@@ -131,7 +131,7 @@ function attachTippy(wrapper: HTMLElement, snwTitleRefCountDisplayCountEl: HTMLE
 function processHeader(mdView: MarkdownView) {
 	const mdViewFile = mdView.file;
 	if (!mdViewFile) return;
-	
+
 	// Count incoming links
 	const incomingLinksCount = countIncomingLinks(mdViewFile);
 
@@ -144,10 +144,10 @@ function processHeader(mdView: MarkdownView) {
 
 	// Create or update the header element
 	const { wrapper, snwTitleRefCountDisplayCountEl, isExisting } = createHeaderElement(mdView, mdViewFile, incomingLinksCount);
-	
+
 	// If we're just updating an existing element, we're done
 	if (isExisting) return;
-	
+
 	// Attach event handlers and tippy
 	if (wrapper) {
 		attachTippy(wrapper, snwTitleRefCountDisplayCountEl);

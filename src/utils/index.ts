@@ -1,2 +1,2 @@
-export { getScrollParent } from './dom';
-export { scrollResultsIntoView } from './scroll'; 
+export { getScrollParent } from "./dom";
+export { scrollResultsIntoView } from "./scroll";

@@ -6,17 +6,17 @@ export interface AutoLinkSettings {
 	enabledReadingView: boolean;
 	detectionMode: "off" | "regex" | "dictionary";
 	regexRules: Array<{
-		pattern: string;       // e.g. "\\bNatural Language Programming\\b"
-		flags: string;         // e.g. "gi"
+		pattern: string; // e.g. "\\bNatural Language Programming\\b"
+		flags: string; // e.g. "gi"
 		targetTemplate: string; // e.g. "Encyclopedia/${0}.md"
 		displayTemplate?: string; // optional, e.g. "${0}"
 	}>;
 	dictionary?: {
 		sources: {
-			basenames: boolean;   // Note basenames (default: true)
-			aliases: boolean;     // frontmatter aliases[] (default: true)
-			headings: boolean;    // Markdown headings in each note (default: false)
-			customList: boolean;  // Use hardcoded custom phrases (default: false)
+			basenames: boolean; // Note basenames (default: true)
+			aliases: boolean; // frontmatter aliases[] (default: true)
+			headings: boolean; // Markdown headings in each note (default: false)
+			customList: boolean; // Use hardcoded custom phrases (default: false)
 		};
 		minPhraseLength: number; // characters; ignore very short keys (default: 3)
 		requireWordBoundaries: boolean; // only match as whole words (default: true)

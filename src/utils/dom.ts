@@ -15,4 +15,4 @@ export const getScrollParent = (element: HTMLElement, includeHidden: boolean): H
 	}
 
 	return document.body;
-}; 
+};

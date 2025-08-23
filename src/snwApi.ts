@@ -1,5 +1,5 @@
+import type { CachedMetadata, TFile } from "obsidian";
 import type SNWPlugin from "./main";
-import type { TFile, CachedMetadata } from "obsidian";
 import type { TransformedCache, VirtualLinkProvider } from "./types";
 
 /**
@@ -39,7 +39,7 @@ export default class SnwAPI {
 		}
 
 		const results: [string, unknown][] = [];
-		
+
 		for (const [key, value] of this.plugin.referenceCountingPolicy.getIndexedReferences()) {
 			if (options.startsWith && key.startsWith(options.startsWith)) {
 				results.push([key, value]);
@@ -47,11 +47,11 @@ export default class SnwAPI {
 				results.push([key, value]);
 			}
 		}
-		
+
 		results.forEach(([key, value]) => {
 			console.log(key, value);
 		});
-		
+
 		return results;
 	};
 
@@ -69,7 +69,7 @@ export default class SnwAPI {
 		return this.searchReferences({ contains: searchString });
 	};
 
-			// For given file name passed into the function, get the meta info for that file
+	// For given file name passed into the function, get the meta info for that file
 	getMetaInfoByFileName = async (fileName: string) => {
 		const currentFile = this.plugin.app.metadataCache.getFirstLinkpathDest(fileName, "/");
 		return {

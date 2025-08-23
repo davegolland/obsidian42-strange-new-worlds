@@ -1,6 +1,6 @@
-import { Link } from "../types";
-import { parseLinktext } from "obsidian";
 import { basename, extname } from "path";
+import { parseLinktext } from "obsidian";
+import type { Link } from "../types";
 
 /**
  * Extracts the subpath (section) from a link if present
@@ -8,8 +8,8 @@ import { basename, extname } from "path";
  * @returns The subpath with # prefix or undefined if none
  */
 export function extractSubpath(link: Link): string | undefined {
-    const parsed = parseLinktext(link.reference.link);
-    return parsed.subpath ? `#${parsed.subpath}` : undefined;
+	const parsed = parseLinktext(link.reference.link);
+	return parsed.subpath ? `#${parsed.subpath}` : undefined;
 }
 
 /**
@@ -20,25 +20,25 @@ export function extractSubpath(link: Link): string | undefined {
  *  - "preserve": keep original casing
  */
 export function normalizeBase(link: Link, casing: "upper" | "lower" | "preserve" = "upper"): string {
-    // Get the base path from resolved file or real link
-    let path = link.resolvedFile?.path || link.realLink;
-    
-    // Add subpath if present
-    const subpath = extractSubpath(link);
-    if (subpath) {
-        path += subpath;
-    }
-    
-    // Add extension if not present and not a section link
-    if (!subpath && !extname(path)) {
-        // We default to .md for preserved or lower; .MD for upper for backward compat
-        path += casing === "upper" ? ".MD" : ".md";
-    }
+	// Get the base path from resolved file or real link
+	let path = link.resolvedFile?.path || link.realLink;
 
-    // Apply casing
-    if (casing === "upper") return path.toUpperCase();
-    if (casing === "lower") return path.toLowerCase();
-    return path; // preserve
+	// Add subpath if present
+	const subpath = extractSubpath(link);
+	if (subpath) {
+		path += subpath;
+	}
+
+	// Add extension if not present and not a section link
+	if (!subpath && !extname(path)) {
+		// We default to .md for preserved or lower; .MD for upper for backward compat
+		path += casing === "upper" ? ".MD" : ".md";
+	}
+
+	// Apply casing
+	if (casing === "upper") return path.toUpperCase();
+	if (casing === "lower") return path.toLowerCase();
+	return path; // preserve
 }
 
 /**
@@ -47,5 +47,5 @@ export function normalizeBase(link: Link, casing: "upper" | "lower" | "preserve"
  * @returns The basename without extension
  */
 export function getBasenameWithoutExt(path: string): string {
-    return basename(path, extname(path));
-} 
+	return basename(path, extname(path));
+}

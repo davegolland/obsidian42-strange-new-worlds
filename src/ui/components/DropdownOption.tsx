@@ -1,4 +1,4 @@
-import { type FunctionComponent, type ComponentChildren } from "preact";
+import type { ComponentChildren, FunctionComponent } from "preact";
 
 export interface DropdownOptionProps {
 	id?: string;
@@ -29,19 +29,15 @@ export const DropdownOption: FunctionComponent<DropdownOptionProps> = ({
 	};
 
 	return (
-		<li
-			id={id || value}
-			onClick={handleClick}
-			class={className}
-		>
+		<li id={id || value} onClick={handleClick} class={className}>
 			{icon && (
 				// biome-ignore lint/security/noDangerouslySetInnerHtml: SVG icon rendering
 				<span className={iconClassName} dangerouslySetInnerHTML={{ __html: icon }} />
 			)}
-			
+
 			{label && <span className={labelClassName}>{label}</span>}
-			
+
 			{children}
 		</li>
 	);
-}; 
+};

@@ -1,4 +1,4 @@
-import { getScrollParent } from './dom';
+import { getScrollParent } from "./dom";
 
 export const scrollResultsIntoView = (resultContainerEl: HTMLElement): void => {
 	const searchResults = resultContainerEl.querySelectorAll(".search-result-file-matched-text");
@@ -10,4 +10,4 @@ export const scrollResultsIntoView = (resultContainerEl: HTMLElement): void => {
 			}
 		}
 	}
-}; 
+};

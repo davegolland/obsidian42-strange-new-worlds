@@ -8,7 +8,7 @@ export interface SettingsHeadingProps {
 
 export function createSettingsHeading({ containerEl, headingText, description }: SettingsHeadingProps): void {
 	const heading = new Setting(containerEl).setHeading().setName(headingText);
-	
+
 	if (description) {
 		containerEl.createEl("sup", { text: description });
 	}
@@ -16,4 +16,4 @@ export function createSettingsHeading({ containerEl, headingText, description }:
 
 export function createSettingsSeparator(containerEl: HTMLElement): void {
 	containerEl.createEl("hr", { cls: "snw-settings-separator" });
-} 
+}

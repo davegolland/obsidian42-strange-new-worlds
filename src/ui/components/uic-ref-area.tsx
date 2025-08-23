@@ -4,11 +4,11 @@ import { setIcon } from "obsidian";
 import { render } from "preact";
 import type SNWPlugin from "src/main";
 import type { Link } from "src/types";
+import type { ReferenceCountingPolicy } from "../../policies/reference-counting";
 import type { SortOption } from "../../settings";
 import { setFileLinkHandlers } from "./uic-ref--parent";
 import { getUIC_Ref_Item } from "./uic-ref-item";
 import { getUIC_Ref_Title_Div } from "./uic-ref-title";
-import { ReferenceCountingPolicy } from "../../policies/reference-counting";
 
 let plugin: SNWPlugin;
 let referenceCountingPolicy: ReferenceCountingPolicy;
@@ -101,9 +101,11 @@ const getRefAreaItems = async (refType: string, key: string, filePath: string): 
 	const countOfRefs = referenceCountingPolicy.countReferences(linksToLoop);
 
 	// get the unique file names for files in thie refeernces
-	const uniqueFileKeys: Link[] = Array.from(new Set(linksToLoop.map((a: Link) => a.sourceFile?.path))).map((file_path) => {
-		return linksToLoop.find((a) => a.sourceFile?.path === file_path);
-	}).filter((link): link is Link => link !== undefined);
+	const uniqueFileKeys: Link[] = Array.from(new Set(linksToLoop.map((a: Link) => a.sourceFile?.path)))
+		.map((file_path) => {
+			return linksToLoop.find((a) => a.sourceFile?.path === file_path);
+		})
+		.filter((link): link is Link => link !== undefined);
 
 	const sortedFileKeys = sortLinks(uniqueFileKeys, plugin.settings.sortOptionDefault);
 
@@ -125,7 +127,7 @@ const getRefAreaItems = async (refType: string, key: string, filePath: string): 
 		if (itemsDisplayedCounter > maxItemsToShow) continue;
 		const file_path = sortedFileKeys[index];
 		if (!file_path.sourceFile) continue;
-		
+
 		const responseItemContainerEl = createDiv();
 		responseItemContainerEl.addClass("snw-ref-item-container");
 		responseItemContainerEl.addClass("tree-item");
