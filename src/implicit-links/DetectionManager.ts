@@ -1,3 +1,8 @@
+/**
+ * DetectionManager - manages implicit link detection
+ * Provides detection functionality for regex and dictionary-based implicit links
+ */
+
 import type { TFile, App } from "obsidian";
 import type { DetectedLink } from "../types";
 import type { AutoLinkSettings } from "../settings";
@@ -13,6 +18,7 @@ export class DetectionManager {
 		private settings: AutoLinkSettings,
 		private policy: WikilinkEquivalencePolicy,
 	) {
+		// Initialize detector based on settings
 		if (settings.detectionMode === "regex") {
 			this.detector = new RegexDetector(settings);
 		} else if (settings.detectionMode === "dictionary") {
@@ -27,7 +33,7 @@ export class DetectionManager {
 	}
 
 	private resolveConflicts(items: DetectedLink[]): DetectedLink[] {
-		// Only regex detector for now, so just apply "longest span wins"
+		// Legacy conflict resolution logic
 		items.sort((a, b) => {
 			const la = a.span.end - a.span.start;
 			const lb = b.span.end - b.span.start;
