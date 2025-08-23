@@ -3,6 +3,7 @@ import process from 'process';
 import builtins from 'builtin-modules';
 import fs from 'fs';
 import path from 'path';
+import { execSync } from 'child_process';
 
 fs.copyFile('manifest.json', 'build/manifest.json', (err) => {
   if (err) console.log(err);
@@ -76,6 +77,16 @@ const context = await esbuild.context({
 if (prod) {
   console.log('Building for production');
   await context.rebuild();
+  
+  // Run build cleanliness check
+  try {
+    console.log('🔍 Checking build cleanliness...');
+    execSync('node scripts/check-build-clean.js', { stdio: 'inherit' });
+  } catch (error) {
+    console.error('❌ Build cleanliness check failed');
+    process.exit(1);
+  }
+  
   process.exit(0);
 } else {
   await context.watch();

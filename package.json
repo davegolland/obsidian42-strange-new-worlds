@@ -7,6 +7,7 @@
 		"dev": "node --no-warnings esbuild.config.mjs",
 		"prebuild": "node scripts/generate-policy-registry.mjs",
 		"build": "node --no-warnings esbuild.config.mjs production",
+		"check-build": "node scripts/check-build-clean.js",
 		"lint": "biome check ./src",
 		"version": "node scripts/release.mjs --local",
 		"tag-version": "node scripts/release.mjs --ci"
