@@ -59,12 +59,18 @@ export interface IgnoreSettings {
 	obsExcludeFoldersLinksTo: boolean;
 }
 
+export interface DevSettings {
+	diagDecorations: boolean;
+	forceLegacy: boolean;
+}
+
 export interface Settings {
 	startup: StartupSettings;
 	display: DisplaySettings;
 	embed: EmbedSettings;
 	render: RenderSettings;
 	ignore: IgnoreSettings;
+	dev: DevSettings;
 	minimumRefCountThreshold: number;
 	maxFileCountToDisplay: number;
 	requireModifierKeyToActivateSNWView: boolean;
@@ -105,6 +111,10 @@ export const DEFAULT_SETTINGS: Settings = {
 	ignore: {
 		obsExcludeFoldersLinksFrom: false,
 		obsExcludeFoldersLinksTo: false,
+	},
+	dev: {
+		diagDecorations: false,
+		forceLegacy: false,
 	},
 	minimumRefCountThreshold: 1,
 	maxFileCountToDisplay: 100,

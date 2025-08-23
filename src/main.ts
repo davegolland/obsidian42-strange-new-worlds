@@ -12,6 +12,7 @@ import {
 } from "obsidian";
 import { DEFAULT_SETTINGS, type Settings, type LegacySettings, migrateSettings } from "./settings";
 import SnwAPI from "./snwApi";
+import { setDiagnosticFlags } from "./diag";
 import { ReferenceCountingPolicy } from "./policies/reference-counting";
 import PluginCommands from "./ui/PluginCommands";
 import { SettingsTab } from "./ui/SettingsTab";
@@ -144,6 +145,9 @@ export default class SNWPlugin extends Plugin {
 	 */
 	private async initSettings(): Promise<void> {
 		await this.loadSettings();
+		
+		// Initialize diagnostic flags
+		setDiagnosticFlags(this.settings.dev);
 		
 		// Ensure the reference counting policy is using the correct policy from settings
 		this.referenceCountingPolicy.setActivePolicy(this.settings.wikilinkEquivalencePolicy);
