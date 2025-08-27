@@ -24,6 +24,8 @@ import { updateProperties } from "./ui/frontmatterRefCount";
 import { updateHeaders } from "./ui/headerRefCount";
 import * as uiInits from "./ui/ui-inits";
 import { updateAllSnwLiveUpdateReferences } from "./view-extensions/htmlDecorations";
+import { BackendClient } from "./backend/client";
+import { createBackendLinksProvider } from "./backend/provider";
 
 export const UPDATE_DEBOUNCE = 200;
 
@@ -60,6 +62,10 @@ export default class SNWPlugin extends Plugin {
 	referenceCountingPolicy: ReferenceCountingPolicy = new ReferenceCountingPolicy(this);
 	featureManager!: FeatureManager;
 	implicitLinksManager!: ImplicitLinksManager;
+	
+	// Backend integration
+	private backendClient!: BackendClient;
+	private unregisterBackendProvider: (() => void) | null = null;
 
 	// Publicly accessible debounced versions of functions
 	updateHeadersDebounced: (() => void) | null = null;
@@ -112,6 +118,8 @@ export default class SNWPlugin extends Plugin {
 		await this.initCommands();
 		await this.initFeatureToggles();
 		await this.initLayoutReadyHandler();
+		// 3) Initialize backend integration
+		await this.initBackend();
 	}
 
 	/**
@@ -261,6 +269,70 @@ export default class SNWPlugin extends Plugin {
 	}
 
 	/**
+	 * Initialize backend integration
+	 */
+	private async initBackend(): Promise<void> {
+		// Only initialize backend if it's enabled in settings
+		if (!this.settings.backend.enabled) return;
+
+		this.backendClient = new BackendClient(this.settings.backend.baseUrl);
+
+		// Register backend with the vault path (zero-config)
+		const basePath = (this.app.vault.adapter as any).getBasePath?.() ?? "";
+		try {
+			await this.backendClient.register(basePath);
+		} catch (error) {
+			console.warn("SNW: Backend register failed — check server", error);
+		}
+
+		// Start status poll (small UX polish)
+		this.pollBackendStatus();
+
+		// Register the virtual link provider if enabled
+		this.refreshBackendProvider();
+	}
+
+	/**
+	 * Refresh the backend provider based on current settings
+	 */
+	refreshBackendProvider(): void {
+		// Turn off existing provider
+		this.unregisterBackendProvider?.();
+		this.unregisterBackendProvider = null;
+
+		if (!this.settings.backend.enabled) return;
+
+		// Initialize backend client if not already done
+		if (!this.backendClient) {
+			this.backendClient = new BackendClient(this.settings.backend.baseUrl);
+		}
+
+		// Register new provider
+		if (!this.snwAPI?.registerVirtualLinkProvider) return;
+		this.unregisterBackendProvider = createBackendLinksProvider(this.snwAPI, this.backendClient);
+	}
+
+	/**
+	 * Poll backend status to show readiness
+	 */
+	private async pollBackendStatus(): Promise<void> {
+		// Non-blocking, simple poll to show readiness
+		const delay = (ms: number) => new Promise(r => setTimeout(r, ms));
+		for (let i = 0; i < 10; i++) {
+			try {
+				const status = await this.backendClient.status();
+				if (status.ready) {
+					new Notice(`Backend inferred links ready (${status.files ?? "?"} files)`);
+					break;
+				}
+			} catch (error) {
+				// Ignore errors during polling
+			}
+			await delay(1500);
+		}
+	}
+
+	/**
 	 * Initialize handlers that run when the layout is ready
 	 */
 	private async initLayoutReadyHandler(): Promise<void> {
@@ -394,6 +466,11 @@ export default class SNWPlugin extends Plugin {
 		if (this.implicitLinksManager) {
 			await this.implicitLinksManager.updateSettings(this.settings.autoLinks);
 		}
+		// Refresh backend provider if backend settings changed
+		if (this.backendClient) {
+			this.backendClient = new BackendClient(this.settings.backend.baseUrl);
+			this.refreshBackendProvider();
+		}
 	}
 
 	onunload(): void {
@@ -406,6 +483,9 @@ export default class SNWPlugin extends Plugin {
 			if (this.implicitLinksManager) {
 				this.implicitLinksManager.unload();
 			}
+
+			// Unload backend provider
+			this.unregisterBackendProvider?.();
 
 			this.app.workspace.unregisterHoverLinkSource(this.appID);
 		} catch (error) {

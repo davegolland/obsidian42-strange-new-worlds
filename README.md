@@ -38,6 +38,23 @@ const unregister = window.snwAPI!.registerVirtualLinkProvider(({ file, cache, ma
 
 See [Virtual Links Documentation](docs/VIRTUAL_LINKS_EXAMPLE.md) for detailed examples and API reference.
 
+## 🤖 Backend Integration
+
+Strange New Worlds supports connecting to external backend services for AI-powered link suggestions. The backend integration provides intelligent link recommendations based on your note content.
+
+### Features
+- **Zero-config setup**: Automatically registers your vault with the backend
+- **Smart suggestions**: Get contextual link recommendations with reasons
+- **Graceful fallback**: Returns empty results if backend is unavailable
+- **Status monitoring**: Shows when the backend is ready to provide suggestions
+
+### Quick Setup
+1. Enable "Backend Integration" in plugin settings
+2. Set your backend server URL (default: `http://localhost:8000`)
+3. Backend will automatically register and start providing suggestions
+
+See [Backend Integration Documentation](docs/BACKEND_INTEGRATION.md) for detailed setup and API reference.
+
 Documentation for this plugin can be found at: https://tfthacker.com/SNW
 
 See videos on how to use Strange New Worlds: https://tfthacker.com/SNW-videos

@@ -8,6 +8,7 @@
 @import "gutter.css";
 @import "popover.css";
 @import "sidepane.css";
+@import "wikilink-candidates.css";
 
 /* Implicit Links Settings Styles */
 .regex-rule-container {

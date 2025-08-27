@@ -595,6 +595,37 @@ export class SettingsTab extends PluginSettingTab {
 					});
 			}
 		}
+
+		// Backend Integration section
+		createSettingsHeading({
+			containerEl,
+			headingText: "Backend Integration",
+		});
+
+		createSettingsToggle({
+			containerEl,
+			name: "Enable backend inferred links",
+			description: "Connect to an external backend service to provide AI-powered link suggestions. Requires a running backend server.",
+			value: this.plugin.settings.backend.enabled,
+			onChange: async (value: boolean) => {
+				this.plugin.settings.backend.enabled = value;
+				await this.plugin.saveSettings();
+				this.plugin.refreshBackendProvider();
+			},
+		});
+
+		new Setting(containerEl)
+			.setName("Backend base URL")
+			.setDesc("The URL of your backend server (e.g., http://localhost:8000)")
+			.addText((text) => {
+				text
+					.setPlaceholder("http://localhost:8000")
+					.setValue(this.plugin.settings.backend.baseUrl)
+					.onChange(async (value) => {
+						this.plugin.settings.backend.baseUrl = value.trim();
+						await this.plugin.saveSettings();
+					});
+			});
 	}
 
 	private createCustomPhraseSetting(containerEl: HTMLElement, index: number, phrase: string) {
@@ -713,5 +744,60 @@ export class SettingsTab extends PluginSettingTab {
 						await this.plugin.saveSettings();
 					});
 			});
+	}
+
+	// Wikilink Candidates section
+	createSettingsHeading({
+		containerEl,
+		headingText: "Wikilink Candidates",
+	});
+
+	const candidatesContainer = containerEl.createDiv("wikilink-candidates-container");
+	candidatesContainer.innerHTML = `
+		<div class="setting-item-description">
+			View detected wikilink candidates from your vault. These are phrases that could potentially become wikilinks.
+		</div>
+		<div id="wikilink-candidates-view"></div>
+	`;
+
+	// Load the wikilink candidates view
+	this.loadWikilinkCandidatesView(candidatesContainer);
+}
+
+private async loadWikilinkCandidatesView(containerEl: HTMLElement) {
+	const candidatesViewEl = containerEl.querySelector('#wikilink-candidates-view');
+	if (!candidatesViewEl) return;
+
+	// Check if backend is available
+	if (!this.plugin.backendClient) {
+		candidatesViewEl.innerHTML = `
+			<div class="candidates-error">
+				Backend not available. Please ensure the backend is running and the vault is registered.
+			</div>
+		`;
+		return;
+	}
+
+	try {
+		// Import and render the React component
+		const { WikilinkCandidatesView } = await import('./components/WikilinkCandidatesView');
+		const React = await import('react');
+		const ReactDOM = await import('react-dom/client');
+		
+		const root = ReactDOM.createRoot(candidatesViewEl as HTMLElement);
+		root.render(React.createElement(WikilinkCandidatesView, {
+			backendClient: this.plugin.backendClient,
+			onRefresh: () => {
+				// Re-render the component
+				root.unmount();
+				this.loadWikilinkCandidatesView(containerEl);
+			}
+		}));
+	} catch (error) {
+		candidatesViewEl.innerHTML = `
+			<div class="candidates-error">
+				Failed to load wikilink candidates view: ${error}
+			</div>
+		`;
 	}
 }

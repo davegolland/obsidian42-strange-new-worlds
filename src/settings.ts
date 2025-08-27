@@ -64,6 +64,11 @@ export interface DevSettings {
 	forceLegacy: boolean;
 }
 
+export interface BackendSettings {
+	enabled: boolean;
+	baseUrl: string;
+}
+
 export interface Settings {
 	startup: StartupSettings;
 	display: DisplaySettings;
@@ -79,6 +84,7 @@ export interface Settings {
 	pluginSupportKanban: boolean;
 	wikilinkEquivalencePolicy: WikilinkEquivalencePolicyType;
 	autoLinks: AutoLinkSettings;
+	backend: BackendSettings;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -123,18 +129,22 @@ export const DEFAULT_SETTINGS: Settings = {
 	displayCustomPropertyList: "",
 	pluginSupportKanban: false,
 	wikilinkEquivalencePolicy: "case-insensitive",
-	autoLinks: {
-		enabledLivePreview: false,
-		enabledReadingView: false,
-		detectionMode: "off",
-		regexRules: [],
-		dictionary: {
-			sources: { basenames: true, aliases: true, headings: false, customList: false },
-			minPhraseLength: 3,
-			requireWordBoundaries: true,
-			customPhrases: [],
+			autoLinks: {
+			enabledLivePreview: false,
+			enabledReadingView: false,
+			detectionMode: "off",
+			regexRules: [],
+			dictionary: {
+				sources: { basenames: true, aliases: true, headings: false, customList: false },
+				minPhraseLength: 3,
+				requireWordBoundaries: true,
+				customPhrases: [],
+			},
 		},
-	},
+		backend: {
+			enabled: false,
+			baseUrl: "http://localhost:8000",
+		},
 };
 
 // For backward compatibility with older settings format
@@ -219,6 +229,10 @@ export function migrateSettings(legacySettings: LegacySettings): Settings {
 				requireWordBoundaries: true,
 				customPhrases: [],
 			},
+		},
+		backend: {
+			enabled: false,
+			baseUrl: "http://localhost:8000",
 		},
 	};
 }
