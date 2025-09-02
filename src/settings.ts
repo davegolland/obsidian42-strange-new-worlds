@@ -85,6 +85,7 @@ export interface Settings {
 	wikilinkEquivalencePolicy: WikilinkEquivalencePolicyType;
 	autoLinks: AutoLinkSettings;
 	backend: BackendSettings;
+	minimalMode: boolean; // NEW: Enable minimal mode for debugging
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -129,22 +130,23 @@ export const DEFAULT_SETTINGS: Settings = {
 	displayCustomPropertyList: "",
 	pluginSupportKanban: false,
 	wikilinkEquivalencePolicy: "case-insensitive",
-			autoLinks: {
-			enabledLivePreview: false,
-			enabledReadingView: false,
-			detectionMode: "off",
-			regexRules: [],
-			dictionary: {
-				sources: { basenames: true, aliases: true, headings: false, customList: false },
-				minPhraseLength: 3,
-				requireWordBoundaries: true,
-				customPhrases: [],
-			},
+	autoLinks: {
+		enabledLivePreview: false,
+		enabledReadingView: false,
+		detectionMode: "off",
+		regexRules: [],
+		dictionary: {
+			sources: { basenames: true, aliases: true, headings: false, customList: false },
+			minPhraseLength: 3,
+			requireWordBoundaries: true,
+			customPhrases: [],
 		},
-		backend: {
-			enabled: false,
-			baseUrl: "http://localhost:8000",
-		},
+	},
+	backend: {
+		enabled: false,
+		baseUrl: "http://localhost:8000",
+	},
+	minimalMode: false,
 };
 
 // For backward compatibility with older settings format
@@ -233,6 +235,11 @@ export function migrateSettings(legacySettings: LegacySettings): Settings {
 		backend: {
 			enabled: false,
 			baseUrl: "http://localhost:8000",
+		},
+		minimalMode: false,
+		dev: {
+			diagDecorations: false,
+			forceLegacy: false,
 		},
 	};
 }

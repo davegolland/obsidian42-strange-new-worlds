@@ -28,7 +28,7 @@ async function testBackend() {
     const registerResponse = await fetch(`${BASE_URL}/register`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ vault_path: '/test/vault/path' })
+      body: JSON.stringify({ vault_path: '/Users/dave/Documents/testvault/testvault' })
     });
     console.log('✅ Register response:', registerResponse.status);
 

@@ -64,8 +64,13 @@ export default class SNWPlugin extends Plugin {
 	implicitLinksManager!: ImplicitLinksManager;
 	
 	// Backend integration
-	private backendClient!: BackendClient;
+	private _backendClient!: BackendClient;
 	private unregisterBackendProvider: (() => void) | null = null;
+
+	// Public getter for backend client
+	get backendClient(): BackendClient {
+		return this._backendClient;
+	}
 
 	// Publicly accessible debounced versions of functions
 	updateHeadersDebounced: (() => void) | null = null;
@@ -104,13 +109,32 @@ export default class SNWPlugin extends Plugin {
 	async onload(): Promise<void> {
 		console.log(`loading ${this.appName}`);
 
-		// Initialize feature manager
-		this.featureManager = new FeatureManager(this, this.settings, this.showCountsActive);
-
-		// 1) Load settings and build the index FIRST so UI has data on first paint
+		// Load settings first
 		await this.initSettings();
+		
+		// Always add settings tab so users can toggle back
+		this.addSettingTab(new SettingsTab(this.app, this));
+		
+		// Always initialize feature manager (needed for settings updates)
+		this.featureManager = new FeatureManager(this, this.settings, this.showCountsActive);
+		
+		// Update feature manager with current settings and state (always needed)
+		this.featureManager.updateSettings(this.settings);
+		this.featureManager.updateShowCountsActive(this.showCountsActive);
+		
+		if (this.settings.minimalMode) {
+			console.log("SNW: 🚀 MINIMAL MODE ENABLED");
+			console.log("SNW: ✅ Skipping: Reference Counting, UI Components");
+			console.log("SNW: ✅ Keeping: Backend Integration and Feature Manager");
+			await this.initAPI({ minimal: true });  // lightweight, no CM6/MD processors
+			await this.initBackend();               // registers provider, starts status polling
+			console.log("SNW: 🎯 Minimal mode initialization complete");
+			return;
+		}
+		
+		console.log("SNW: 🔧 Full mode initialization");
+		// Full initialization (existing code)
 		await this.referenceCountingPolicy.buildLinksAndReferences();
-		// 2) Now wire up UI/view extensions
 		await this.initUI();
 		await this.initAPI();
 		await this.initViews();
@@ -118,7 +142,6 @@ export default class SNWPlugin extends Plugin {
 		await this.initCommands();
 		await this.initFeatureToggles();
 		await this.initLayoutReadyHandler();
-		// 3) Initialize backend integration
 		await this.initBackend();
 	}
 
@@ -126,6 +149,12 @@ export default class SNWPlugin extends Plugin {
 	 * Initialize all UI components
 	 */
 	private async initUI(): Promise<void> {
+		// Skip in minimal mode
+		if (this.settings.minimalMode) {
+			console.log("SNW: Minimal mode - skipping UI component initialization");
+			return;
+		}
+		
 		// Initialize all UI components by calling each initializer
 		for (const init of this.UI_INITIALIZERS) {
 			init(this);
@@ -135,13 +164,18 @@ export default class SNWPlugin extends Plugin {
 	/**
 	 * Initialize the API for external access
 	 */
-	private async initAPI(): Promise<void> {
+	private async initAPI(options?: { minimal?: boolean }): Promise<void> {
 		window.snwAPI = this.snwAPI; // API access to SNW for Templater, Dataviewjs and the console debugger
+		
+		if (options?.minimal) {
+			// Minimal mode: only expose what's needed for backend provider
+			console.log("SNW: Minimal mode - lightweight API only");
+			// Don't touch reference counts, index, or CM6 extensions
+			return;
+		}
+		
+		// Full mode: complete API setup
 		this.snwAPI.references = this.referenceCountingPolicy.indexedReferences;
-
-		// Will be set after settings are loaded
-		// @ts-ignore
-		this.snwAPI.settings = this.settings;
 	}
 
 	/**
@@ -153,26 +187,26 @@ export default class SNWPlugin extends Plugin {
 		// Initialize diagnostic flags
 		setDiagnosticFlags(this.settings.dev);
 
-		// Ensure the reference counting policy is using the correct policy from settings
-		this.referenceCountingPolicy.setActivePolicy(this.settings.wikilinkEquivalencePolicy);
-
-		// Build synchronously from caller so first render has data
-		// await this.referenceCountingPolicy.buildLinksAndReferences();
-
-		this.addSettingTab(new SettingsTab(this.app, this));
-
-		// set current state based on startup parameters
+		// set current state based on startup parameters (always needed)
 		if (Platform.isMobile || Platform.isMobileApp) {
 			this.showCountsActive = this.settings.startup.enableOnMobile;
 		} else {
 			this.showCountsActive = this.settings.startup.enableOnDesktop;
 		}
 
-		// Update feature manager with current settings and state
-		this.featureManager.updateSettings(this.settings);
-		this.featureManager.updateShowCountsActive(this.showCountsActive);
+		if (this.settings.minimalMode) {
+			console.log("SNW: Minimal mode - skipping reference counting and UI setup");
+			return; // Settings tab added in onload() before this check
+		}
 
-		// Initialize implicit links manager
+		// Full settings initialization (existing code)
+		// Ensure the reference counting policy is using the correct policy from settings
+		this.referenceCountingPolicy.setActivePolicy(this.settings.wikilinkEquivalencePolicy);
+
+		// Build synchronously from caller so first render has data
+		// await this.referenceCountingPolicy.buildLinksAndReferences();
+
+		// Initialize implicit links manager (only in full mode)
 		this.implicitLinksManager = new ImplicitLinksManager(this, this.settings.autoLinks);
 		this.implicitLinksManager.registerProvider(this.snwAPI.registerVirtualLinkProvider.bind(this.snwAPI));
 	}
@@ -181,6 +215,12 @@ export default class SNWPlugin extends Plugin {
 	 * Initialize views and register them
 	 */
 	private async initViews(): Promise<void> {
+		// Skip in minimal mode
+		if (this.settings.minimalMode) {
+			console.log("SNW: Minimal mode - skipping views and editor extensions");
+			return;
+		}
+
 		this.registerView(VIEW_TYPE_SNW, (leaf) => new SideBarPaneView(leaf, this));
 
 		this.app.workspace.registerHoverLinkSource(this.appID, {
@@ -197,6 +237,11 @@ export default class SNWPlugin extends Plugin {
 	 * Initialize all debounced event handlers
 	 */
 	private async initDebouncedEvents(): Promise<void> {
+		if (this.settings.minimalMode) {
+			console.log("SNW: Minimal mode - skipping debounced event setup");
+			return;
+		}
+
 		// Create debounced versions of our update functions for external use
 		this.updateHeadersDebounced = debounce(updateHeaders, UPDATE_DEBOUNCE, true);
 		this.updatePropertiesDebounced = debounce(updateProperties, UPDATE_DEBOUNCE, true);
@@ -208,6 +253,9 @@ export default class SNWPlugin extends Plugin {
 				target: this.app.vault,
 				events: ["rename", "delete"],
 				handler: () => {
+					// Skip in minimal mode
+					if (this.settings.minimalMode) return;
+					
 					// Full vault rebuild
 					this.referenceCountingPolicy.buildLinksAndReferences().catch(console.error);
 					updateHeadersDebounce();
@@ -222,6 +270,9 @@ export default class SNWPlugin extends Plugin {
 				target: this.app.metadataCache,
 				events: ["changed"],
 				handler: async (file: TFile, data: string, cache: CachedMetadata) => {
+					// Skip in minimal mode
+					if (this.settings.minimalMode) return;
+					
 					// Single file update
 					await this.referenceCountingPolicy.removeLinkReferencesForFile(file);
 					await this.referenceCountingPolicy.getLinkReferencesForFile(file, cache);
@@ -264,6 +315,12 @@ export default class SNWPlugin extends Plugin {
 	 * Initialize feature toggles based on settings
 	 */
 	private async initFeatureToggles(): Promise<void> {
+		// Skip in minimal mode
+		if (this.settings.minimalMode) {
+			console.log("SNW: Minimal mode - skipping feature toggles");
+			return;
+		}
+		
 		// Apply all feature toggles using the feature manager
 		this.featureManager.apply();
 	}
@@ -275,12 +332,12 @@ export default class SNWPlugin extends Plugin {
 		// Only initialize backend if it's enabled in settings
 		if (!this.settings.backend.enabled) return;
 
-		this.backendClient = new BackendClient(this.settings.backend.baseUrl);
+		this._backendClient = new BackendClient(this.settings.backend.baseUrl);
 
 		// Register backend with the vault path (zero-config)
 		const basePath = (this.app.vault.adapter as any).getBasePath?.() ?? "";
 		try {
-			await this.backendClient.register(basePath);
+			await this._backendClient.register(basePath);
 		} catch (error) {
 			console.warn("SNW: Backend register failed — check server", error);
 		}
@@ -303,13 +360,13 @@ export default class SNWPlugin extends Plugin {
 		if (!this.settings.backend.enabled) return;
 
 		// Initialize backend client if not already done
-		if (!this.backendClient) {
-			this.backendClient = new BackendClient(this.settings.backend.baseUrl);
+		if (!this._backendClient) {
+			this._backendClient = new BackendClient(this.settings.backend.baseUrl);
 		}
 
 		// Register new provider
 		if (!this.snwAPI?.registerVirtualLinkProvider) return;
-		this.unregisterBackendProvider = createBackendLinksProvider(this.snwAPI, this.backendClient);
+		this.unregisterBackendProvider = createBackendLinksProvider(this.snwAPI, this._backendClient);
 	}
 
 	/**
@@ -320,7 +377,7 @@ export default class SNWPlugin extends Plugin {
 		const delay = (ms: number) => new Promise(r => setTimeout(r, ms));
 		for (let i = 0; i < 10; i++) {
 			try {
-				const status = await this.backendClient.status();
+				const status = await this._backendClient.status();
 				if (status.ready) {
 					new Notice(`Backend inferred links ready (${status.files ?? "?"} files)`);
 					break;
@@ -336,10 +393,19 @@ export default class SNWPlugin extends Plugin {
 	 * Initialize handlers that run when the layout is ready
 	 */
 	private async initLayoutReadyHandler(): Promise<void> {
+		if (this.settings.minimalMode) {
+			console.log("SNW: Minimal mode - skipping layout ready handler setup");
+			return;
+		}
+
 		this.app.workspace.onLayoutReady(async () => {
 			if (!this.app.workspace.getLeavesOfType(VIEW_TYPE_SNW)?.length) {
 				await this.app.workspace.getRightLeaf(false)?.setViewState({ type: VIEW_TYPE_SNW, active: false });
 			}
+			
+			// Skip in minimal mode
+			if (this.settings.minimalMode) return;
+			
 			// Build the index, then proactively refresh all UI so badges appear without edits
 			this.referenceCountingPolicy
 				.buildLinksAndReferences()
@@ -373,6 +439,12 @@ export default class SNWPlugin extends Plugin {
 	 * Force a complete rebuild of the reference index
 	 */
 	rebuildIndex(): void {
+		// Skip in minimal mode
+		if (this.settings.minimalMode) {
+			new Notice("SNW: Rebuild disabled in Minimal Mode");
+			return;
+		}
+
 		// First toggle debug mode on if it's not already
 		if (!this.referenceCountingPolicy.isDebugModeEnabled()) {
 			this.referenceCountingPolicy.setDebugMode(true);
@@ -467,8 +539,8 @@ export default class SNWPlugin extends Plugin {
 			await this.implicitLinksManager.updateSettings(this.settings.autoLinks);
 		}
 		// Refresh backend provider if backend settings changed
-		if (this.backendClient) {
-			this.backendClient = new BackendClient(this.settings.backend.baseUrl);
+		if (this._backendClient) {
+			this._backendClient = new BackendClient(this.settings.backend.baseUrl);
 			this.refreshBackendProvider();
 		}
 	}

@@ -1,4 +1,4 @@
-import { type App, PluginSettingTab, Setting, type ToggleComponent } from "obsidian";
+import { type App, PluginSettingTab, Setting, type ToggleComponent, Notice } from "obsidian";
 import type SNWPlugin from "../main";
 import { getPolicyOptions } from "../policies/index";
 import { createSettingsHeading, createSettingsSlider, createSettingsToggle, createSettingsToggleGroup } from "./components";
@@ -382,8 +382,12 @@ export class SettingsTab extends PluginSettingTab {
 			.addButton((button) => {
 				button
 					.setButtonText("Rebuild References")
-					.setTooltip("Force rebuild all references using the selected policy")
+					.setTooltip(this.plugin.settings.minimalMode 
+						? "Disabled in Minimal Mode (Backend only)" 
+						: "Force rebuild all references using the selected policy")
+					.setDisabled(this.plugin.settings.minimalMode)
 					.onClick(() => {
+						if (this.plugin.settings.minimalMode) return;
 						this.plugin.referenceCountingPolicy.buildLinksAndReferences().catch(console.error);
 					});
 			})
@@ -626,6 +630,41 @@ export class SettingsTab extends PluginSettingTab {
 						await this.plugin.saveSettings();
 					});
 			});
+
+		// Minimal Mode section
+		createSettingsHeading({
+			containerEl,
+			headingText: "Debug & Performance",
+		});
+
+		createSettingsToggle({
+			containerEl,
+			name: "Minimal Mode (Backend only)",
+			description: "Disable indexing, implicit links, and UI decorations. Only backend inferred links remain. Use this to isolate freezing issues.",
+			value: this.plugin.settings.minimalMode,
+			onChange: async (value: boolean) => {
+				this.plugin.settings.minimalMode = value;
+				await this.plugin.saveSettings();
+				new Notice("SNW: Restart Obsidian to apply Minimal Mode changes.");
+			},
+		});
+
+		// Wikilink Candidates section
+		createSettingsHeading({
+			containerEl,
+			headingText: "Wikilink Candidates",
+		});
+
+		const candidatesContainer = containerEl.createDiv("wikilink-candidates-container");
+		candidatesContainer.innerHTML = `
+			<div class="setting-item-description">
+				View detected wikilink candidates from your vault. These are phrases that could potentially become wikilinks.
+			</div>
+			<div id="wikilink-candidates-view"></div>
+		`;
+
+		// Load the wikilink candidates view
+		this.loadWikilinkCandidatesView(candidatesContainer);
 	}
 
 	private createCustomPhraseSetting(containerEl: HTMLElement, index: number, phrase: string) {
@@ -746,58 +785,39 @@ export class SettingsTab extends PluginSettingTab {
 			});
 	}
 
-	// Wikilink Candidates section
-	createSettingsHeading({
-		containerEl,
-		headingText: "Wikilink Candidates",
-	});
+	private async loadWikilinkCandidatesView(containerEl: HTMLElement) {
+		const candidatesViewEl = containerEl.querySelector('#wikilink-candidates-view');
+		if (!candidatesViewEl) return;
 
-	const candidatesContainer = containerEl.createDiv("wikilink-candidates-container");
-	candidatesContainer.innerHTML = `
-		<div class="setting-item-description">
-			View detected wikilink candidates from your vault. These are phrases that could potentially become wikilinks.
-		</div>
-		<div id="wikilink-candidates-view"></div>
-	`;
+		// Check if backend is available
+		if (!this.plugin.backendClient) {
+			candidatesViewEl.innerHTML = `
+				<div class="candidates-error">
+					Backend not available. Please ensure the backend is running and the vault is registered.
+				</div>
+			`;
+			return;
+		}
 
-	// Load the wikilink candidates view
-	this.loadWikilinkCandidatesView(candidatesContainer);
-}
-
-private async loadWikilinkCandidatesView(containerEl: HTMLElement) {
-	const candidatesViewEl = containerEl.querySelector('#wikilink-candidates-view');
-	if (!candidatesViewEl) return;
-
-	// Check if backend is available
-	if (!this.plugin.backendClient) {
-		candidatesViewEl.innerHTML = `
-			<div class="candidates-error">
-				Backend not available. Please ensure the backend is running and the vault is registered.
-			</div>
-		`;
-		return;
-	}
-
-	try {
-		// Import and render the React component
-		const { WikilinkCandidatesView } = await import('./components/WikilinkCandidatesView');
-		const React = await import('react');
-		const ReactDOM = await import('react-dom/client');
-		
-		const root = ReactDOM.createRoot(candidatesViewEl as HTMLElement);
-		root.render(React.createElement(WikilinkCandidatesView, {
-			backendClient: this.plugin.backendClient,
-			onRefresh: () => {
-				// Re-render the component
-				root.unmount();
-				this.loadWikilinkCandidatesView(containerEl);
-			}
-		}));
-	} catch (error) {
-		candidatesViewEl.innerHTML = `
-			<div class="candidates-error">
-				Failed to load wikilink candidates view: ${error}
-			</div>
-		`;
+		try {
+			// Import and render the Preact component
+			const { WikilinkCandidatesView } = await import('./components/WikilinkCandidatesView');
+			const { render } = await import('preact');
+			
+			render(WikilinkCandidatesView({
+				backendClient: this.plugin.backendClient,
+				onRefresh: () => {
+					// Re-render the component
+					this.loadWikilinkCandidatesView(containerEl);
+				}
+			}), candidatesViewEl as HTMLElement);
+		} catch (error) {
+			candidatesViewEl.innerHTML = `
+				<div class="candidates-error">
+					Failed to load wikilink candidates view: ${error}
+				</div>
+			`;
+		}
 	}
 }
+
