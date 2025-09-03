@@ -4,6 +4,7 @@ import type { Settings } from "./settings";
 import ReferenceGutterExtension from "./view-extensions/gutters-cm6";
 import { InlineReferenceExtension } from "./view-extensions/references-cm6";
 import markdownPreviewProcessor from "./view-extensions/references-preview";
+import { log } from "./diag";
 // Implicit links are now handled by the virtual-badges system in main.ts
 
 // Define a Feature interface for toggling features
@@ -28,7 +29,9 @@ export class FeatureManager {
 		private settings: Settings,
 		private showCountsActive = true,
 	) {
+		log.debug("FeatureManager: initializing");
 		this.initFeatures();
+		log.debug("FeatureManager: initialization complete");
 	}
 
 	/**
@@ -75,15 +78,18 @@ export class FeatureManager {
 	 * Apply all feature toggles based on current settings and showCountsActive state
 	 */
 	public apply(): void {
+		log.debug("FeatureManager: applying feature toggles");
 		for (const feature of this.features) {
 			this.toggleFeature(feature);
 		}
+		log.debug("FeatureManager: feature toggles applied");
 	}
 
 	/**
 	 * Update settings reference and reapply feature toggles
 	 */
 	public updateSettings(settings: Settings): void {
+		log.debug("FeatureManager: updating settings");
 		this.settings = settings;
 		this.apply();
 	}
@@ -92,6 +98,7 @@ export class FeatureManager {
 	 * Update showCountsActive state and reapply feature toggles
 	 */
 	public updateShowCountsActive(showCountsActive: boolean): void {
+		log.debug("FeatureManager: updating showCountsActive", { showCountsActive });
 		this.showCountsActive = showCountsActive;
 		this.apply();
 	}
@@ -111,10 +118,13 @@ export class FeatureManager {
 	 */
 	private toggleFeature(feature: Feature): void {
 		const enabled = feature.check(this.settings) && this.showCountsActive;
+		log.debug(`FeatureManager: toggling ${feature.name}`, { enabled, showCountsActive: this.showCountsActive });
 
 		if (enabled) {
+			log.debug(`FeatureManager: registering ${feature.name}`);
 			feature.register();
 		} else {
+			log.debug(`FeatureManager: unregistering ${feature.name}`);
 			feature.unregister();
 		}
 	}
@@ -123,11 +133,15 @@ export class FeatureManager {
 	 * Manages which CM extensions are loaded into Obsidian
 	 */
 	private updateCMExtensionState(extensionIdentifier: string, extensionState: boolean, extension: Extension): void {
+		log.debug(`FeatureManager: updating CM extension state`, { extensionIdentifier, extensionState });
+		
 		if (extensionState === true) {
+			log.debug(`FeatureManager: adding CM extension ${extensionIdentifier}`);
 			this.editorExtensions.push(extension);
 			// @ts-ignore
 			this.editorExtensions[this.editorExtensions.length - 1].snwID = extensionIdentifier;
 		} else {
+			log.debug(`FeatureManager: removing CM extension ${extensionIdentifier}`);
 			for (let i = 0; i < this.editorExtensions.length; i++) {
 				const ext = this.editorExtensions[i];
 				// @ts-ignore
@@ -171,6 +185,7 @@ export class FeatureManager {
 	 * Clean up and unregister all features
 	 */
 	public unloadAll(): void {
+		log.debug("FeatureManager: unloading all features");
 		for (const feature of this.features) {
 			feature.unregister();
 		}

@@ -3,6 +3,7 @@ import type SNWPlugin from "../main";
 import type { Link, TransformedCache, TransformedCachedItem, VirtualLinkProvider } from "../types";
 import type { WikilinkEquivalencePolicy } from "./base/WikilinkEquivalencePolicy";
 import { getPolicyByType } from "./index";
+import { log, ProgressTracker, yieldToUI } from "../diag";
 
 export class ReferenceCountingPolicy {
 	private plugin: SNWPlugin;
@@ -296,28 +297,45 @@ export class ReferenceCountingPolicy {
 	 * Builds a list of cache references for resolving the block count
 	 */
 	async buildLinksAndReferences(): Promise<void> {
-		if (this.plugin.showCountsActive !== true) return;
+		if (this.plugin.showCountsActive !== true) {
+			log.debug("buildLinksAndReferences: showCountsActive is false, skipping");
+			return;
+		}
+
+		log.time("refcount.build");
+		log.info("Starting reference counting and indexing");
 
 		// Clear existing references
 		this.indexedReferences = new Map();
 
-		// Debug flags
-		const logDebugInfo = this.debugMode;
-		const totalLinks = 0;
-		const keysByType = new Map<string, Set<string>>();
+		const files = this.plugin.app.vault.getMarkdownFiles();
+		log.info(`refcount.build scanning ${files.length} files`);
 
-		for (const file of this.plugin.app.vault.getMarkdownFiles()) {
-			const fileCache = this.plugin.app.metadataCache.getFileCache(file);
-			if (fileCache) {
-				// Debug logging removed for production
-				await this.getLinkReferencesForFile(file, fileCache);
+		if (files.length > 0) {
+			const progress = new ProgressTracker(files.length, "refcount.build", 200);
+			
+			for (let i = 0; i < files.length; i++) {
+				const file = files[i];
+				const fileCache = this.plugin.app.metadataCache.getFileCache(file);
+				
+				if (fileCache) {
+					await this.getLinkReferencesForFile(file, fileCache);
+				}
+				
+				// Progress tracking and yield to UI every 200 files
+				if ((i + 1) % 200 === 0) {
+					progress.update(i + 1);
+					await yieldToUI();
+				}
 			}
+			
+			progress.complete();
 		}
 
-		// Debug logging removed for production
-
+		log.debug(`refcount.build completed with ${this.indexedReferences.size} indexed references`);
 		if (window.snwAPI) window.snwAPI.references = this.indexedReferences;
 		this.lastUpdateToReferences = Date.now();
+		log.timeEnd("refcount.build");
 	}
 
 	/**

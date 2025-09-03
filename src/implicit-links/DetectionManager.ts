@@ -9,6 +9,7 @@ import type { AutoLinkSettings } from "../settings";
 import type { DetectedLink } from "../types";
 import { DictionaryDetector } from "./DictionaryDetector";
 import { RegexDetector } from "./RegexDetector";
+import { log } from "../diag";
 
 export class DetectionManager {
 	private detector: RegexDetector | DictionaryDetector | null = null;
@@ -28,8 +29,12 @@ export class DetectionManager {
 
 	async detect(file: TFile, text: string): Promise<DetectedLink[]> {
 		if (!this.detector) return [];
+		log.debug(`DetectionManager: detecting in ${file.path} (${text.length} chars)`);
 		const detected = await this.detector.detect(file, text);
-		return this.resolveConflicts(detected);
+		log.debug(`DetectionManager: found ${detected.length} raw matches in ${file.path}`);
+		const resolved = this.resolveConflicts(detected);
+		log.debug(`DetectionManager: resolved to ${resolved.length} final matches in ${file.path}`);
+		return resolved;
 	}
 
 	private resolveConflicts(items: DetectedLink[]): DetectedLink[] {

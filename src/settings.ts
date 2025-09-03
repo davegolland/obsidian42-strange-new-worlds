@@ -120,7 +120,7 @@ export const DEFAULT_SETTINGS: Settings = {
 		obsExcludeFoldersLinksTo: false,
 	},
 	dev: {
-		diagDecorations: false,
+		diagDecorations: true,
 		forceLegacy: false,
 	},
 	minimumRefCountThreshold: 1,

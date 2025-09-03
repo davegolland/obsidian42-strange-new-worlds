@@ -6,3 +6,4 @@ export { createSettingsSlider, type SettingsSliderProps } from "./SettingsSlider
 export { createSettingsToggle, type SettingsToggleProps } from "./SettingsToggle";
 export { createSettingsToggleGroup, type SettingsToggleGroupProps, type ToggleItem } from "./SettingsToggleGroup";
 export { WikilinkCandidatesView } from "./WikilinkCandidatesView";
+export { RelatedFilesView } from "./RelatedFilesView";

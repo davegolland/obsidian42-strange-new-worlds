@@ -2,6 +2,8 @@ import { type App, PluginSettingTab, Setting, type ToggleComponent, Notice } fro
 import type SNWPlugin from "../main";
 import { getPolicyOptions } from "../policies/index";
 import { createSettingsHeading, createSettingsSlider, createSettingsToggle, createSettingsToggleGroup } from "./components";
+import { log } from "../diag";
+import { h, render } from "preact";
 
 export class SettingsTab extends PluginSettingTab {
 	plugin: SNWPlugin;
@@ -649,6 +651,45 @@ export class SettingsTab extends PluginSettingTab {
 			},
 		});
 
+		createSettingsToggle({
+			containerEl,
+			name: "Enable Diagnostic Logging",
+			description: "Enable detailed console logging for debugging and development. This will show performance timings, network calls, and detailed initialization logs.",
+			value: this.plugin.settings.dev.diagDecorations,
+			onChange: async (value: boolean) => {
+				this.plugin.settings.dev.diagDecorations = value;
+				await this.plugin.saveSettings();
+				// Update diagnostic flags immediately
+				this.plugin.updateDiagnosticFlags();
+				new Notice("SNW: Diagnostic logging " + (value ? "enabled" : "disabled") + ". Check console for detailed logs.");
+			},
+		});
+
+		createSettingsToggle({
+			containerEl,
+			name: "Force Legacy Mode",
+			description: "Force the plugin to use legacy rendering mode. Use this if you experience issues with the new rendering system.",
+			value: this.plugin.settings.dev.forceLegacy,
+			onChange: async (value: boolean) => {
+				this.plugin.settings.dev.forceLegacy = value;
+				await this.plugin.saveSettings();
+				// Update diagnostic flags immediately
+				this.plugin.updateDiagnosticFlags();
+				new Notice("SNW: Legacy mode " + (value ? "enabled" : "disabled") + ". Restart Obsidian to apply changes.");
+			},
+		});
+
+		createSettingsToggle({
+			containerEl,
+			name: "Enable Reference Counting Debug Mode",
+			description: "Enable detailed logging for reference counting operations. This will show detailed information about link processing and indexing.",
+			value: this.plugin.referenceCountingPolicy.isDebugModeEnabled(),
+			onChange: async (value: boolean) => {
+				this.plugin.referenceCountingPolicy.setDebugMode(value);
+				new Notice("SNW: Reference counting debug mode " + (value ? "enabled" : "disabled") + ". Check console for detailed logs.");
+			},
+		});
+
 		// Wikilink Candidates section
 		createSettingsHeading({
 			containerEl,
@@ -665,6 +706,75 @@ export class SettingsTab extends PluginSettingTab {
 
 		// Load the wikilink candidates view
 		this.loadWikilinkCandidatesView(candidatesContainer);
+
+		// Related Files section
+		createSettingsHeading({
+			containerEl,
+			headingText: "Related Files",
+		});
+
+		const relatedFilesContainer = containerEl.createDiv("related-files-container");
+		relatedFilesContainer.innerHTML = `
+			<div class="setting-item-description">
+				View files related to the current file with span information for precise navigation.
+			</div>
+			<div id="related-files-view"></div>
+		`;
+
+		// Load the related files view
+		this.loadRelatedFilesView(relatedFilesContainer);
+	}
+
+	private async loadRelatedFilesView(containerEl: HTMLElement) {
+		const relatedFilesViewEl = containerEl.querySelector('#related-files-view');
+		if (!relatedFilesViewEl) return;
+
+		// Check if backend is available
+		if (!this.plugin.backendClient) {
+			relatedFilesViewEl.innerHTML = `
+				<div class="related-files-error">
+					Backend not available. Please ensure the backend is running and the vault is registered.
+				</div>
+			`;
+			return;
+		}
+
+		// Get the current active file
+		const currentFilePath = this.plugin.app.workspace.getActiveFile()?.path;
+		if (!currentFilePath) {
+			relatedFilesViewEl.innerHTML = `
+				<div class="related-files-info">
+					No active file. Open a file to view related files with span information.
+				</div>
+			`;
+			return;
+		}
+
+		try {
+			// Import and render the Preact component using stable mounting
+			const { RelatedFilesView } = await import('./components');
+			
+			// Clear the container for clean mounting
+			relatedFilesViewEl.innerHTML = '';
+			
+			render(
+				h(RelatedFilesView, {
+					backendClient: this.plugin.backendClient,
+					currentFilePath,
+					onRefresh: () => {
+						// Re-render the component
+						this.loadRelatedFilesView(containerEl);
+					}
+				}),
+				relatedFilesViewEl
+			);
+		} catch (error) {
+			relatedFilesViewEl.innerHTML = `
+				<div class="related-files-error">
+					Failed to load related files view: ${error}
+				</div>
+			`;
+		}
 	}
 
 	private createCustomPhraseSetting(containerEl: HTMLElement, index: number, phrase: string) {
@@ -786,11 +896,13 @@ export class SettingsTab extends PluginSettingTab {
 	}
 
 	private async loadWikilinkCandidatesView(containerEl: HTMLElement) {
+		log.debug("SettingsTab: loadWikilinkCandidatesView mount start");
 		const candidatesViewEl = containerEl.querySelector('#wikilink-candidates-view');
 		if (!candidatesViewEl) return;
 
 		// Check if backend is available
 		if (!this.plugin.backendClient) {
+			log.warn("SettingsTab: backend not available for wikilink candidates");
 			candidatesViewEl.innerHTML = `
 				<div class="candidates-error">
 					Backend not available. Please ensure the backend is running and the vault is registered.
@@ -800,18 +912,26 @@ export class SettingsTab extends PluginSettingTab {
 		}
 
 		try {
-			// Import and render the Preact component
-			const { WikilinkCandidatesView } = await import('./components/WikilinkCandidatesView');
-			const { render } = await import('preact');
+			// Import and render the Preact component using stable mounting
+			const { WikilinkCandidatesView } = await import('./components');
 			
-			render(WikilinkCandidatesView({
-				backendClient: this.plugin.backendClient,
-				onRefresh: () => {
-					// Re-render the component
-					this.loadWikilinkCandidatesView(containerEl);
-				}
-			}), candidatesViewEl as HTMLElement);
+			// Clear the container for clean mounting
+			candidatesViewEl.innerHTML = '';
+			
+			render(
+				h(WikilinkCandidatesView, {
+					backendClient: this.plugin.backendClient,
+					onRefresh: () => {
+						// Re-render the component
+						this.loadWikilinkCandidatesView(containerEl);
+					}
+				}),
+				candidatesViewEl
+			);
+			
+			log.debug("SettingsTab: loadWikilinkCandidatesView mount done");
 		} catch (error) {
+			log.error("SettingsTab: failed to load wikilink candidates view", error);
 			candidatesViewEl.innerHTML = `
 				<div class="candidates-error">
 					Failed to load wikilink candidates view: ${error}

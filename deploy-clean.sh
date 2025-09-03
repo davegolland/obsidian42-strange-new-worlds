@@ -6,8 +6,10 @@
 
 echo "🔧 Deploying clean plugin build..."
 
+ROOT="/Users/dave/temp/vault/techniques/techniques"
+
 # Configuration - update these paths for your setup
-VAULT_PLUGIN_DIR="$HOME/.obsidian/plugins/obsidian42-strange-new-worlds"
+VAULT_PLUGIN_DIR="$ROOT/.obsidian/plugins/obsidian42-strange-new-worlds"
 BUILD_DIR="./build"
 
 # Check if build directory exists

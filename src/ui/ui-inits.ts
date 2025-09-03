@@ -3,6 +3,7 @@
 
 import type SNWPlugin from "../main";
 import { setPluginVariableForDebouncedHelpers as setDebouncedHelpersPlugin } from "./debounced-helpers";
+import { log } from "../diag";
 
 export { setPluginVariableUIC_RefArea } from "./components/uic-ref-area";
 export { setPluginVariableForUIC } from "./components/uic-ref--parent";
@@ -14,6 +15,7 @@ export { setPluginVariableForCM6InlineReferences } from "../view-extensions/refe
 export { setPluginVariableForMarkdownPreviewProcessor } from "../view-extensions/references-preview";
 // Initialize the debounced helpers module
 export function initDebouncedHelpers(plugin: SNWPlugin) {
+	log.debug("initDebouncedHelpers: setting up debounced event handlers");
 	setDebouncedHelpersPlugin(plugin);
 }
 
@@ -33,6 +35,7 @@ function assertValidExtensions(exts: any[], label: string) {
 
 // Initialize implicit links Live Preview (flicker-free)
 export function initImplicitLinksLivePreview(plugin: SNWPlugin) {
+	log.debug("initImplicitLinksLivePreview: creating implicit links extension");
 	const implicitExt = createInferredLinksExtension(plugin, {
 		debounceMs: 120,
 		boundaryMode: "word",
@@ -41,7 +44,7 @@ export function initImplicitLinksLivePreview(plugin: SNWPlugin) {
 	});
 	const validExtensions = assertValidExtensions(implicitExt, "implicit-links");
 
-	// Debug logging removed for production
+	log.debug("initImplicitLinksLivePreview: registering editor extension");
 
 	plugin.registerEditorExtension(validExtensions);
 }

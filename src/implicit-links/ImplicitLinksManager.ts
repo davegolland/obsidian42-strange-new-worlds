@@ -5,6 +5,7 @@ import type { AutoLinkSettings } from "../settings";
 import type { VirtualLinkProvider } from "../types";
 import { DetectionManager } from "./DetectionManager";
 import { getCleanSegments, offsetRangeToPos } from "./utils";
+import { log } from "../diag";
 
 export class ImplicitLinksManager {
 	private detectionManager: DetectionManager;
@@ -15,7 +16,9 @@ export class ImplicitLinksManager {
 		private plugin: SNWPlugin,
 		private settings: AutoLinkSettings,
 	) {
+		log.debug("ImplicitLinksManager: initializing");
 		this.detectionManager = new DetectionManager(plugin.app, settings, plugin.referenceCountingPolicy.getActivePolicy());
+		log.debug("ImplicitLinksManager: detection manager created");
 	}
 
 	/**

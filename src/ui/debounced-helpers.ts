@@ -1,4 +1,5 @@
 import type SNWPlugin from "../main";
+import { log } from "../diag";
 
 // A plugin reference to be set during initialization
 let plugin: SNWPlugin;
@@ -16,6 +17,7 @@ export function setPluginVariableForDebouncedHelpers(snwPlugin: SNWPlugin) {
  */
 export function updateHeadersDebounce() {
 	if (plugin?.updateHeadersDebounced) {
+		log.debug("debounced: updateHeadersDebounced fired");
 		plugin.updateHeadersDebounced();
 	}
 }
@@ -25,6 +27,7 @@ export function updateHeadersDebounce() {
  */
 export function updatePropertiesDebounce() {
 	if (plugin?.updatePropertiesDebounced) {
+		log.debug("debounced: updatePropertiesDebounced fired");
 		plugin.updatePropertiesDebounced();
 	}
 }
@@ -34,6 +37,7 @@ export function updatePropertiesDebounce() {
  */
 export function updateAllSnwLiveUpdateReferencesDebounce() {
 	if (plugin?.updateAllSnwLiveUpdateReferencesDebounced) {
+		log.debug("debounced: updateAllSnwLiveUpdateReferencesDebounced fired");
 		plugin.updateAllSnwLiveUpdateReferencesDebounced();
 	}
 }

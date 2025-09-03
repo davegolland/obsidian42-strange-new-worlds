@@ -11,7 +11,7 @@ import {
 	debounce,
 } from "obsidian";
 import { FeatureManager } from "./FeatureManager";
-import { setDiagnosticFlags } from "./diag";
+import { setDiagnosticFlags, log } from "./diag";
 import { ImplicitLinksManager } from "./implicit-links";
 import { ReferenceCountingPolicy } from "./policies/reference-counting";
 import { DEFAULT_SETTINGS, type LegacySettings, type Settings, migrateSettings } from "./settings";
@@ -106,43 +106,127 @@ export default class SNWPlugin extends Plugin {
 		}
 	}
 
-	async onload(): Promise<void> {
-		console.log(`loading ${this.appName}`);
+	/**
+	 * Update diagnostic flags from current settings
+	 */
+	public updateDiagnosticFlags(): void {
+		setDiagnosticFlags(this.settings.dev);
+	}
 
-		// Load settings first
-		await this.initSettings();
+	async onload(): Promise<void> {
+		// Load settings first to get diagnostic flags
+		log.time("initSettings");
+		try {
+			await this.initSettings();
+			log.timeEnd("initSettings");
+		} catch (error) {
+			log.error("Failed to load settings:", error);
+			log.warn("Using default settings");
+		}
+
+		// Now that settings are loaded, set up diagnostic logging
+		if (this.settings.dev?.diagDecorations) {
+			window.addEventListener("error", (e) => log.error("window.error", e.error || e));
+			window.addEventListener("unhandledrejection", (e) => log.error("unhandledrejection", e.reason));
+			
+			// Log all fetch calls for development
+			const _fetch = window.fetch;
+			window.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
+				const url = typeof input === "string" ? input : input.toString();
+				log.debug("NET:", init?.method || "GET", url);
+				const t = `NET ⏱ ${init?.method || "GET"} ${url}`;
+				log.time(t);
+				try {
+					const resp = await _fetch(input, init);
+					log.timeEnd(t);
+					log.debug("NET: status", resp.status, url);
+					return resp;
+				} catch (e) {
+					log.timeEnd(t);
+					log.error("NET: error", url, e);
+					throw e;
+				}
+			};
+		}
 		
-		// Always add settings tab so users can toggle back
+		log.info("🔌 onload(): start");
+		log.time("onload total");
+		log.mark("onload-start");
+
+		log.info("settings snapshot", JSON.stringify(this.settings));
+		log.debug("minimalMode value:", this.settings.minimalMode);
+
+		// Always add settings tab early for toggling
 		this.addSettingTab(new SettingsTab(this.app, this));
-		
+
 		// Always initialize feature manager (needed for settings updates)
+		log.time("featureManager");
 		this.featureManager = new FeatureManager(this, this.settings, this.showCountsActive);
-		
+		log.timeEnd("featureManager");
+
 		// Update feature manager with current settings and state (always needed)
 		this.featureManager.updateSettings(this.settings);
 		this.featureManager.updateShowCountsActive(this.showCountsActive);
 		
 		if (this.settings.minimalMode) {
-			console.log("SNW: 🚀 MINIMAL MODE ENABLED");
-			console.log("SNW: ✅ Skipping: Reference Counting, UI Components");
-			console.log("SNW: ✅ Keeping: Backend Integration and Feature Manager");
+			log.info("🚀 Minimal mode ENABLED — backend-only path");
+			log.time("initAPI(minimal)");
 			await this.initAPI({ minimal: true });  // lightweight, no CM6/MD processors
+			log.timeEnd("initAPI(minimal)");
+
+			log.time("initBackend");
 			await this.initBackend();               // registers provider, starts status polling
-			console.log("SNW: 🎯 Minimal mode initialization complete");
+			log.timeEnd("initBackend");
+
+			log.timeEnd("onload total");
+			log.mark("onload-end");
+			log.measure("onload-total", "onload-start", "onload-end");
+			log.info("🎯 Minimal mode initialization complete");
 			return;
 		}
-		
-		console.log("SNW: 🔧 Full mode initialization");
-		// Full initialization (existing code)
+
+		log.info("🔧 Full mode initialization");
+
+		log.time("buildLinksAndReferences");
 		await this.referenceCountingPolicy.buildLinksAndReferences();
+		log.timeEnd("buildLinksAndReferences");
+
+		log.time("initUI");
 		await this.initUI();
+		log.timeEnd("initUI");
+
+		log.time("initAPI");
 		await this.initAPI();
+		log.timeEnd("initAPI");
+
+		log.time("initViews");
 		await this.initViews();
+		log.timeEnd("initViews");
+
+		log.time("initDebouncedEvents");
 		await this.initDebouncedEvents();
+		log.timeEnd("initDebouncedEvents");
+
+		log.time("initCommands");
 		await this.initCommands();
+		log.timeEnd("initCommands");
+
+		log.time("initFeatureToggles");
 		await this.initFeatureToggles();
+		log.timeEnd("initFeatureToggles");
+
+		log.time("initLayoutReadyHandler");
 		await this.initLayoutReadyHandler();
+		log.timeEnd("initLayoutReadyHandler");
+
+		log.time("initBackend");
 		await this.initBackend();
+		log.timeEnd("initBackend");
+
+		log.timeEnd("onload total");
+		log.mark("onload-end");
+		log.measure("onload-total", "onload-start", "onload-end");
+		log.info("🎯 Full mode initialization complete");
 	}
 
 	/**
@@ -151,13 +235,17 @@ export default class SNWPlugin extends Plugin {
 	private async initUI(): Promise<void> {
 		// Skip in minimal mode
 		if (this.settings.minimalMode) {
-			console.log("SNW: Minimal mode - skipping UI component initialization");
+			log.info("Minimal mode - skipping UI component initialization");
 			return;
 		}
 		
+		log.info(`Initializing ${this.UI_INITIALIZERS.length} UI components`);
 		// Initialize all UI components by calling each initializer
-		for (const init of this.UI_INITIALIZERS) {
+		for (let i = 0; i < this.UI_INITIALIZERS.length; i++) {
+			const init = this.UI_INITIALIZERS[i];
+			log.time(`UI.init.${i}`);
 			init(this);
+			log.timeEnd(`UI.init.${i}`);
 		}
 	}
 
@@ -165,17 +253,21 @@ export default class SNWPlugin extends Plugin {
 	 * Initialize the API for external access
 	 */
 	private async initAPI(options?: { minimal?: boolean }): Promise<void> {
+		log.time("initAPI");
 		window.snwAPI = this.snwAPI; // API access to SNW for Templater, Dataviewjs and the console debugger
 		
 		if (options?.minimal) {
 			// Minimal mode: only expose what's needed for backend provider
-			console.log("SNW: Minimal mode - lightweight API only");
+			log.info("Minimal mode - lightweight API only");
 			// Don't touch reference counts, index, or CM6 extensions
+			log.timeEnd("initAPI");
 			return;
 		}
 		
 		// Full mode: complete API setup
+		log.debug("Full mode - setting up complete API with references");
 		this.snwAPI.references = this.referenceCountingPolicy.indexedReferences;
+		log.timeEnd("initAPI");
 	}
 
 	/**
@@ -195,11 +287,12 @@ export default class SNWPlugin extends Plugin {
 		}
 
 		if (this.settings.minimalMode) {
-			console.log("SNW: Minimal mode - skipping reference counting and UI setup");
+			log.info("Minimal mode - skipping reference counting and UI setup");
 			return; // Settings tab added in onload() before this check
 		}
 
 		// Full settings initialization (existing code)
+		log.debug("Full mode - setting up reference counting policy");
 		// Ensure the reference counting policy is using the correct policy from settings
 		this.referenceCountingPolicy.setActivePolicy(this.settings.wikilinkEquivalencePolicy);
 
@@ -207,6 +300,7 @@ export default class SNWPlugin extends Plugin {
 		// await this.referenceCountingPolicy.buildLinksAndReferences();
 
 		// Initialize implicit links manager (only in full mode)
+		log.debug("Initializing implicit links manager");
 		this.implicitLinksManager = new ImplicitLinksManager(this, this.settings.autoLinks);
 		this.implicitLinksManager.registerProvider(this.snwAPI.registerVirtualLinkProvider.bind(this.snwAPI));
 	}
@@ -217,10 +311,11 @@ export default class SNWPlugin extends Plugin {
 	private async initViews(): Promise<void> {
 		// Skip in minimal mode
 		if (this.settings.minimalMode) {
-			console.log("SNW: Minimal mode - skipping views and editor extensions");
+			log.info("Minimal mode - skipping views and editor extensions");
 			return;
 		}
 
+		log.debug("Registering SNW view");
 		this.registerView(VIEW_TYPE_SNW, (leaf) => new SideBarPaneView(leaf, this));
 
 		this.app.workspace.registerHoverLinkSource(this.appID, {
@@ -238,7 +333,7 @@ export default class SNWPlugin extends Plugin {
 	 */
 	private async initDebouncedEvents(): Promise<void> {
 		if (this.settings.minimalMode) {
-			console.log("SNW: Minimal mode - skipping debounced event setup");
+			log.info("Minimal mode - skipping debounced event setup");
 			return;
 		}
 
@@ -317,7 +412,7 @@ export default class SNWPlugin extends Plugin {
 	private async initFeatureToggles(): Promise<void> {
 		// Skip in minimal mode
 		if (this.settings.minimalMode) {
-			console.log("SNW: Minimal mode - skipping feature toggles");
+			log.info("Minimal mode - skipping feature toggles");
 			return;
 		}
 		
@@ -394,11 +489,14 @@ export default class SNWPlugin extends Plugin {
 	 */
 	private async initLayoutReadyHandler(): Promise<void> {
 		if (this.settings.minimalMode) {
-			console.log("SNW: Minimal mode - skipping layout ready handler setup");
+			log.info("Minimal mode - skipping layout ready handler setup");
 			return;
 		}
 
+		log.debug("layout ready handler: setting up");
 		this.app.workspace.onLayoutReady(async () => {
+			log.debug("layout ready handler: layout ready event fired");
+			
 			if (!this.app.workspace.getLeavesOfType(VIEW_TYPE_SNW)?.length) {
 				await this.app.workspace.getRightLeaf(false)?.setViewState({ type: VIEW_TYPE_SNW, active: false });
 			}
@@ -406,30 +504,34 @@ export default class SNWPlugin extends Plugin {
 			// Skip in minimal mode
 			if (this.settings.minimalMode) return;
 			
+			log.debug("layout ready handler: building index and refreshing UI");
 			// Build the index, then proactively refresh all UI so badges appear without edits
 			this.referenceCountingPolicy
 				.buildLinksAndReferences()
 				.then(() => {
 					try {
+						log.debug("layout ready handler: index built, refreshing UI");
 						updateHeadersDebounce();
 						updatePropertiesDebounce();
 						updateAllSnwLiveUpdateReferencesDebounce(); // also triggers CM6 rescan internally
 						// Trigger implicit links refresh to sync with updated reference counts
 						this.implicitLinksManager?.triggerRefresh();
+						log.debug("layout ready handler: UI refresh complete");
 					} catch (e) {
-						console.error("SNW: post-index UI refresh failed", e);
+						log.error("post-index UI refresh failed", e);
 					}
 				})
-				.catch(console.error);
+				.catch((e) => log.error("index build failed", e));
 		});
 
 		// When the user switches notes, ensure inline badges render even if nothing changed
 		this.registerEvent(
 			this.app.workspace.on("active-leaf-change", () => {
+				log.debug("layout ready handler: active-leaf-change event fired");
 				try {
 					updateAllSnwLiveUpdateReferencesDebounce();
 				} catch (e) {
-					console.error("SNW: leaf-change refresh failed", e);
+					log.error("leaf-change refresh failed", e);
 				}
 			}),
 		);
@@ -439,35 +541,44 @@ export default class SNWPlugin extends Plugin {
 	 * Force a complete rebuild of the reference index
 	 */
 	rebuildIndex(): void {
+		log.info("rebuildIndex: starting manual rebuild");
+		
 		// Skip in minimal mode
 		if (this.settings.minimalMode) {
+			log.warn("rebuildIndex: rebuild disabled in Minimal Mode");
 			new Notice("SNW: Rebuild disabled in Minimal Mode");
 			return;
 		}
 
 		// First toggle debug mode on if it's not already
 		if (!this.referenceCountingPolicy.isDebugModeEnabled()) {
+			log.debug("rebuildIndex: enabling debug mode");
 			this.referenceCountingPolicy.setDebugMode(true);
 		}
 
 		// Clear caches
+		log.debug("rebuildIndex: clearing caches");
 		this.referenceCountingPolicy.invalidateCache();
 
 		// Reset to default policy then back to current to ensure clean state
 		const currentPolicy = this.settings.wikilinkEquivalencePolicy;
+		log.debug("rebuildIndex: resetting policy", { currentPolicy });
 		this.referenceCountingPolicy.setActivePolicy("case-insensitive");
 		this.referenceCountingPolicy.setActivePolicy(currentPolicy);
 
 		// Completely rebuild index
-		this.referenceCountingPolicy.buildLinksAndReferences().catch(console.error);
+		log.debug("rebuildIndex: building links and references");
+		this.referenceCountingPolicy.buildLinksAndReferences().catch((e) => log.error("rebuildIndex: build failed", e));
 
 		// Force UI updates using debounced helpers
+		log.debug("rebuildIndex: forcing UI updates");
 		updateHeadersDebounce();
 		updatePropertiesDebounce();
 		updateAllSnwLiveUpdateReferencesDebounce();
 		// Trigger implicit links refresh to sync with updated reference counts
 		this.implicitLinksManager?.triggerRefresh();
 
+		log.info("rebuildIndex: manual rebuild complete");
 		// Show notice
 		new Notice("SNW: References rebuilt successfully");
 	}
@@ -519,19 +630,28 @@ export default class SNWPlugin extends Plugin {
 	}
 
 	async loadSettings(): Promise<void> {
+		log.time("settings.load");
 		const loadedData = await this.loadData();
+		log.debug("settings.load raw:", loadedData);
 
 		// Check if we need to migrate from legacy format
 		if (loadedData && "enableOnStartupDesktop" in loadedData) {
-			console.log(`${this.appName}: Migrating settings from legacy format to new format`);
+			log.info("Migrating settings from legacy format to new format");
 			this.settings = migrateSettings(loadedData as unknown as LegacySettings);
 		} else {
 			this.settings = Object.assign({}, DEFAULT_SETTINGS, loadedData);
 		}
+		
+		log.debug("settings.after.migrate:", this.settings);
+		log.timeEnd("settings.load");
 	}
 
 	async saveSettings(): Promise<void> {
+		log.time("settings.save");
+		log.debug("settings.save snapshot:", this.settings);
 		await this.saveData(this.settings);
+		log.timeEnd("settings.save");
+		
 		// Update the feature manager with the new settings
 		this.featureManager.updateSettings(this.settings);
 		// Update the implicit links manager with the new settings
@@ -546,7 +666,7 @@ export default class SNWPlugin extends Plugin {
 	}
 
 	onunload(): void {
-		console.log(`unloading ${this.appName}`);
+		log.info(`unloading ${this.appName}`);
 		try {
 			// Unload all features using the feature manager
 			this.featureManager.unloadAll();
@@ -561,7 +681,7 @@ export default class SNWPlugin extends Plugin {
 
 			this.app.workspace.unregisterHoverLinkSource(this.appID);
 		} catch (error) {
-			/* don't do anything */
+			log.error("unload error", error);
 		}
 	}
 }

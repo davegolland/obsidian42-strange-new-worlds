@@ -2,6 +2,7 @@ import type { App, CachedMetadata, TFile } from "obsidian";
 import type { WikilinkEquivalencePolicy } from "../policies/base/WikilinkEquivalencePolicy";
 import type { AutoLinkSettings } from "../settings";
 import type { DetectedLink, ImplicitLinkDetector, TextSpan } from "../types";
+import { log } from "../diag";
 
 // Target entry
 type Target = { path: string; display: string };
@@ -35,6 +36,7 @@ export class DictionaryDetector implements ImplicitLinkDetector {
 		// Strip code blocks / inline code / existing links if you have helpers.
 		// For now we scan the whole text. TODO: replace with your "clean segments" helper.
 		const matches = this.scan(text);
+		log.debug(`DictionaryDetector: scanned ${text.length} chars, found ${matches.length} matches`);
 
 		// Map matches to DetectedLink with resolved paths & display
 		const results: DetectedLink[] = [];
@@ -49,15 +51,20 @@ export class DictionaryDetector implements ImplicitLinkDetector {
 				source: "dictionary",
 			});
 		}
+		log.debug(`DictionaryDetector: resolved ${results.length} matches to targets`);
 		return this.resolveOverlaps(results);
 	}
 
 	// ---- Build dictionary & trie ----
 	private async build() {
+		log.time("DictionaryDetector.build");
+		log.info("DictionaryDetector: building dictionary");
+		
 		this.trieRoot = new TrieNode();
 		this.keyToTarget.clear();
 
 		const mdFiles = this.app.vault.getMarkdownFiles();
+		log.info(`DictionaryDetector: scanning ${mdFiles.length} markdown files`);
 
 		// Collect source names
 		const names: string[] = [];
@@ -125,6 +132,9 @@ export class DictionaryDetector implements ImplicitLinkDetector {
 		}
 
 		this.built = true;
+		
+		log.info(`DictionaryDetector: built dictionary with ${names.length} names, ${this.keyToTarget.size} targets`);
+		log.timeEnd("DictionaryDetector.build");
 
 		// OPTIONAL: subscribe to vault events for incremental rebuilds (debounce)
 		// this.registerEvent(this.app.vault.on("create", ...))
