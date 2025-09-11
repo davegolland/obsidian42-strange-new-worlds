@@ -426,13 +426,16 @@ export default class SNWPlugin extends Plugin {
 	private async initBackend(): Promise<void> {
 		// Only initialize backend if it's enabled in settings
 		if (!this.settings.backend.enabled) return;
-
-		this._backendClient = new BackendClient(this.settings.backend.baseUrl);
+		if (!this._backendClient) {
+			this._backendClient = new BackendClient(this.settings.backend.baseUrl);
+		}
 
 		// Register backend with the vault path (zero-config)
 		const basePath = (this.app.vault.adapter as any).getBasePath?.() ?? "";
 		if (!basePath) {
 			console.warn("SNW: Cannot get vault base path for backend registration");
+			// We can still use /query/related without /register, so ensure provider is up.
+			this.refreshBackendProvider();
 			return;
 		}
 		
@@ -681,9 +684,9 @@ export default class SNWPlugin extends Plugin {
 		const oldBackendEnabled = this._backendClient ? true : false;
 		const newBackendEnabled = this.settings.backend.enabled;
 		
-		if (newBackendEnabled && (!this._backendClient || (this._backendClient as any).baseUrl !== this.settings.backend.baseUrl)) {
+		if (newBackendEnabled && (!this._backendClient || this._backendClient.getBaseUrl() !== this.settings.backend.baseUrl)) {
 			// Backend enabled or URL changed - reinitialize
-			this._backendClient = new BackendClient(this.settings.backend.baseUrl);
+			this._backendClient = null; // force re-create with new URL
 			await this.initBackend();
 		} else if (!newBackendEnabled && oldBackendEnabled) {
 			// Backend disabled - clean up

@@ -906,12 +906,50 @@ export class SettingsTab extends PluginSettingTab {
 		const candidatesViewEl = containerEl.querySelector('#wikilink-candidates-view');
 		if (!candidatesViewEl) return;
 
-		// Check if backend is available
-		if (!this.plugin.backendClient) {
-			log.warn("SettingsTab: backend not available for wikilink candidates");
+		// Check if backend is enabled and client is initialized
+		if (!this.plugin.settings.backend.enabled || !this.plugin.backendClient) {
+			log.warn("SettingsTab: backend disabled or client not initialized");
 			candidatesViewEl.innerHTML = `
 				<div class="candidates-error">
-					Backend not available. Please ensure the backend is running and the vault is registered.
+					Backend disabled or client not initialized. Please enable the backend in settings.
+				</div>
+			`;
+			return;
+		}
+
+		const client = this.plugin.backendClient;
+
+		// Check backend status
+		let status: { ready?: boolean } = {};
+		try {
+			status = await client.status();
+		} catch (error) {
+			log.warn("SettingsTab: backend unreachable", error);
+			candidatesViewEl.innerHTML = `
+				<div class="candidates-error">
+					Backend unreachable. Please check the backend URL and ensure the server is running.
+				</div>
+			`;
+			return;
+		}
+
+		if (!status.ready) {
+			log.warn("SettingsTab: backend not ready");
+			candidatesViewEl.innerHTML = `
+				<div class="candidates-error">
+					Backend warming up... Please wait for the backend to finish indexing your vault.
+				</div>
+			`;
+			return;
+		}
+
+		// Check if candidates API is available
+		const canCandidates = await client.checkCandidatesAvailable();
+		if (!canCandidates) {
+			log.warn("SettingsTab: candidates API not available");
+			candidatesViewEl.innerHTML = `
+				<div class="candidates-error">
+					Candidates API not available on this backend build. Active-file suggestions still work.
 				</div>
 			`;
 			return;

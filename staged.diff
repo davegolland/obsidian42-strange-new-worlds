@@ -1,0 +1,176 @@
+diff --git a/docs/BACKEND_INTEGRATION.md b/docs/BACKEND_INTEGRATION.md
+index 9538717..fb4cd40 100644
+--- a/docs/BACKEND_INTEGRATION.md
++++ b/docs/BACKEND_INTEGRATION.md
+@@ -1,5 +1,7 @@
+ # Backend Integration
+ 
++> **📚 Comprehensive API Documentation**: For complete API documentation including all endpoints, request/response formats, and examples, see the backend's [API_DOCUMENTATION.md](../../obs-plugin-backend/API_DOCUMENTATION.md).
++
+ This plugin now supports connecting to an external backend service to provide AI-powered link suggestions. The backend integration allows you to get intelligent link recommendations based on the content of your notes.
+ 
+ ## Features
+diff --git a/src/backend/client.ts b/src/backend/client.ts
+index 2538c6e..80a2e59 100644
+--- a/src/backend/client.ts
++++ b/src/backend/client.ts
+@@ -1,5 +1,5 @@
+-import type { LinkCandidateList, StatusSummary, WikilinkCandidatesResponse } from "./types";
+ import { log } from "../diag";
++import type { LinkCandidateList, StatusSummary, WikilinkCandidatesResponse } from "./types";
+ 
+ export class BackendClient {
+ 	constructor(private baseUrl: string) {}
+@@ -58,6 +58,7 @@ export class BackendClient {
+ 			});
+ 			log.timeEnd(`HTTP ${url}`);
+ 			log.debug("HTTP status", r.status);
++			
+ 			if (r.status === 503) { 
+ 				log.warn("service warming up (503)"); 
+ 				return { items: [] }; 
+@@ -71,6 +72,8 @@ export class BackendClient {
+ 			return data;
+ 		} catch (e) {
+ 			log.error("HTTP error", e);
++			// Don't show user notifications for every failed request
++			// The provider will just return empty results
+ 			return { items: [] };
+ 		}
+ 	}
+diff --git a/src/backend/provider.ts b/src/backend/provider.ts
+index c413e3f..8650877 100644
+--- a/src/backend/provider.ts
++++ b/src/backend/provider.ts
+@@ -1,4 +1,5 @@
+ import type { TFile } from "obsidian";
++import { log } from "../diag";
+ import type { BackendClient } from "./client";
+ 
+ type ProviderCtx = {
+@@ -10,7 +11,9 @@ type ProviderCtx = {
+ export function createBackendLinksProvider(api: any, client: BackendClient) {
+   // return an unregister() so main.ts can clean up
+   return api.registerVirtualLinkProvider(async ({ file, makeLink }: ProviderCtx) => {
++    log.debug("Backend provider called for file:", file.path);
+     const res = await client.related(file.path, 10);
++    log.debug("Backend provider response:", res.items.length, "items");
+     return res.items
+       .filter(x => x?.path)
+       .map(x => makeLink(x.path, x.reason ? `🤝 ${x.reason}` : undefined));
+diff --git a/src/main.ts b/src/main.ts
+index bf95909..77d80f2 100644
+--- a/src/main.ts
++++ b/src/main.ts
+@@ -64,11 +64,11 @@ export default class SNWPlugin extends Plugin {
+ 	implicitLinksManager!: ImplicitLinksManager;
+ 	
+ 	// Backend integration
+-	private _backendClient!: BackendClient;
++	private _backendClient: BackendClient | null = null;
+ 	private unregisterBackendProvider: (() => void) | null = null;
+ 
+ 	// Public getter for backend client
+-	get backendClient(): BackendClient {
++	get backendClient(): BackendClient | null {
+ 		return this._backendClient;
+ 	}
+ 
+@@ -431,10 +431,18 @@ export default class SNWPlugin extends Plugin {
+ 
+ 		// Register backend with the vault path (zero-config)
+ 		const basePath = (this.app.vault.adapter as any).getBasePath?.() ?? "";
++		if (!basePath) {
++			console.warn("SNW: Cannot get vault base path for backend registration");
++			return;
++		}
++		
+ 		try {
+ 			await this._backendClient.register(basePath);
++			log.info("SNW: Backend registered successfully");
+ 		} catch (error) {
+ 			console.warn("SNW: Backend register failed — check server", error);
++			// Continue with provider registration even if register fails
++			// The backend might still be available for queries
+ 		}
+ 
+ 		// Start status poll (small UX polish)
+@@ -468,19 +476,29 @@ export default class SNWPlugin extends Plugin {
+ 	 * Poll backend status to show readiness
+ 	 */
+ 	private async pollBackendStatus(): Promise<void> {
+-		// Non-blocking, simple poll to show readiness
++		if (!this._backendClient) return;
++		
+ 		const delay = (ms: number) => new Promise(r => setTimeout(r, ms));
+-		for (let i = 0; i < 10; i++) {
++		const maxAttempts = 10;
++		let attempts = 0;
++		
++		while (attempts < maxAttempts) {
+ 			try {
+ 				const status = await this._backendClient.status();
+ 				if (status.ready) {
+-					new Notice(`Backend inferred links ready (${status.files ?? "?"} files)`);
+-					break;
++					new Notice(`SNW: Backend ready (${status.files || 0} files indexed)`);
++					return;
+ 				}
++				attempts++;
++				await delay(2000); // Poll every 2 seconds
+ 			} catch (error) {
+-				// Ignore errors during polling
++				attempts++;
++				if (attempts >= maxAttempts) {
++					console.warn("SNW: Backend status polling timed out");
++					return;
++				}
++				await delay(2000);
+ 			}
+-			await delay(1500);
+ 		}
+ 	}
+ 
+@@ -658,9 +676,22 @@ export default class SNWPlugin extends Plugin {
+ 		if (this.implicitLinksManager) {
+ 			await this.implicitLinksManager.updateSettings(this.settings.autoLinks);
+ 		}
++		
+ 		// Refresh backend provider if backend settings changed
+-		if (this._backendClient) {
++		const oldBackendEnabled = this._backendClient ? true : false;
++		const newBackendEnabled = this.settings.backend.enabled;
++		
++		if (newBackendEnabled && (!this._backendClient || (this._backendClient as any).baseUrl !== this.settings.backend.baseUrl)) {
++			// Backend enabled or URL changed - reinitialize
+ 			this._backendClient = new BackendClient(this.settings.backend.baseUrl);
++			await this.initBackend();
++		} else if (!newBackendEnabled && oldBackendEnabled) {
++			// Backend disabled - clean up
++			this.unregisterBackendProvider?.();
++			this.unregisterBackendProvider = null;
++			this._backendClient = null;
++		} else if (newBackendEnabled) {
++			// Just refresh the provider
+ 			this.refreshBackendProvider();
+ 		}
+ 	}
+diff --git a/src/ui/SettingsTab.ts b/src/ui/SettingsTab.ts
+index 90c620d..b1fe8f3 100644
+--- a/src/ui/SettingsTab.ts
++++ b/src/ui/SettingsTab.ts
+@@ -628,7 +628,13 @@ export class SettingsTab extends PluginSettingTab {
+ 					.setPlaceholder("http://localhost:8000")
+ 					.setValue(this.plugin.settings.backend.baseUrl)
+ 					.onChange(async (value) => {
+-						this.plugin.settings.backend.baseUrl = value.trim();
++						const trimmedValue = value.trim();
++						// Basic URL validation
++						if (trimmedValue && !trimmedValue.match(/^https?:\/\/.+/)) {
++							new Notice("SNW: Please enter a valid URL starting with http:// or https://");
++							return;
++						}
++						this.plugin.settings.backend.baseUrl = trimmedValue;
+ 						await this.plugin.saveSettings();
+ 					});
+ 			});

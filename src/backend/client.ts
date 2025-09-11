@@ -3,6 +3,7 @@ import type { LinkCandidateList, StatusSummary, WikilinkCandidatesResponse } fro
 
 export class BackendClient {
 	constructor(private baseUrl: string) {}
+	getBaseUrl(): string { return this.baseUrl; }
 
 	async register(vaultPath: string): Promise<void> {
 		const url = `${this.baseUrl}/register`;
@@ -75,6 +76,17 @@ export class BackendClient {
 			// Don't show user notifications for every failed request
 			// The provider will just return empty results
 			return { items: [] };
+		}
+	}
+
+	/** Check if the candidates API is available without spamming the UI */
+	async checkCandidatesAvailable(): Promise<boolean> {
+		const url = `${this.baseUrl}/candidates?page=1&page_size=1`;
+		try {
+			const r = await fetch(url, { method: "GET" });
+			return r.ok; // 200 means available
+		} catch {
+			return false;
 		}
 	}
 
