@@ -1,7 +1,7 @@
 import type { FunctionComponent } from 'preact';
 import { useEffect, useState } from 'preact/hooks';
 import type { BackendClient } from '../../backend/client';
-import type { LinkCandidate, Span } from '../../backend/types';
+import type { LinkCandidate, APISpan } from '../../backend/types';
 import { buildContext } from '../lib/context';
 import './RelatedFilesView.css';
 import { log } from '../../diag';
@@ -27,35 +27,29 @@ export const RelatedFilesView: FunctionComponent<RelatedFilesViewProps> = ({
     setLoading(true);
     setError(null);
     try {
-      log.debug("RelatedFilesView: fetching related files", { file: currentFilePath, includeSpans });
-      const t = `fetch related ${currentFilePath}`;
+      log.debug("RelatedFilesView: fetching keywords", { file: currentFilePath });
+      const t = `fetch keywords ${currentFilePath}`;
       log.time(t);
       
-      const response = await backendClient.related(currentFilePath, 10, includeSpans);
-      log.debug("related files loaded", { count: response.items?.length });
+      // Use new candidates endpoint to get keywords from current file
+      const response = await backendClient.getKeywordCandidatesForFile(currentFilePath);
+      log.debug("keywords loaded", { count: response.keywords?.length });
       log.timeEnd(t);
       
-      setRelatedFiles(response.items);
+      // Convert keywords to a format that can be displayed
+      // For now, just show the keywords as "related" items
+      const keywordItems = response.keywords.map(kw => ({
+        path: `keyword: ${kw.keyword}`,
+        reason: `Found ${kw.spans.length} occurrence(s)`,
+        score: kw.spans.length
+      }));
+      setRelatedFiles(keywordItems);
       
       // Pre-fetch file contents for context previews if spans are enabled
-      if (includeSpans && response.items.length > 0) {
-        const texts: Record<string, string> = {};
-        for (const file of response.items) {
-          try {
-            // Use Obsidian API to read file content
-            const app = (window as any).app;
-            if (app?.vault) {
-              const abstractFile = app.vault.getAbstractFileByPath(file.path);
-              if (abstractFile && abstractFile instanceof (window as any).TFile) {
-                const content = await app.vault.read(abstractFile);
-                texts[file.path] = content;
-              }
-            }
-          } catch (err) {
-            console.warn(`Failed to read file ${file.path}:`, err);
-          }
-        }
-        setFileTexts(texts);
+      if (includeSpans && response.keywords.length > 0) {
+        // For keywords, we don't need to pre-fetch file contents since we already have the current file
+        // The spans are already in the keyword response
+        setFileTexts({ [currentFilePath]: "Current file content" });
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch related files');
@@ -75,13 +69,12 @@ export const RelatedFilesView: FunctionComponent<RelatedFilesViewProps> = ({
     return fileTexts[filePath];
   };
 
-  const copySpanInfo = async (filePath: string, span: Span) => {
+  const copySpanInfo = async (filePath: string, span: APISpan) => {
     try {
       const spanInfo = {
         file: filePath,
         start: span.start,
-        end: span.end,
-        unit: span.unit || 'char'
+        end: span.end
       };
       await navigator.clipboard.writeText(JSON.stringify(spanInfo, null, 2));
       // Could add a toast notification here
@@ -90,7 +83,7 @@ export const RelatedFilesView: FunctionComponent<RelatedFilesViewProps> = ({
     }
   };
 
-  const renderSpan = (span: Span, filePath: string) => {
+  const renderSpan = (span: APISpan, filePath: string) => {
     log.debug("SpanRow: render", { file: filePath, start: span.start, end: span.end });
     const text = getFileText(filePath);
     const ctx = text ? buildContext(text, span) : { before: "", match: "(span)", after: "" };

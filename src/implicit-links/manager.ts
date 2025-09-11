@@ -30,7 +30,11 @@ async function computePhraseInfo(text: string, plugin: any): Promise<Map<string,
 		if (!file) return byPhrase;
 
 		const cache = plugin.referenceCountingPolicy?.getSNWCacheByFile?.(file) ?? null;
-		const providers = plugin.implicitLinksManager?.providers || [];
+		const providers = plugin.snwAPI?.virtualLinkProviders || [];
+		console.log("[ImplicitLinks manager] computePhraseInfo: found providers", providers.length);
+		console.log("[ImplicitLinks manager] computePhraseInfo: active file", file.path);
+		console.log("[ImplicitLinks manager] plugin.snwAPI:", plugin.snwAPI);
+		console.log("[ImplicitLinks manager] plugin.snwAPI?.virtualLinkProviders:", plugin.snwAPI?.virtualLinkProviders);
 
 		const makeLink = (realLink: string, display: string | undefined, pos: any) => ({
 			realLink,
@@ -42,6 +46,7 @@ async function computePhraseInfo(text: string, plugin: any): Promise<Map<string,
 			providers.map(async (p: any) => {
 				try {
 					const result = await p({ file, cache, makeLink });
+					console.log("[ImplicitLinks manager] provider returned", (result || []).length, "links");
 					return result || [];
 				} catch (e) {
 					console.warn("[ImplicitLinks manager] Provider error:", e);
@@ -51,6 +56,7 @@ async function computePhraseInfo(text: string, plugin: any): Promise<Map<string,
 		);
 
 		const links = batches.flat();
+		console.log("[ImplicitLinks manager] total links from all providers:", links.length);
 
 		// Fallback: scan custom phrases from settings
 		// DISABLED: Using DetectionManager approach instead to avoid duplicates
@@ -91,12 +97,20 @@ async function computePhraseInfo(text: string, plugin: any): Promise<Map<string,
 			const key = generateReferenceKey(plugin, linktext, file);
 			const count = getReferenceCount(plugin, key);
 
-			// Skip if count is below threshold (same as native SNW behavior)
-			if (count < (plugin?.settings?.minimumRefCountThreshold ?? 0)) continue;
+			// Check if this is a backend keyword (starts with "keyword:")
+			const isBackendKeyword = l.realLink?.startsWith("keyword:");
+			
+			// For backend keywords, use synthetic count of 1 to bypass threshold
+			// For native phrases, apply the threshold filter
+			const effectiveCount = isBackendKeyword ? 1 : count;
+			
+			if (!isBackendKeyword && effectiveCount < (plugin?.settings?.minimumRefCountThreshold ?? 0)) {
+				continue;
+			}
 
 			byPhrase.set(linktext.toLowerCase(), {
 				target: l.realLink,
-				count,
+				count: effectiveCount,
 			});
 		}
 	} catch (e) {

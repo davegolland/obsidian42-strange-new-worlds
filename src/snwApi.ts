@@ -90,4 +90,11 @@ export default class SnwAPI {
 	registerVirtualLinkProvider(provider: VirtualLinkProvider): () => void {
 		return this.plugin.referenceCountingPolicy.registerVirtualLinkProvider(provider);
 	}
+
+	/**
+	 * Get all registered virtual link providers
+	 */
+	get virtualLinkProviders(): VirtualLinkProvider[] {
+		return this.plugin.referenceCountingPolicy.getVirtualLinkProviders();
+	}
 }

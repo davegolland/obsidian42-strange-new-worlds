@@ -12,9 +12,21 @@ ROOT="/Users/dave/temp/vault/techniques/techniques"
 VAULT_PLUGIN_DIR="$ROOT/.obsidian/plugins/obsidian42-strange-new-worlds"
 BUILD_DIR="./build"
 
-# Check if build directory exists
+# Clean and rebuild the plugin
+echo "🧹 Cleaning previous build..."
+rm -rf "$BUILD_DIR"
+
+echo "🔨 Building plugin..."
+npm run build
+
+# Check if build was successful
 if [ ! -d "$BUILD_DIR" ]; then
-    echo "❌ Build directory not found. Run 'npm run build' first."
+    echo "❌ Build failed. Build directory not found."
+    exit 1
+fi
+
+if [ ! -f "$BUILD_DIR/main.js" ]; then
+    echo "❌ Build failed. main.js not found in build directory."
     exit 1
 fi
 
@@ -26,6 +38,10 @@ rm -rf "$VAULT_PLUGIN_DIR"/*
 
 echo "📦 Copying built files..."
 cp -r "$BUILD_DIR"/* "$VAULT_PLUGIN_DIR/"
+
+# Copy manifest file (required for Obsidian to recognize the plugin)
+echo "📋 Copying manifest file..."
+cp "./manifest.dev.json" "$VAULT_PLUGIN_DIR/manifest.json"
 
 # Copy media if it exists
 if [ -d "./media" ]; then
@@ -45,6 +61,15 @@ if [ -d "$VAULT_PLUGIN_DIR/node_modules" ]; then
     echo "   This may cause CM6 extension errors."
 else
     echo "✅ No node_modules found - clean deployment!"
+fi
+
+echo ""
+echo "🔐 Main plugin file MD5 hash:"
+if [ -f "$VAULT_PLUGIN_DIR/main.js" ]; then
+    MAIN_JS_MD5=$(md5 -q "$VAULT_PLUGIN_DIR/main.js")
+    echo "   main.js: $MAIN_JS_MD5"
+else
+    echo "   ⚠️  main.js not found in plugin directory"
 fi
 
 echo ""

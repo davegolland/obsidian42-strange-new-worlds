@@ -229,6 +229,13 @@ export class ReferenceCountingPolicy {
 	}
 
 	/**
+	 * Get all registered virtual link providers
+	 */
+	getVirtualLinkProviders(): VirtualLinkProvider[] {
+		return Array.from(this.virtualLinkProviders);
+	}
+
+	/**
 	 * Small helper for providers to build a fully-formed Link from link text.
 	 */
 	private makeLinkFor(file: TFile, linkText: string, displayText = "", pos?: { start: any; end: any }): Link {
@@ -269,13 +276,22 @@ export class ReferenceCountingPolicy {
 	 * Invoke all providers for a file and merge their links into the index.
 	 */
 	private async applyVirtualProviders(file: TFile, cache: any): Promise<void> {
-		if (this.virtualLinkProviders.size === 0) return;
+		if (this.virtualLinkProviders.size === 0) {
+			console.log("SNW: applyVirtualProviders: no providers registered");
+			return;
+		}
+		console.log("SNW: applyVirtualProviders: processing", this.virtualLinkProviders.size, "providers for file:", file.path);
 		const makeLink = (lt: string, dt?: string, p?: any) => this.makeLinkFor(file, lt, dt, p);
 		for (const provider of this.virtualLinkProviders) {
 			try {
 				const links = await Promise.resolve(provider({ file, cache, makeLink }));
+				console.log("SNW: applyVirtualProviders: provider returned", (links || []).length, "links");
+				if (links && links.length > 0) {
+					console.log("SNW: applyVirtualProviders: sample link:", links[0]);
+				}
 				for (const link of links || []) {
 					const k = this.activePolicy.generateKey(link);
+					console.log("SNW: applyVirtualProviders: generated key for link:", k);
 					this.indexedReferences.set(k, [...(this.indexedReferences.get(k) || []), link]);
 				}
 			} catch (e) {

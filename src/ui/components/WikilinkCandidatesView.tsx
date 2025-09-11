@@ -47,25 +47,36 @@ export const WikilinkCandidatesView: FunctionComponent<WikilinkCandidatesViewPro
     setLoading(true);
     setError(null);
     try {
-      log.debug("WikilinkCandidatesView: fetching candidates", { page, pageSize });
-      const t = `fetch candidates p${page}`;
+      log.debug("WikilinkCandidatesView: fetching keywords", { page, pageSize });
+      const t = `fetch keywords p${page}`;
       log.time(t);
       
-      const response = await backendClient.getWikilinkCandidates({
-        page,
-        page_size: pageSize
-      });
+      // Use new candidates endpoint to get keywords from a test file
+      // TODO: Make this configurable or use current file
+      const testPath = "test.md";
+      const response = await backendClient.getKeywordCandidatesForFile(testPath);
       
-      log.debug("candidates loaded", { count: response.candidates?.length, total: response.total_candidates });
+      log.debug("keywords loaded", { count: response.keywords?.length });
       log.timeEnd(t);
       
-      setCandidates(response.candidates);
-      setTotalPages(response.total_pages);
-      setTotalCandidates(response.total_candidates);
+      // Convert keywords to candidates format for display
+      const convertedCandidates = response.keywords.map(kw => ({
+        text: kw.keyword,
+        score: kw.spans.length,
+        count: kw.spans.length,
+        total: kw.spans.length,
+        fuzzy_resolution: undefined,
+        files: [testPath],
+        spansByFile: { [testPath]: kw.spans }
+      }));
+      
+      setCandidates(convertedCandidates);
+      setTotalPages(1); // Single page for now
+      setTotalCandidates(convertedCandidates.length);
       setCurrentPage(page);
     } catch (err) {
-      log.error("candidates error", err);
-      setError(err instanceof Error ? err.message : 'Failed to fetch candidates');
+      log.error("keywords error", err);
+      setError(err instanceof Error ? err.message : 'Failed to fetch keywords');
     } finally {
       setLoading(false);
     }

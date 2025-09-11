@@ -933,41 +933,42 @@ export class SettingsTab extends PluginSettingTab {
 
 		const client = this.plugin.backendClient;
 
+		// TEMPORARILY DISABLED - Using new candidates endpoint instead
 		// Check backend status
-		let status: { ready?: boolean } = {};
-		try {
-			status = await client.status();
-		} catch (error) {
-			log.warn("SettingsTab: backend unreachable", error);
-			candidatesViewEl.innerHTML = `
-				<div class="candidates-error">
-					Backend unreachable. Please check the backend URL and ensure the server is running.
-				</div>
-			`;
-			return;
-		}
+		// let status: { ready?: boolean } = {};
+		// try {
+		// 	status = await client.status();
+		// } catch (error) {
+		// 	log.warn("SettingsTab: backend unreachable", error);
+		// 	candidatesViewEl.innerHTML = `
+		// 		<div class="candidates-error">
+		// 			Backend unreachable. Please check the backend URL and ensure the server is running.
+		// 		</div>
+		// 	`;
+		// 	return;
+		// }
 
-		if (!status.ready) {
-			log.warn("SettingsTab: backend not ready");
-			candidatesViewEl.innerHTML = `
-				<div class="candidates-error">
-					Backend warming up... Please wait for the backend to finish indexing your vault.
-				</div>
-			`;
-			return;
-		}
+		// if (!status.ready) {
+		// 	log.warn("SettingsTab: backend not ready");
+		// 	candidatesViewEl.innerHTML = `
+		// 		<div class="candidates-error">
+		// 			Backend warming up... Please wait for the backend to finish indexing your vault.
+		// 		</div>
+		// 	`;
+		// 	return;
+		// }
 
-		// Check if candidates API is available
-		const canCandidates = await client.checkCandidatesAvailable();
-		if (!canCandidates) {
-			log.warn("SettingsTab: candidates API not available");
-			candidatesViewEl.innerHTML = `
-				<div class="candidates-error">
-					Candidates API not available on this backend build. Active-file suggestions still work.
-				</div>
-			`;
-			return;
-		}
+		// // Check if candidates API is available
+		// const canCandidates = await client.checkCandidatesAvailable();
+		// if (!canCandidates) {
+		// 	log.warn("SettingsTab: candidates API not available");
+		// 	candidatesViewEl.innerHTML = `
+		// 		<div class="candidates-error">
+		// 			Candidates API not available on this backend build. Active-file suggestions still work.
+		// 		</div>
+		// 	`;
+		// 	return;
+		// }
 
 		try {
 			// Import and render the Preact component using stable mounting

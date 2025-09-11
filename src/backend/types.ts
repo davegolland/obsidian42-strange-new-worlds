@@ -1,17 +1,32 @@
+// New API types based on OpenAPI spec
+export type APISpan = {
+  start: number;
+  end: number;
+};
+
+export type KeywordResponse = {
+  keyword: string;
+  spans: APISpan[];
+};
+
+export type CandidatesResponse = {
+  vault: string;
+  path: string;
+  keywords: KeywordResponse[];
+};
+
+// Legacy types for backward compatibility (temporarily disabled)
 export type LinkCandidate = { 
   path: string; 
   reason?: string; 
   score?: number;
-  span?: Span;  // Character offset span from backend
+  span?: APISpan;  // Character offset span from backend
+  text?: string;   // For virtual links
+  target?: string; // For virtual links
+  count?: number;  // For virtual links
+  spans?: APISpan[]; // Multiple spans for keywords
 };
 export type LinkCandidateList = { items: LinkCandidate[] };
-
-// Match actual backend models - char-only format
-export type Span = {
-  start: number;
-  end: number;
-  unit?: "char";  // Optional, defaults to char
-};
 
 // For WLX candidates view - enhanced version with spans and file information
 export type WikilinkCandidate = {

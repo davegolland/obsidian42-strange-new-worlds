@@ -424,6 +424,10 @@ export default class SNWPlugin extends Plugin {
 	 * Initialize backend integration
 	 */
 	private async initBackend(): Promise<void> {
+		// ADD: Diagnostic logging for initBackend start
+		console.log("SNW: initBackend start",
+			{ enabled: this.settings.backend.enabled, baseUrl: this.settings.backend.baseUrl });
+
 		// Only initialize backend if it's enabled in settings
 		if (!this.settings.backend.enabled) return;
 		if (!this._backendClient) {
@@ -432,6 +436,9 @@ export default class SNWPlugin extends Plugin {
 
 		// Register backend with the vault path (zero-config)
 		const basePath = (this.app.vault.adapter as any).getBasePath?.() ?? "";
+		// ADD: Diagnostic logging for basePath
+		console.log("SNW: initBackend basePath", { basePath });
+
 		if (!basePath) {
 			console.warn("SNW: Cannot get vault base path for backend registration");
 			// We can still use /query/related without /register, so ensure provider is up.
@@ -442,16 +449,23 @@ export default class SNWPlugin extends Plugin {
 		try {
 			// Use vault name from settings or generate one from path
 			const vaultName = this.settings.backend.vaultName || this.app.vault.getName() || "default-vault";
+			// ADD: Diagnostic logging for registration attempt
+			console.log("SNW: initBackend registering", { vaultName, basePath });
+
 			await this._backendClient.register(vaultName, basePath);
+			// ADD: Diagnostic logging for successful registration
+			console.log("SNW: initBackend registered OK");
 			log.info("SNW: Backend registered successfully");
 		} catch (error) {
+			// ADD: Diagnostic logging for registration failure
+			console.error("SNW: initBackend register failed", error);
 			console.warn("SNW: Backend register failed — check server", error);
 			// Continue with provider registration even if register fails
 			// The backend might still be available for queries
 		}
 
-		// Start status poll (small UX polish)
-		this.pollBackendStatus();
+		// TEMPORARILY DISABLED - Using new candidates endpoint instead
+		// this.pollBackendStatus();
 
 		// Register the virtual link provider if enabled
 		this.refreshBackendProvider();
@@ -464,6 +478,12 @@ export default class SNWPlugin extends Plugin {
 		// Turn off existing provider
 		this.unregisterBackendProvider?.();
 		this.unregisterBackendProvider = null;
+
+		// ADD: Diagnostic logging to check if provider registration is being skipped
+		console.log("SNW: refreshBackendProvider",
+			{ enabled: this.settings.backend.enabled,
+				hasSnwAPI: !!this.snwAPI,
+				canRegister: !!this.snwAPI?.registerVirtualLinkProvider });
 
 		if (!this.settings.backend.enabled) return;
 
@@ -553,6 +573,10 @@ export default class SNWPlugin extends Plugin {
 				log.debug("layout ready handler: active-leaf-change event fired");
 				try {
 					updateAllSnwLiveUpdateReferencesDebounce();
+					// Refresh backend provider for new active file
+					if (this.settings.backend.enabled) {
+						this.refreshBackendProvider();
+					}
 				} catch (e) {
 					log.error("leaf-change refresh failed", e);
 				}
