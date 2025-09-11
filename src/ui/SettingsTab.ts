@@ -628,7 +628,13 @@ export class SettingsTab extends PluginSettingTab {
 					.setPlaceholder("http://localhost:8000")
 					.setValue(this.plugin.settings.backend.baseUrl)
 					.onChange(async (value) => {
-						this.plugin.settings.backend.baseUrl = value.trim();
+						const trimmedValue = value.trim();
+						// Basic URL validation
+						if (trimmedValue && !trimmedValue.match(/^https?:\/\/.+/)) {
+							new Notice("SNW: Please enter a valid URL starting with http:// or https://");
+							return;
+						}
+						this.plugin.settings.backend.baseUrl = trimmedValue;
 						await this.plugin.saveSettings();
 					});
 			});

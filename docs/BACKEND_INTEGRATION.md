@@ -1,5 +1,7 @@
 # Backend Integration
 
+> **📚 Comprehensive API Documentation**: For complete API documentation including all endpoints, request/response formats, and examples, see the backend's [API_DOCUMENTATION.md](../../obs-plugin-backend/API_DOCUMENTATION.md).
+
 This plugin now supports connecting to an external backend service to provide AI-powered link suggestions. The backend integration allows you to get intelligent link recommendations based on the content of your notes.
 
 ## Features

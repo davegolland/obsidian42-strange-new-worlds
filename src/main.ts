@@ -64,11 +64,11 @@ export default class SNWPlugin extends Plugin {
 	implicitLinksManager!: ImplicitLinksManager;
 	
 	// Backend integration
-	private _backendClient!: BackendClient;
+	private _backendClient: BackendClient | null = null;
 	private unregisterBackendProvider: (() => void) | null = null;
 
 	// Public getter for backend client
-	get backendClient(): BackendClient {
+	get backendClient(): BackendClient | null {
 		return this._backendClient;
 	}
 
@@ -431,10 +431,18 @@ export default class SNWPlugin extends Plugin {
 
 		// Register backend with the vault path (zero-config)
 		const basePath = (this.app.vault.adapter as any).getBasePath?.() ?? "";
+		if (!basePath) {
+			console.warn("SNW: Cannot get vault base path for backend registration");
+			return;
+		}
+		
 		try {
 			await this._backendClient.register(basePath);
+			log.info("SNW: Backend registered successfully");
 		} catch (error) {
 			console.warn("SNW: Backend register failed — check server", error);
+			// Continue with provider registration even if register fails
+			// The backend might still be available for queries
 		}
 
 		// Start status poll (small UX polish)
@@ -468,19 +476,29 @@ export default class SNWPlugin extends Plugin {
 	 * Poll backend status to show readiness
 	 */
 	private async pollBackendStatus(): Promise<void> {
-		// Non-blocking, simple poll to show readiness
+		if (!this._backendClient) return;
+		
 		const delay = (ms: number) => new Promise(r => setTimeout(r, ms));
-		for (let i = 0; i < 10; i++) {
+		const maxAttempts = 10;
+		let attempts = 0;
+		
+		while (attempts < maxAttempts) {
 			try {
 				const status = await this._backendClient.status();
 				if (status.ready) {
-					new Notice(`Backend inferred links ready (${status.files ?? "?"} files)`);
-					break;
+					new Notice(`SNW: Backend ready (${status.files || 0} files indexed)`);
+					return;
 				}
+				attempts++;
+				await delay(2000); // Poll every 2 seconds
 			} catch (error) {
-				// Ignore errors during polling
+				attempts++;
+				if (attempts >= maxAttempts) {
+					console.warn("SNW: Backend status polling timed out");
+					return;
+				}
+				await delay(2000);
 			}
-			await delay(1500);
 		}
 	}
 
@@ -658,9 +676,22 @@ export default class SNWPlugin extends Plugin {
 		if (this.implicitLinksManager) {
 			await this.implicitLinksManager.updateSettings(this.settings.autoLinks);
 		}
+		
 		// Refresh backend provider if backend settings changed
-		if (this._backendClient) {
+		const oldBackendEnabled = this._backendClient ? true : false;
+		const newBackendEnabled = this.settings.backend.enabled;
+		
+		if (newBackendEnabled && (!this._backendClient || (this._backendClient as any).baseUrl !== this.settings.backend.baseUrl)) {
+			// Backend enabled or URL changed - reinitialize
 			this._backendClient = new BackendClient(this.settings.backend.baseUrl);
+			await this.initBackend();
+		} else if (!newBackendEnabled && oldBackendEnabled) {
+			// Backend disabled - clean up
+			this.unregisterBackendProvider?.();
+			this.unregisterBackendProvider = null;
+			this._backendClient = null;
+		} else if (newBackendEnabled) {
+			// Just refresh the provider
 			this.refreshBackendProvider();
 		}
 	}

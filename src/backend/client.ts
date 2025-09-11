@@ -1,5 +1,5 @@
-import type { LinkCandidateList, StatusSummary, WikilinkCandidatesResponse } from "./types";
 import { log } from "../diag";
+import type { LinkCandidateList, StatusSummary, WikilinkCandidatesResponse } from "./types";
 
 export class BackendClient {
 	constructor(private baseUrl: string) {}
@@ -58,6 +58,7 @@ export class BackendClient {
 			});
 			log.timeEnd(`HTTP ${url}`);
 			log.debug("HTTP status", r.status);
+			
 			if (r.status === 503) { 
 				log.warn("service warming up (503)"); 
 				return { items: [] }; 
@@ -71,6 +72,8 @@ export class BackendClient {
 			return data;
 		} catch (e) {
 			log.error("HTTP error", e);
+			// Don't show user notifications for every failed request
+			// The provider will just return empty results
 			return { items: [] };
 		}
 	}
