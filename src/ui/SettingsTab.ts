@@ -639,6 +639,20 @@ export class SettingsTab extends PluginSettingTab {
 					});
 			});
 
+		// Vault name setting
+		new Setting(containerEl)
+			.setName("Vault name")
+			.setDesc("Optional name for this vault when registering with the backend (defaults to Obsidian vault name)")
+			.addText((text) => {
+				text
+					.setPlaceholder("my-vault")
+					.setValue(this.plugin.settings.backend.vaultName || "")
+					.onChange(async (value) => {
+						this.plugin.settings.backend.vaultName = value.trim() || undefined;
+						await this.plugin.saveSettings();
+					});
+			});
+
 		// Minimal Mode section
 		createSettingsHeading({
 			containerEl,

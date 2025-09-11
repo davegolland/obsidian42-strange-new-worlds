@@ -1,13 +1,13 @@
 import { log } from "../diag";
-import type { LinkCandidateList, StatusSummary, WikilinkCandidatesResponse } from "./types";
+import type { LinkCandidateList, StatusSummary, WikilinkCandidatesResponse, VaultCreate, CandidatesResponse, StatusResponse } from "./types";
 
 export class BackendClient {
 	constructor(private baseUrl: string) {}
 	getBaseUrl(): string { return this.baseUrl; }
 
-	async register(vaultPath: string): Promise<void> {
+	async register(vaultName: string, vaultPath: string): Promise<void> {
 		const url = `${this.baseUrl}/register`;
-		const payload = { vault_path: vaultPath };
+		const payload: VaultCreate = { vault: vaultName, path: vaultPath };
 		log.debug("HTTP POST", url, payload);
 		log.time(`HTTP ${url}`);
 
@@ -37,7 +37,16 @@ export class BackendClient {
 			log.timeEnd(`HTTP ${url}`);
 			log.debug("HTTP status", r.status);
 			if (!r.ok) throw new Error(`status failed: ${r.status}`);
-			return r.json();
+			const response: StatusResponse = await r.json();
+			
+			// Convert new API response to legacy format for compatibility
+			return {
+				ready: response.status === "healthy",
+				vaultPath: null, // Not provided in new API
+				files: undefined, // Not provided in new API
+				apiVersion: undefined, // Not provided in new API
+				commit: undefined, // Not provided in new API
+			};
 		} catch (e) {
 			log.error("HTTP error", e);
 			throw e;
@@ -81,12 +90,47 @@ export class BackendClient {
 
 	/** Check if the candidates API is available without spamming the UI */
 	async checkCandidatesAvailable(): Promise<boolean> {
-		const url = `${this.baseUrl}/candidates?page=1&page_size=1`;
+		const url = `${this.baseUrl}/candidates?vault=test&path=test.md`;
 		try {
 			const r = await fetch(url, { method: "GET" });
 			return r.ok; // 200 means available
 		} catch {
 			return false;
+		}
+	}
+
+	/** Get keyword candidates from a specific markdown file using the new API */
+	async getKeywordCandidates(vault: string, path: string): Promise<CandidatesResponse> {
+		const url = `${this.baseUrl}/candidates?vault=${encodeURIComponent(vault)}&path=${encodeURIComponent(path)}`;
+		log.debug("HTTP GET", url, { vault, path });
+		log.time(`HTTP ${url}`);
+
+		try {
+			const response = await fetch(url);
+			log.timeEnd(`HTTP ${url}`);
+			log.debug("HTTP status", response.status);
+
+			if (response.status === 503) {
+				log.warn("service warming up (503)");
+				// Backend "Service not ready" - return empty response
+				return {
+					vault,
+					path,
+					keywords: [],
+				};
+			}
+
+			if (!response.ok) {
+				log.warn("non-OK response", response.status);
+				throw new Error(`Failed to fetch keyword candidates: ${response.statusText}`);
+			}
+
+			const data: CandidatesResponse = await response.json();
+			log.debug("keyword candidates response", { count: data?.keywords?.length, vault: data?.vault, path: data?.path });
+			return data;
+		} catch (e) {
+			log.error("HTTP error", e);
+			throw e;
 		}
 	}
 

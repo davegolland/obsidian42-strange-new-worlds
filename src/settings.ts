@@ -67,6 +67,7 @@ export interface DevSettings {
 export interface BackendSettings {
 	enabled: boolean;
 	baseUrl: string;
+	vaultName?: string; // Optional vault name for backend registration
 }
 
 export interface Settings {
@@ -145,6 +146,7 @@ export const DEFAULT_SETTINGS: Settings = {
 	backend: {
 		enabled: false,
 		baseUrl: "http://localhost:8000",
+		vaultName: undefined,
 	},
 	minimalMode: false,
 };
@@ -235,6 +237,7 @@ export function migrateSettings(legacySettings: LegacySettings): Settings {
 		backend: {
 			enabled: false,
 			baseUrl: "http://localhost:8000",
+			vaultName: undefined,
 		},
 		minimalMode: false,
 		dev: {

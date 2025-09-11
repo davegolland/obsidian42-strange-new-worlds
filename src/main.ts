@@ -440,7 +440,9 @@ export default class SNWPlugin extends Plugin {
 		}
 		
 		try {
-			await this._backendClient.register(basePath);
+			// Use vault name from settings or generate one from path
+			const vaultName = this.settings.backend.vaultName || this.app.vault.getName() || "default-vault";
+			await this._backendClient.register(vaultName, basePath);
 			log.info("SNW: Backend registered successfully");
 		} catch (error) {
 			console.warn("SNW: Backend register failed — check server", error);

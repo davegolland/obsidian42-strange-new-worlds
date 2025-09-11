@@ -47,3 +47,35 @@ export type StatusSummary = {
 	apiVersion?: string;
 	commit?: string;
 };
+
+// New types for OpenAPI spec compliance
+export type VaultCreate = {
+	vault: string;
+	path: string;
+};
+
+export type APISpan = {
+	start: number;
+	end: number;
+};
+
+export type KeywordResponse = {
+	keyword: string;
+	spans: APISpan[];
+};
+
+export type CandidatesResponse = {
+	vault: string;
+	path: string;
+	keywords: KeywordResponse[];
+};
+
+export type StatusResponse = {
+	status: "healthy" | "unhealthy" | "degraded";
+};
+
+export type ErrorResponse = {
+	detail: string;
+	error_code?: string | null;
+	timestamp?: string | null;
+};
