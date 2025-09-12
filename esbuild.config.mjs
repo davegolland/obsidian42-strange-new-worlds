@@ -5,9 +5,18 @@ import fs from 'fs';
 import path from 'path';
 import { execSync } from 'child_process';
 
-fs.copyFile('manifest.json', 'build/manifest.json', (err) => {
-  if (err) console.log(err);
-});
+// Ensure build directory exists
+if (!fs.existsSync('build')) {
+  fs.mkdirSync('build', { recursive: true });
+}
+
+// Copy manifest.json synchronously to avoid race conditions
+try {
+  fs.copyFileSync('manifest.json', 'build/manifest.json');
+} catch (err) {
+  console.error('Error copying manifest.json:', err);
+  process.exit(1);
+}
 
 // Create styles directory in build if it doesn't exist
 if (!fs.existsSync('build/styles')) {
@@ -33,9 +42,11 @@ ${processedCss}`;
   // Also copy individual files for reference
   const styleFiles = ['common.css', 'inline.css', 'gutter.css', 'popover.css', 'sidepane.css', 'main.css'];
   styleFiles.forEach(file => {
-    fs.copyFile(path.join('styles', file), path.join('build/styles', file), (err) => {
-      if (err) console.log(err);
-    });
+    try {
+      fs.copyFileSync(path.join('styles', file), path.join('build/styles', file));
+    } catch (err) {
+      console.error(`Error copying ${file}:`, err);
+    }
   });
 };
 

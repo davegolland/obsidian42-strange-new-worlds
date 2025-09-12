@@ -1,6 +1,6 @@
 import { StateEffect, StateField } from "@codemirror/state";
 
-export type PhraseInfo = { target: string; count: number };
+export type PhraseInfo = { target: string; count: number; key: string };
 export type InferredCache = {
 	// For decoration lookups
 	byPhrase: Map<string, PhraseInfo>; // key = normalized phrase

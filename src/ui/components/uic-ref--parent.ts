@@ -18,11 +18,11 @@ export function setPluginVariableForUIC(snwPlugin: SNWPlugin) {
  * @param {Instance} instance   the Tippy instance. Tippy provides the floating container.
  */
 export const getUIC_Hoverview = async (instance: Instance) => {
-	const { refType, realLink, key, filePath, lineNu } = await getDataElements(instance);
+	const { refType, realLink, key, filePath, lineNu, display } = await getDataElements(instance);
 	const popoverEl = createDiv();
 	popoverEl.addClass("snw-popover-container");
 	popoverEl.addClass("search-result-container");
-	popoverEl.appendChild(await getUIC_Ref_Area(refType, realLink, key, filePath, lineNu, true));
+	popoverEl.appendChild(await getUIC_Ref_Area(refType, realLink, key, filePath, lineNu, true, display));
 	instance.setContent(popoverEl);
 	setTimeout(async () => {
 		await setFileLinkHandlers(false, popoverEl);
@@ -147,6 +147,7 @@ const getDataElements = async (
 	key: string;
 	filePath: string;
 	lineNu: number;
+	display?: string;
 }> => {
 	const parentElement: ReferenceElement = instance.reference;
 	const refType = parentElement.getAttribute("data-snw-type") || "";
@@ -154,11 +155,18 @@ const getDataElements = async (
 	const key = parentElement.getAttribute("data-snw-key") || "";
 	const path = parentElement.getAttribute("data-snw-filepath") || "";
 	const lineNum = Number(parentElement.getAttribute("snw-data-line-number")) || 0;
+	const display = parentElement.getAttribute("data-snw-display") || undefined;
+	
+	// Log what the tooltip receives
+	console.log("[SNW hover] key=%s, realLink=%s, filePath=%s, refType=%s, display=%s",
+		key, realLink, path, refType, display);
+	
 	return {
 		refType: refType,
 		realLink: realLink,
 		key: key,
 		filePath: path,
 		lineNu: lineNum,
+		display: display,
 	};
 };

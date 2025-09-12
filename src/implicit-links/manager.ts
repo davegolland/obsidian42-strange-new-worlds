@@ -94,7 +94,8 @@ async function computePhraseInfo(text: string, plugin: any): Promise<Map<string,
 		// Convert to phrase info map
 		for (const l of links) {
 			const linktext = l.display && l.display.trim() ? l.display : l.realLink.replace(/\.md$/, "");
-			const key = generateReferenceKey(plugin, linktext, file);
+			// Use the realLink (target) for key generation to match what the virtual provider stores
+			const key = generateReferenceKey(plugin, l.realLink, file);
 			const count = getReferenceCount(plugin, key);
 
 			// Check if this is a backend keyword (starts with "keyword:")
@@ -111,6 +112,7 @@ async function computePhraseInfo(text: string, plugin: any): Promise<Map<string,
 			byPhrase.set(linktext.toLowerCase(), {
 				target: l.realLink,
 				count: effectiveCount,
+				key,
 			});
 		}
 	} catch (e) {

@@ -15,7 +15,8 @@ export const getUIC_Ref_Title_Div = (
 	lineNu: number,
 	isPopover: boolean,
 	plugin: SNWPlugin,
-	handleSortOptionChangeCallback: () => void,
+	display?: string,
+	handleSortOptionChangeCallback?: () => void,
 ): HTMLElement => {
 	const titleElJsx = (
 		<div className={`${isPopover ? "snw-ref-title-popover" : "snw-ref-title-side-pane"} tree-item-self is-clickable`}>
@@ -27,9 +28,18 @@ export const getUIC_Ref_Title_Div = (
 				snw-data-file-name={filePath}
 				snw-data-line-number={lineNu.toString()}
 			>
-				{realLink}
+				{(() => {
+					// Use display if provided, otherwise fallback to existing logic
+					if (display) {
+						return display;
+					}
+					const src = filePath || realLink || "";
+					const base = src.split("/").pop() || src;
+					const pretty = base.replace(/\.md$/i, "");  // strip .md
+					return pretty;
+				})()}
 			</div>
-			<SortOrderDropdown plugin={plugin} onChange={handleSortOptionChangeCallback} />
+			<SortOrderDropdown plugin={plugin} onChange={handleSortOptionChangeCallback || (() => {})} />
 			{isPopover && (
 				<span
 					className="snw-ref-title-popover-open-sidepane-icon"

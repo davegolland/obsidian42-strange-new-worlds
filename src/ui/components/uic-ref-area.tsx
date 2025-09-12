@@ -26,13 +26,14 @@ export const getUIC_Ref_Area = async (
 	filePath: string,
 	lineNu: number,
 	isHoverView: boolean,
+	display?: string,
 ): Promise<HTMLElement> => {
 	const refAreaItems = await getRefAreaItems(refType, key, filePath);
 	const refAreaContainerEl = createDiv();
 
 	//get title header for this reference area
 	refAreaContainerEl.append(
-		getUIC_Ref_Title_Div(refType, realLink, key, filePath, refAreaItems.refCount, lineNu, isHoverView, plugin, async () => {
+		getUIC_Ref_Title_Div(refType, realLink, key, filePath, refAreaItems.refCount, lineNu, isHoverView, plugin, display, async () => {
 			// Callback to re-render the references area when the sort option is changed
 			const refAreaEl: HTMLElement | null = refAreaContainerEl.querySelector(".snw-ref-area");
 			if (refAreaEl) {
@@ -96,9 +97,21 @@ const getRefAreaItems = async (refType: string, key: string, filePath: string): 
 		const refCache = referenceCountingPolicy.getIndexedReferences().get(key) || [];
 		const sortedCache = await sortRefCache(refCache);
 		linksToLoop = referenceCountingPolicy.filterReferences(sortedCache);
+		
+		// Fallback: if nothing found and this is an implicit badge, show a friendly empty state
+		if (!linksToLoop.length && refType === 'implicit') {
+			const hint = createDiv({ cls: "snw-ref-empty" });
+			hint.setText("No indexed backlinks (inferred link).");
+			const container = createDiv();
+			container.append(hint);
+			return { response: container, refCount: 0 };
+		}
 	}
 
 	const countOfRefs = referenceCountingPolicy.countReferences(linksToLoop);
+	
+	// Log how many items the list will render
+	console.log("[SNW hover] items for key=%s → %d", key, linksToLoop.length);
 
 	// get the unique file names for files in thie refeernces
 	const uniqueFileKeys: Link[] = Array.from(new Set(linksToLoop.map((a: Link) => a.sourceFile?.path)))

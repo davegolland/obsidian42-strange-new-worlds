@@ -12,6 +12,9 @@ class CountBadge extends WidgetType {
 		private count: number,
 		private key: string,
 		private plugin: any,
+		private realLink: string,
+		private fromFilePath: string,
+		private display: string
 	) {
 		super();
 	}
@@ -24,9 +27,18 @@ class CountBadge extends WidgetType {
 		el.textContent = String(this.count);
 		el.title = `${this.count} reference${this.count === 1 ? "" : "s"}`;
 
+		// Set attributes before binding the hover
+		el.setAttribute("data-snw-reallink", this.realLink);
+		el.setAttribute("data-snw-filepath", this.fromFilePath);
+
 		// Use unified hover system - same as native SNW counters
 		try {
-			bindReferenceHover(el, this.key, this.plugin);
+			bindReferenceHover(el, this.key, this.plugin, {
+				realLink: this.realLink,
+				filePath: this.fromFilePath,
+				display: this.display,
+				refType: "implicit",
+			});
 		} catch (e) {
 			console.warn("[ImplicitLinks decorators] Failed to bind hover:", e);
 		}
@@ -49,7 +61,16 @@ function addLinkDecos(add: any, from: number, to: number, text: string, info: Ph
 			},
 		}),
 	);
-	add(to, to, Decoration.widget({ side: 1, widget: new CountBadge(info.count, key, plugin) }));
+	// Get the current file for fromFilePath
+	const fromFile = plugin?.app?.workspace?.getActiveFile?.() ?? null;
+	
+	// Log the badge construction
+	console.log("[SNW badge] key=%s count=%d target=%s from=%s", key, info.count, info.target, fromFile?.path ?? "");
+	
+	add(to, to, Decoration.widget({ 
+		side: 1, 
+		widget: new CountBadge(info.count, key, plugin, info.target, fromFile?.path ?? "", text) 
+	}));
 }
 
 /** One view plugin per regex chunk. CM6 will merge multiple decoration sources. */
@@ -74,10 +95,9 @@ export function makeChunkPlugin(regex: RegExp, plugin: any) {
 			const info = cache.byPhrase.get(text.toLowerCase());
 			if (!info || info.count <= 0) return;
 
-			// Generate reference key for consistent behavior with native SNW
+			// Use the stored key from PhraseInfo instead of recomputing
 			const fromFile = plugin?.app?.workspace?.getActiveFile?.() ?? null;
-			const key = generateReferenceKey(plugin, text, fromFile);
-			addLinkDecos(add, from, to, text, info, key, plugin);
+			addLinkDecos(add, from, to, text, info, info.key, plugin);
 		},
 	});
 
