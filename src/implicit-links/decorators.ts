@@ -4,6 +4,7 @@ import { type PhraseInfo, inferredCacheField } from "./cache";
 import { buildHoverPopover } from "../ui/components/hover-content";
 import { ATTR } from "../ui/attr";
 import tippy from "tippy.js";
+import { log } from "../diag";
 
 // Using shared guard functions from text-guards.ts
 
@@ -84,7 +85,7 @@ function addLinkDecos(add: any, from: number, to: number, text: string, info: Ph
 	// Log the badge construction (only in dev mode)
 	if (plugin?.settings?.dev?.diagDecorations) {
 		const fromFile = plugin?.app?.workspace?.getActiveFile?.() ?? null;
-		console.log("[SNW badge] key=%s count=%d target=%s from=%s", key, info.count, info.target, fromFile?.path ?? "");
+		log.info("[SNW badge] key=%s count=%d target=%s from=%s", key, info.count, info.target, fromFile?.path ?? "");
 	}
 	
 	// Get the current file for fromFilePath

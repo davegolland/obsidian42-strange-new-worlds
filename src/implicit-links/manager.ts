@@ -4,6 +4,7 @@ import type { TFile } from "obsidian";
 import { type InferredCache, type PhraseInfo, inferredCacheField, setInferredCache } from "./cache";
 import { makeChunkPlugin } from "./decorators";
 import { ATTR } from "../ui/attr";
+import { log } from "../diag";
 // buildPhraseRegexChunks implementation (moved from deleted regex.ts)
 type PhraseRegexOpts = {
 	caseInsensitive?: boolean; // default true
@@ -73,10 +74,10 @@ async function computePhraseInfo(text: string, plugin: any): Promise<Map<string,
 
 		const cache = plugin.referenceCountingPolicy?.getSNWCacheByFile?.(file) ?? null;
 		const providers = plugin.snwAPI?.virtualLinkProviders || [];
-		console.log("[ImplicitLinks manager] computePhraseInfo: found providers", providers.length);
-		console.log("[ImplicitLinks manager] computePhraseInfo: active file", file.path);
-		console.log("[ImplicitLinks manager] plugin.snwAPI:", plugin.snwAPI);
-		console.log("[ImplicitLinks manager] plugin.snwAPI?.virtualLinkProviders:", plugin.snwAPI?.virtualLinkProviders);
+		log.info("[ImplicitLinks manager] computePhraseInfo: found providers", providers.length);
+		log.info("[ImplicitLinks manager] computePhraseInfo: active file", file.path);
+		log.info("[ImplicitLinks manager] plugin.snwAPI:", plugin.snwAPI);
+		log.info("[ImplicitLinks manager] plugin.snwAPI?.virtualLinkProviders:", plugin.snwAPI?.virtualLinkProviders);
 
 		const makeLink = (realLink: string, display: string | undefined, pos: any) => ({
 			realLink,
@@ -88,17 +89,17 @@ async function computePhraseInfo(text: string, plugin: any): Promise<Map<string,
 			providers.map(async (p: any) => {
 				try {
 					const result = await p({ file, cache, makeLink });
-					console.log("[ImplicitLinks manager] provider returned", (result || []).length, "links");
+					log.info("[ImplicitLinks manager] provider returned", (result || []).length, "links");
 					return result || [];
 				} catch (e) {
-					console.warn("[ImplicitLinks manager] Provider error:", e);
+					log.warn("[ImplicitLinks manager] Provider error:", e);
 					return [];
 				}
 			}),
 		);
 
 		const links = batches.flat();
-		console.log("[ImplicitLinks manager] total links from all providers:", links.length);
+		log.info("[ImplicitLinks manager] total links from all providers:", links.length);
 
 		// Fallback: scan custom phrases from settings
 		// DISABLED: Using DetectionManager approach instead to avoid duplicates
@@ -158,7 +159,7 @@ async function computePhraseInfo(text: string, plugin: any): Promise<Map<string,
 			});
 		}
 	} catch (e) {
-		console.warn("[ImplicitLinks manager] Error computing phrase info:", e);
+		log.warn("[ImplicitLinks manager] Error computing phrase info:", e);
 	}
 
 	return byPhrase;

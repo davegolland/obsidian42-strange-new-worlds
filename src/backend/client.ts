@@ -145,13 +145,13 @@ export class BackendClient {
 	/** Get keyword candidates for a file using the stored vault information */
 	async getKeywordCandidatesForFile(relativeFilePath: string): Promise<CandidatesResponse> {
 		if (!this.vaultName || !this.vaultPath) {
-			console.warn("SNW: getKeywordCandidatesForFile: not registered");
+			log.warn("getKeywordCandidatesForFile: not registered");
 			throw new Error("Vault not registered. Call register() first.");
 		}
 		
 		// ADD: Diagnostic logging to track HTTP requests
 		const url = `${this.baseUrl}/candidates?vault=${encodeURIComponent(this.vaultPath)}&path=${encodeURIComponent(relativeFilePath)}`;
-		console.log("SNW: GET", url);
+		log.info("GET", url);
 		
 		// Use the vault path as the vault parameter (as we discovered in testing)
 		return this.getKeywordCandidates(this.vaultPath, relativeFilePath);

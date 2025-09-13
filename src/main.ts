@@ -7,6 +7,7 @@ import * as uiInits from "./ui/ui-inits";
 import { BackendClient } from "./backend/client";
 import { createBackendLinksProvider } from "./backend/provider";
 import { ReferenceCountingPolicy } from "./policies/reference-counting";
+import { log } from "./diag";
 
 
 export default class SNWPlugin extends Plugin {
@@ -114,7 +115,7 @@ export default class SNWPlugin extends Plugin {
 	private async initBackend(): Promise<void> {
 		const url = (this.settings.backendUrl || "").trim();
 		if (!url) {
-			console.warn("SNW: backend URL not set; skipping initBackend");
+			log.warn("backend URL not set; skipping initBackend");
 			this.unregisterBackendProvider?.(); // ensure no stale provider
 			return;
 		}
@@ -128,7 +129,7 @@ export default class SNWPlugin extends Plugin {
 		const basePath = (this.app.vault.adapter as any).getBasePath?.() ?? "";
 
 		if (!basePath) {
-			console.warn("SNW: Cannot get vault base path for backend registration");
+			log.warn("Cannot get vault base path for backend registration");
 			// We can still use /query/related without /register, so ensure provider is up.
 			this.refreshBackendProvider();
 			return;
@@ -139,9 +140,9 @@ export default class SNWPlugin extends Plugin {
 			const vaultName = this.app.vault.getName() || "default-vault";
 
 			await this._backendClient.register(vaultName, basePath);
-			console.log("SNW: HTTP POST {base}/register");
+			log.info("HTTP POST {base}/register");
 		} catch (error) {
-			console.warn("SNW: Backend register failed — check server", error);
+			log.warn("Backend register failed — check server", error);
 			// Continue with provider registration even if register fails
 			// The backend might still be available for queries
 		}
@@ -162,7 +163,7 @@ export default class SNWPlugin extends Plugin {
 
 		// Guard: api ready?
 		if (!this.snwAPI || typeof this.snwAPI.registerVirtualLinkProvider !== 'function') {
-			console.warn("SNW: snwAPI not ready; will try again soon");
+			log.warn("snwAPI not ready; will try again soon");
 			return;
 		}
 
@@ -170,7 +171,7 @@ export default class SNWPlugin extends Plugin {
 			this.snwAPI,
 			this._backendClient
 		);
-		console.log("SNW: backend virtual provider registered");
+		log.info("backend virtual provider registered");
 	}
 
 
@@ -207,7 +208,7 @@ export default class SNWPlugin extends Plugin {
 
 			this.app.workspace.unregisterHoverLinkSource(this.appID);
 		} catch (error) {
-			console.error("unload error", error);
+			log.error("unload error", error);
 		}
 	}
 }

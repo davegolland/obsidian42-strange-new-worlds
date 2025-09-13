@@ -103,7 +103,7 @@ export class ReferenceCountingPolicy {
 		// In minimal mode, we ignore policy changes and always use case-insensitive
 		this.setActivePolicyFromSettings();
 		this.invalidateCache();
-		this.buildLinksAndReferences().catch(console.error);
+		this.buildLinksAndReferences().catch(log.error);
 	}
 
 	/**
@@ -245,11 +245,11 @@ export class ReferenceCountingPolicy {
 		this.virtualLinkProviders.add(provider);
 		// Rebuild so new links are visible immediately
 		this.invalidateCache();
-		this.buildLinksAndReferences().catch(console.error);
+		this.buildLinksAndReferences().catch(log.error);
 		return () => {
 			this.virtualLinkProviders.delete(provider);
 			this.invalidateCache();
-			this.buildLinksAndReferences().catch(console.error);
+			this.buildLinksAndReferences().catch(log.error);
 		};
 	}
 
@@ -302,25 +302,25 @@ export class ReferenceCountingPolicy {
 	 */
 	private async applyVirtualProviders(file: TFile, cache: any): Promise<void> {
 		if (this.virtualLinkProviders.size === 0) {
-			console.log("SNW: applyVirtualProviders: no providers registered");
+			log.info("applyVirtualProviders: no providers registered");
 			return;
 		}
-		console.log("SNW: applyVirtualProviders: processing", this.virtualLinkProviders.size, "providers for file:", file.path);
+		log.info("applyVirtualProviders: processing", this.virtualLinkProviders.size, "providers for file:", file.path);
 		const makeLink = (lt: string, dt?: string, p?: any) => this.makeLinkFor(file, lt, dt, p);
 		for (const provider of this.virtualLinkProviders) {
 			try {
 				const links = await Promise.resolve(provider({ file, cache, makeLink, app: this.plugin.app }));
-				console.log("SNW: applyVirtualProviders: provider returned", (links || []).length, "links");
+				log.info("applyVirtualProviders: provider returned", (links || []).length, "links");
 				if (links && links.length > 0) {
-					console.log("SNW: applyVirtualProviders: sample link:", links[0]);
+					log.info("applyVirtualProviders: sample link:", links[0]);
 				}
 				for (const link of links || []) {
 					const k = this.activePolicy.generateKey(link);
-					console.log("SNW: applyVirtualProviders: generated key for link:", k);
+					log.info("applyVirtualProviders: generated key for link:", k);
 					this.indexedReferences.set(k, [...(this.indexedReferences.get(k) || []), link]);
 				}
 			} catch (e) {
-				console.warn("SNW: VirtualLinkProvider error", e);
+				log.warn("VirtualLinkProvider error", e);
 			}
 		}
 	}
@@ -831,22 +831,22 @@ export class ReferenceCountingPolicy {
 		if (!this.debugMode) return;
 
 		const total = this.indexedReferences.size;
-		console.log(`Total indexed references: ${total}`);
+		log.info(`Total indexed references: ${total}`);
 
 		if (total > 0) {
-			console.log(`First 10 reference keys:`);
+			log.info(`First 10 reference keys:`);
 			let count = 0;
 			for (const key of this.indexedReferences.keys()) {
 				if (count++ < 10) {
 					const refs = this.indexedReferences.get(key) || [];
-					console.log(`  ${key} (${refs.length} references)`);
+					log.info(`  ${key} (${refs.length} references)`);
 
 					// Show first reference's details
 					if (refs.length > 0) {
 						const firstRef = refs[0];
-						console.log(`    From: ${firstRef.sourceFile?.path || "unknown"}`);
-						console.log(`    To: ${firstRef.resolvedFile?.path || "unknown"}`);
-						console.log(`    RealLink: ${firstRef.realLink}`);
+						log.info(`    From: ${firstRef.sourceFile?.path || "unknown"}`);
+						log.info(`    To: ${firstRef.resolvedFile?.path || "unknown"}`);
+						log.info(`    RealLink: ${firstRef.realLink}`);
 					}
 				} else {
 					break;

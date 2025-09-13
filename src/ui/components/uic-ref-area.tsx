@@ -109,7 +109,7 @@ const getRefAreaItems = async (refType: string, realLink: string, key: string, f
 						reference: { link: ref.file, key: ref.file, displayText: ref.title, position: { start: { line: ref.line, col: ref.col, offset: 0 }, end: { line: ref.line, col: ref.col, offset: 0 } } },
 					}));
 					
-					console.log("[SNW hover] backend references for linkId=%s → %d", linkId, linksToLoop.length);
+					log.info("[SNW hover] backend references for linkId=%s → %d", linkId, linksToLoop.length);
 				} else {
 					// No backend references found
 					const hint = createDiv({ cls: "snw-ref-empty" });
@@ -119,7 +119,7 @@ const getRefAreaItems = async (refType: string, realLink: string, key: string, f
 					return { response: container, refCount: 0 };
 				}
 			} catch (error) {
-				console.warn("[SNW hover] backend references failed:", error);
+				log.warn("[SNW hover] backend references failed:", error);
 				// Fallback to empty state
 				const hint = createDiv({ cls: "snw-ref-empty" });
 				hint.setText("No indexed backlinks (inferred link).");
@@ -147,7 +147,7 @@ const getRefAreaItems = async (refType: string, realLink: string, key: string, f
 	const countOfRefs = referenceCountingPolicy.countReferences(linksToLoop);
 	
 	// Log how many items the list will render
-	console.log("[SNW hover] items for key=%s → %d", key, linksToLoop.length);
+	log.info("[SNW hover] items for key=%s → %d", key, linksToLoop.length);
 
 	// get the unique file names for files in thie refeernces
 	const uniqueFileKeys: Link[] = Array.from(new Set(linksToLoop.map((a: Link) => a.sourceFile?.path)))
