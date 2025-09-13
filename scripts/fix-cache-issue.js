@@ -1,23 +1,23 @@
 // Fix Cache Issue script
 // This script uses the correct method to process links and populate cache
 
-console.log('🔧 SNW Cache Fix Script');
+console.log('🔧 InferredWikilinks Cache Fix Script');
 console.log('=======================');
 
-// Wait for SNW to be available
-function waitForSNW() {
-    if (window.snwAPI) {
+// Wait for InferredWikilinks to be available
+function waitForInferredWikilinks() {
+    if (window.inferredWikilinksAPI) {
         fixCacheIssue();
     } else {
-        console.log('⏳ Waiting for SNW API...');
-        setTimeout(waitForSNW, 1000);
+        console.log('⏳ Waiting for InferredWikilinks API...');
+        setTimeout(waitForInferredWikilinks, 1000);
     }
 }
 
 async function fixCacheIssue() {
-    console.log('✅ SNW API found, fixing cache issue...');
+    console.log('✅ InferredWikilinks API found, fixing cache issue...');
     
-    const plugin = window.snwAPI.plugin;
+    const plugin = window.inferredWikilinksAPI.plugin;
     const currentFile = plugin.app.workspace.getActiveFile();
     
     console.log(`📄 Current file: ${currentFile.path}`);
@@ -44,8 +44,8 @@ async function fixCacheIssue() {
         await new Promise(resolve => setTimeout(resolve, 1000));
         
         // Check cache again
-        const snwCache = plugin.referenceCountingPolicy.getSNWCacheByFile(currentFile);
-        console.log('SNW cache after processing:', snwCache);
+        const snwCache = plugin.referenceCountingPolicy.getInferredWikilinksCacheByFile(currentFile);
+        console.log('InferredWikilinks cache after processing:', snwCache);
         
         if (snwCache) {
             console.log('- Links in cache:', snwCache.links?.length || 0);
@@ -59,7 +59,7 @@ async function fixCacheIssue() {
         
         // Check DOM
         const snwElements = document.querySelectorAll('[class*="snw"]');
-        console.log(`SNW elements in DOM: ${snwElements.length}`);
+        console.log(`InferredWikilinks elements in DOM: ${snwElements.length}`);
         
         // If still no cache, try a different approach
         if (!snwCache || snwCache.links?.length === 0) {
@@ -73,8 +73,8 @@ async function fixCacheIssue() {
                 await plugin.referenceCountingPolicy.buildLinksAndReferences();
                 
                 // Check cache again
-                const newSnwCache = plugin.referenceCountingPolicy.getSNWCacheByFile(currentFile);
-                console.log('SNW cache after full rebuild:', newSnwCache);
+                const newSnwCache = plugin.referenceCountingPolicy.getInferredWikilinksCacheByFile(currentFile);
+                console.log('InferredWikilinks cache after full rebuild:', newSnwCache);
                 
                 if (newSnwCache) {
                     console.log('- Links in new cache:', newSnwCache.links?.length || 0);
@@ -85,7 +85,7 @@ async function fixCacheIssue() {
                 
                 // Check DOM again
                 const newSnwElements = document.querySelectorAll('[class*="snw"]');
-                console.log(`SNW elements after rebuild: ${newSnwElements.length}`);
+                console.log(`InferredWikilinks elements after rebuild: ${newSnwElements.length}`);
             }
         }
         
@@ -100,4 +100,4 @@ async function fixCacheIssue() {
 }
 
 // Start the fix
-waitForSNW();
+waitForInferredWikilinks();

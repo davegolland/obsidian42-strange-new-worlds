@@ -1,7 +1,7 @@
 import { Plugin } from "obsidian";
 import { ImplicitLinksManager } from "./implicit-links/ImplicitLinksManager";
 import { DEFAULT_SETTINGS, type Settings, loadSettings, saveSettings } from "./settings";
-import SnwAPI from "./snwApi";
+import InferredWikilinksAPI from "./inferredWikilinksApi";
 import { SettingsTab } from "./ui/SettingsTab";
 import * as uiInits from "./ui/ui-inits";
 import { BackendClient } from "./backend/client";
@@ -10,12 +10,12 @@ import { ReferenceCountingPolicy } from "./policies/reference-counting";
 import { log } from "./diag";
 
 
-export default class SNWPlugin extends Plugin {
+export default class InferredWikilinksPlugin extends Plugin {
 	appName = this.manifest.name;
 	appID = this.manifest.id;
-	APP_ABBREVIARTION = "SNW";
+	APP_ABBREVIATION = "IW";
 	settings: Settings = DEFAULT_SETTINGS;
-	snwAPI: SnwAPI = new SnwAPI(this);
+	inferredWikilinksAPI: InferredWikilinksAPI = new InferredWikilinksAPI(this);
 	implicitLinksManager!: ImplicitLinksManager;
 	referenceCountingPolicy!: ReferenceCountingPolicy;
 	
@@ -45,7 +45,7 @@ export default class SNWPlugin extends Plugin {
 	 * Initialize the API for external access
 	 */
 	private async initAPI(): Promise<void> {
-		this.snwAPI ??= new SnwAPI(this);
+		this.inferredWikilinksAPI ??= new InferredWikilinksAPI(this);
 	}
 
 	/**
@@ -162,13 +162,13 @@ export default class SNWPlugin extends Plugin {
 		this.unregisterBackendProvider = null;
 
 		// Guard: api ready?
-		if (!this.snwAPI || typeof this.snwAPI.registerVirtualLinkProvider !== 'function') {
-			log.warn("snwAPI not ready; will try again soon");
+		if (!this.inferredWikilinksAPI || typeof this.inferredWikilinksAPI.registerVirtualLinkProvider !== 'function') {
+			log.warn("inferredWikilinksAPI not ready; will try again soon");
 			return;
 		}
 
 		this.unregisterBackendProvider = createBackendLinksProvider(
-			this.snwAPI,
+			this.inferredWikilinksAPI,
 			this._backendClient
 		);
 		log.info("backend virtual provider registered");

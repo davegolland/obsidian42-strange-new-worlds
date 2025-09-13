@@ -72,7 +72,7 @@ export class CachedAPIDetector extends APIDetector {
 ### For Users
 
 1. **Copy the demo files** to your vault
-2. **Configure implicit links** in SNW settings
+2. **Configure implicit links** in InferredWikilinks settings
 3. **Test the patterns** by viewing the files in Obsidian
 4. **Customize the patterns** for your own use cases
 
@@ -142,7 +142,7 @@ export class CachedAPIDetector extends APIDetector {
 ## Testing Your Configuration
 
 ### Step 1: Enable Implicit Links
-1. Open SNW settings
+1. Open InferredWikilinks settings
 2. Navigate to "Implicit Links" section
 3. Set detection mode to "regex" or "dictionary"
 4. Configure your patterns or dictionary settings
@@ -150,12 +150,12 @@ export class CachedAPIDetector extends APIDetector {
 ### Step 2: Test with Demo Files
 1. Open one of the demo files in this directory
 2. Look for highlighted text (implicit links)
-3. Check the SNW sidebar for virtual links
+3. Check the InferredWikilinks sidebar for virtual links
 4. Click on links to verify navigation
 
 ### Step 3: Debug Issues
 1. Open browser console (Ctrl+Shift+I)
-2. Look for SNW-related log messages
+2. Look for InferredWikilinks-related log messages
 3. Check that patterns match your text
 4. Verify target files exist in your vault
 

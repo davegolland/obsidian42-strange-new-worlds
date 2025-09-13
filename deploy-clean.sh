@@ -10,7 +10,7 @@ echo "🔧 Deploying clean plugin build..."
 ROOT="${VAULT_PATH:-/Users/dave/temp/vault/techniques/techniques}"
 
 # Configuration - update these paths for your setup
-VAULT_PLUGIN_DIR="$ROOT/.obsidian/plugins/obsidian42-strange-new-worlds"
+VAULT_PLUGIN_DIR="$ROOT/.obsidian/plugins/obsidian42-inferred-wikilinks"
 BUILD_DIR="./build"
 
 # Clean and rebuild the plugin
@@ -43,11 +43,7 @@ cp -r "$BUILD_DIR"/* "$VAULT_PLUGIN_DIR/"
 # Manifest file is already copied by esbuild config
 echo "📋 Manifest file already in build directory"
 
-# Copy media if it exists
-if [ -d "./media" ]; then
-    echo "🖼️  Copying media files..."
-    cp -r "./media" "$VAULT_PLUGIN_DIR/"
-fi
+# Media directory removed - no longer copying media files
 
 # Verify deployment
 echo "✅ Deployment complete!"
@@ -75,7 +71,7 @@ fi
 echo ""
 echo "🎯 Next steps:"
 echo "1. Restart Obsidian"
-echo "2. Enable the SNW plugin"
+echo "2. Enable the InferredWikilinks plugin"
 echo "3. Check console for CM6 path logs"
 echo "4. Test for 'Unrecognized extension value' errors"
 echo ""

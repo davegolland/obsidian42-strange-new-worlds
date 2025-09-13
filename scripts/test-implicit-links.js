@@ -5,7 +5,7 @@
  * Run this in the Obsidian console after enabling the plugin
  */
 
-console.log("Testing SNW Implicit Links...");
+console.log("Testing InferredWikilinks Implicit Links...");
 
 // Test configuration
 const testConfig = {
@@ -109,4 +109,4 @@ console.log("1. Enable the plugin");
 console.log("2. Set detectionMode to 'regex' in settings");
 console.log("3. Add regex rules similar to the test config");
 console.log("4. Create a test file with the test text");
-console.log("5. Check if virtual links appear in the SNW sidebar");
+console.log("5. Check if virtual links appear in the InferredWikilinks sidebar");

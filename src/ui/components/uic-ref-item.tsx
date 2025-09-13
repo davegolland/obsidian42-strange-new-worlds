@@ -2,7 +2,7 @@
 
 import { MarkdownRenderer } from "obsidian";
 import { render } from "preact";
-import type SNWPlugin from "src/main";
+import type InferredWikilinksPlugin from "src/main";
 import type { Link } from "../../types";
 import { ATTR } from "../attr";
 // Context imports removed - context directory was deleted
@@ -36,11 +36,11 @@ function formatListWithDescendants(fileContents: string, item: any): string {
 	return item.text || "";
 }
 
-export function setPluginVariableUIC_RefItem(snwPlugin: SNWPlugin) {
+export function setPluginVariableUIC_RefItem(inferredWikilinksPlugin: InferredWikilinksPlugin) {
 	// No longer needed - plugin is injected as parameter
 }
 
-export const getUIC_Ref_Item = async (ref: Link, plugin: SNWPlugin): Promise<HTMLElement> => {
+export const getUIC_Ref_Item = async (ref: Link, plugin: InferredWikilinksPlugin): Promise<HTMLElement> => {
 	const startLine = ref.reference.position !== undefined ? ref.reference.position.start.line.toString() : "0";
 
 	const itemElJsx = (
@@ -68,7 +68,7 @@ export const getUIC_Ref_Item = async (ref: Link, plugin: SNWPlugin): Promise<HTM
  * @param {Link} ref
  * @return {*}  {Promise<string>}
  */
-const grabChunkOfFile = async (ref: Link, plugin: SNWPlugin): Promise<HTMLElement> => {
+const grabChunkOfFile = async (ref: Link, plugin: InferredWikilinksPlugin): Promise<HTMLElement> => {
 	const fileContents = await plugin.app.vault.cachedRead(ref.sourceFile);
 	const fileCache = plugin.app.metadataCache.getFileCache(ref.sourceFile);
 	const linkPosition = ref.reference.position;

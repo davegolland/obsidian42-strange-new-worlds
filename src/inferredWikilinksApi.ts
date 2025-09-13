@@ -1,25 +1,25 @@
 import type { CachedMetadata, TFile } from "obsidian";
-import type SNWPlugin from "./main";
+import type InferredWikilinksPlugin from "./main";
 import type { TransformedCache, TransformedCacheMinimal, VirtualLinkProvider, Link } from "./types";
 import type { ReferenceCountingPolicy } from "./policies/reference-counting";
 
 /**
  * Provide a simple API for use with Templater, Dataview and debugging the complexities of various pages.
  */
-export default class SnwAPI {
-	plugin: SNWPlugin;
+export default class InferredWikilinksAPI {
+	plugin: InferredWikilinksPlugin;
 	references: Map<string, Link[]>;
 
 
-	constructor(snwPlugin: SNWPlugin) {
-		this.plugin = snwPlugin;
+	constructor(inferredWikilinksPlugin: InferredWikilinksPlugin) {
+		this.plugin = inferredWikilinksPlugin;
 	}
 
 
 	getMetaInfoByCurrentFile = async (): Promise<{
 		TFile: TFile | null;
 		metadataCache: CachedMetadata | null;
-		SnwTransformedCache: TransformedCache | null;
+		InferredWikilinksTransformedCache: TransformedCache | null;
 	} | null> => {
 		return this.getMetaInfoByFileName(this.plugin.app.workspace.getActiveFile()?.path || "");
 	};
@@ -31,7 +31,7 @@ export default class SnwAPI {
 		return {
 			TFile: currentFile,
 			metadataCache: currentFile ? this.plugin.app.metadataCache.getFileCache(currentFile) : null,
-			SnwTransformedCache: currentFile ? this.plugin.referenceCountingPolicy.getSNWCacheByFile(currentFile) : null,
+			InferredWikilinksTransformedCache: currentFile ? this.plugin.referenceCountingPolicy.getInferredWikilinksCacheByFile(currentFile) : null,
 		};
 	};
 
@@ -56,8 +56,8 @@ export default class SnwAPI {
 	}
 
 	// (If any UI piece still calls this, give it a safe fallback)
-	getSNWCacheByFile(file: TFile): TransformedCacheMinimal {
-		const cache = this.plugin?.referenceCountingPolicy?.getSNWCacheByFile?.(file);
+	getInferredWikilinksCacheByFile(file: TFile): TransformedCacheMinimal {
+		const cache = this.plugin?.referenceCountingPolicy?.getInferredWikilinksCacheByFile?.(file);
 		return {
 			blocks: cache?.blocks ?? [],
 			links: cache?.links ?? [],

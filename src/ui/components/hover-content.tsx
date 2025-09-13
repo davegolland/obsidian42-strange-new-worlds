@@ -1,12 +1,12 @@
 import { Keymap, Notice } from "obsidian";
-import type SNWPlugin from "src/main";
+import type InferredWikilinksPlugin from "src/main";
 import { getUIC_Ref_Area } from "./uic-ref-area";
 import { setPluginVariableUIC_RefItem } from "./uic-ref-item";
 import { ATTR } from "../attr";
 import { passesHoverGate } from "../modifier";
 
-export function setPluginVariableForUIC(snwPlugin: SNWPlugin) {
-	setPluginVariableUIC_RefItem(snwPlugin);
+export function setPluginVariableForUIC(inferredWikilinksPlugin: InferredWikilinksPlugin) {
+	setPluginVariableUIC_RefItem(inferredWikilinksPlugin);
 }
 
 
@@ -15,7 +15,7 @@ export function setPluginVariableForUIC(snwPlugin: SNWPlugin) {
  * @param ctx - Context containing reference element and plugin instance
  * @returns Promise resolving to the hover popover HTMLElement
  */
-export const buildHoverPopover = async (ctx: { referenceEl: HTMLElement, plugin: SNWPlugin }): Promise<HTMLElement> => {
+export const buildHoverPopover = async (ctx: { referenceEl: HTMLElement, plugin: InferredWikilinksPlugin }): Promise<HTMLElement> => {
 	const { referenceEl, plugin } = ctx;
 	
 	// Read data attributes from referenceEl
@@ -40,10 +40,10 @@ export const buildHoverPopover = async (ctx: { referenceEl: HTMLElement, plugin:
 
 /**
  * Attaches hover behavior to a popover element
- * @param plugin - SNW plugin instance
+ * @param plugin - InferredWikilinks plugin instance
  * @param el - The popover element to attach behavior to
  */
-const attachHoverBehavior = (plugin: SNWPlugin, el: HTMLElement): void => {
+const attachHoverBehavior = (plugin: InferredWikilinksPlugin, el: HTMLElement): void => {
 	requestAnimationFrame(() => { void wireHoverEvents(plugin, el); });
 	// Simple scroll to top - popover content is already visible
 	el.scrollTop = 0;
@@ -52,10 +52,10 @@ const attachHoverBehavior = (plugin: SNWPlugin, el: HTMLElement): void => {
 
 /**
  * Wires hover events for file links and reference items using event delegation
- * @param plugin - SNW plugin instance
+ * @param plugin - InferredWikilinks plugin instance
  * @param rootElementForViewEl - Root element to attach handlers to
  */
-export const wireHoverEvents = async (plugin: SNWPlugin, rootElementForViewEl: HTMLElement) => {
+export const wireHoverEvents = async (plugin: InferredWikilinksPlugin, rootElementForViewEl: HTMLElement) => {
 	// CLICK event delegation
 	rootElementForViewEl.addEventListener("click", async (e: MouseEvent) => {
 		const handlerElement = (e.target as HTMLElement).closest(".snw-ref-item-file, .snw-ref-item-info, .snw-ref-title-popover-label");

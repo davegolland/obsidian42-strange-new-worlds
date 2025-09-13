@@ -5,7 +5,7 @@
  * Run this in the Obsidian console after enabling the plugin
  */
 
-console.log("Testing SNW Dictionary Detector...");
+console.log("Testing InferredWikilinks Dictionary Detector...");
 
 // Test configuration
 const testConfig = {
@@ -199,4 +199,4 @@ console.log("1. Enable the plugin");
 console.log("2. Set detectionMode to 'dictionary' in settings");
 console.log("3. Configure dictionary sources (basenames, aliases, headings)");
 console.log("4. Create test files with the mock vault structure");
-console.log("5. Check if virtual links appear in the SNW sidebar");
+console.log("5. Check if virtual links appear in the InferredWikilinks sidebar");

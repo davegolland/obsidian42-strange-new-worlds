@@ -48,7 +48,7 @@ const context = await esbuild.context({
   bundle: true,
   minify: prod,
   define: {
-    'process.env.SNW_MINIMAL': JSON.stringify(process.env.SNW_MINIMAL || 'false'),
+    'process.env.IW_MINIMAL': JSON.stringify(process.env.IW_MINIMAL || 'false'),
     'process.env.NODE_ENV': JSON.stringify(prod ? 'production' : 'development'),
   },
   drop: prod ? ['console', 'debugger'] : [],

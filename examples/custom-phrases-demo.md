@@ -1,6 +1,6 @@
 # Custom Phrases Demo
 
-This file demonstrates the custom phrases feature. With the right configuration, the following terms should appear as virtual links in the SNW sidebar:
+This file demonstrates the custom phrases feature. With the right configuration, the following terms should appear as virtual links in the InferredWikilinks sidebar:
 
 ## Custom Terms
 
@@ -102,7 +102,7 @@ In the current implementation, custom phrases are added to each file's dictionar
 ## Management Tips
 
 ### **Adding Phrases**
-1. Go to SNW settings → Implicit Links → Dictionary Configuration
+1. Go to InferredWikilinks settings → Implicit Links → Dictionary Configuration
 2. Enable "Include Custom Phrases"
 3. Click "Add Phrase" for each new phrase
 4. Enter the exact phrase text

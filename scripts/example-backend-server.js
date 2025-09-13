@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 /**
- * Example backend server for testing SNW backend integration
+ * Example backend server for testing InferredWikilinks backend integration
  * Run with: node scripts/example-backend-server.js
  */
 

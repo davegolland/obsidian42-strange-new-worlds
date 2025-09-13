@@ -1,6 +1,6 @@
 # Dictionary Detection Demo
 
-This file demonstrates the dictionary-based implicit links feature. With the right configuration, the following terms should appear as virtual links in the SNW sidebar:
+This file demonstrates the dictionary-based implicit links feature. With the right configuration, the following terms should appear as virtual links in the InferredWikilinks sidebar:
 
 ## Note References
 
@@ -90,6 +90,6 @@ Machine learning concepts and techniques.
 ## Advanced Features
 
 - **Headings**: Enable "Include Note Headings" to also detect links to headings within notes
-- **Custom Policies**: Dictionary detection works with all SNW equivalence policies
+- **Custom Policies**: Dictionary detection works with all InferredWikilinks equivalence policies
 - **Incremental Updates**: Dictionary rebuilds when files are created/renamed
 - **Trie-based Matching**: Efficient character-based matching for large phrase sets

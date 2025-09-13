@@ -1,11 +1,11 @@
-import type SNWPlugin from "../main";
+import type InferredWikilinksPlugin from "../main";
 
 /**
  * Factory function to register inline decorations and implicit links extensions
  * Separates "what we wire" from "when we boot" for cleaner main.ts
- * @param plugin - SNW plugin instance
+ * @param plugin - InferredWikilinks plugin instance
  */
-export const registerInlineAndImplicit = async (plugin: SNWPlugin) => {
+export const registerInlineAndImplicit = async (plugin: InferredWikilinksPlugin) => {
 	// Register inline decorations extension
 	const { inlineDecorationsExtension } = await import("./references-cm6");
 	plugin.registerEditorExtension(inlineDecorationsExtension(plugin));

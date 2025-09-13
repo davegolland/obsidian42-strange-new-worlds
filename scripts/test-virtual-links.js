@@ -3,20 +3,20 @@
 
 console.log('Testing Virtual Links feature...');
 
-// Wait for SNW to be available
-function waitForSNW() {
-    if (window.snwAPI) {
+// Wait for InferredWikilinks to be available
+function waitForInferredWikilinks() {
+    if (window.inferredWikilinksAPI) {
         testVirtualLinks();
     } else {
-        setTimeout(waitForSNW, 1000);
+        setTimeout(waitForInferredWikilinks, 1000);
     }
 }
 
 function testVirtualLinks() {
-    console.log('SNW API found, testing Virtual Links...');
+    console.log('InferredWikilinks API found, testing Virtual Links...');
     
     // Test 1: Simple frontmatter provider
-    const frontmatterProvider = window.snwAPI.registerVirtualLinkProvider(({ file, cache, makeLink }) => {
+    const frontmatterProvider = window.inferredWikilinksAPI.registerVirtualLinkProvider(({ file, cache, makeLink }) => {
         const links = [];
         
         // Treat 'related' frontmatter property as links
@@ -42,7 +42,7 @@ function testVirtualLinks() {
     });
     
     // Test 2: Path-based provider
-    const pathProvider = window.snwAPI.registerVirtualLinkProvider(({ file, cache, makeLink }) => {
+    const pathProvider = window.inferredWikilinksAPI.registerVirtualLinkProvider(({ file, cache, makeLink }) => {
         const links = [];
         
         // Create links based on file path patterns
@@ -64,7 +64,7 @@ function testVirtualLinks() {
     });
     
     // Test 3: Content-based provider
-    const contentProvider = window.snwAPI.registerVirtualLinkProvider(({ file, cache, makeLink }) => {
+    const contentProvider = window.inferredWikilinksAPI.registerVirtualLinkProvider(({ file, cache, makeLink }) => {
         const links = [];
         
         // Create links based on file content
@@ -88,7 +88,7 @@ function testVirtualLinks() {
     });
     
     console.log('Virtual Links providers registered successfully!');
-    console.log('Providers will be active for all files. Check the SNW sidebar and gutters for virtual links.');
+    console.log('Providers will be active for all files. Check the InferredWikilinks sidebar and gutters for virtual links.');
     console.log('To unregister providers, call: frontmatterProvider(); pathProvider(); contentProvider();');
     
     // Store unregister functions globally for easy access
@@ -101,4 +101,4 @@ function testVirtualLinks() {
 }
 
 // Start the test
-waitForSNW();
+waitForInferredWikilinks();

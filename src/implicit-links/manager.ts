@@ -72,12 +72,12 @@ async function computePhraseInfo(text: string, plugin: any): Promise<Map<string,
 		const file: TFile | null = plugin.app.workspace.getActiveFile?.() ?? null;
 		if (!file) return byPhrase;
 
-		const cache = plugin.referenceCountingPolicy?.getSNWCacheByFile?.(file) ?? null;
-		const providers = plugin.snwAPI?.virtualLinkProviders || [];
+		const cache = plugin.referenceCountingPolicy?.getInferredWikilinksCacheByFile?.(file) ?? null;
+		const providers = plugin.inferredWikilinksAPI?.virtualLinkProviders || [];
 		log.info("[ImplicitLinks manager] computePhraseInfo: found providers", providers.length);
 		log.info("[ImplicitLinks manager] computePhraseInfo: active file", file.path);
-		log.info("[ImplicitLinks manager] plugin.snwAPI:", plugin.snwAPI);
-		log.info("[ImplicitLinks manager] plugin.snwAPI?.virtualLinkProviders:", plugin.snwAPI?.virtualLinkProviders);
+		log.info("[ImplicitLinks manager] plugin.inferredWikilinksAPI:", plugin.inferredWikilinksAPI);
+		log.info("[ImplicitLinks manager] plugin.inferredWikilinksAPI?.virtualLinkProviders:", plugin.inferredWikilinksAPI?.virtualLinkProviders);
 
 		const makeLink = (realLink: string, display: string | undefined, pos: any) => ({
 			realLink,

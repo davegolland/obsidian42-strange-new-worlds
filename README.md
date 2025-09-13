@@ -1,12 +1,12 @@
-# Strange New Worlds of networked thought
+# Inferred Wikilinks
 
-This plugin helps you to see the connections between the different parts of your vault.
+This plugin helps you to see the connections between the different parts of your vault through intelligent link detection and visualization.
 
-The basic idea is we want to see when links, block references and embeds have associations with other files in the vault. The problem is you have to search, open backlinks, and so on to find out what is going on. But there are so many strange new worlds of networked thought to discover in our vault. This plugin attempts to resurface those connections and not be too intrusive (or not too intrusive) in doing so.
+The basic idea is we want to see when links, block references and embeds have associations with other files in the vault. The problem is you have to search, open backlinks, and so on to find out what is going on. But there are so many inferred connections to discover in our vault. This plugin attempts to resurface those connections and not be too intrusive (or not too intrusive) in doing so.
 
 ## 🔧 Modular Policy System
 
-Strange New Worlds features a **modular policy system** that determines how wikilinks should be considered equivalent. Each policy is self-contained and can be easily enabled/disabled or extended:
+Inferred Wikilinks features a **modular policy system** that determines how wikilinks should be considered equivalent. Each policy is self-contained and can be easily enabled/disabled or extended:
 
 - **Built-in Policies**: Case insensitive, word form unification, prefix overlap, and more
 - **External Service Integration**: Connect to backend services for advanced link normalization
@@ -15,17 +15,15 @@ Strange New Worlds features a **modular policy system** that determines how wiki
 
 See [Policy System Documentation](docs/POLICY_SYSTEM.md) for detailed information on creating and configuring policies.
 
-![](media/SNW.gif)
-
 ## 🆕 Virtual Links
 
-Strange New Worlds now supports **Virtual Links** - a powerful feature that allows other plugins and snippets to register dynamic link providers. These virtual links are indexed just like regular wikilinks and appear in reference counts, gutters, and the sidebar.
+Inferred Wikilinks now supports **Virtual Links** - a powerful feature that allows other plugins and snippets to register dynamic link providers. These virtual links are indexed just like regular wikilinks and appear in reference counts, gutters, and the sidebar.
 
 ### Quick Example
 
 ```typescript
 // Register a provider that treats frontmatter 'related' property as links
-const unregister = window.snwAPI!.registerVirtualLinkProvider(({ file, cache, makeLink }) => {
+const unregister = window.inferredWikilinksAPI!.registerVirtualLinkProvider(({ file, cache, makeLink }) => {
     const links = [];
     if (cache?.frontmatter?.related) {
         cache.frontmatter.related.forEach(noteName => {
@@ -40,7 +38,7 @@ See [Virtual Links Documentation](docs/VIRTUAL_LINKS_EXAMPLE.md) for detailed ex
 
 ## 🤖 Backend Integration
 
-Strange New Worlds supports connecting to external backend services for AI-powered link suggestions. The backend integration provides intelligent link recommendations based on your note content.
+Inferred Wikilinks supports connecting to external backend services for AI-powered link suggestions. The backend integration provides intelligent link recommendations based on your note content.
 
 ### Features
 - **Zero-config setup**: Automatically registers your vault with the backend

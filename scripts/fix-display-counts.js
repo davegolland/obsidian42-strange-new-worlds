@@ -1,30 +1,30 @@
 // Fix Display Counts script
 // This script fixes the display logic to show correct reference counts
 
-console.log('🔧 SNW Fix Display Counts');
+console.log('🔧 InferredWikilinks Fix Display Counts');
 console.log('=========================');
 
-// Wait for SNW to be available
-function waitForSNW() {
-    if (window.snwAPI) {
+// Wait for InferredWikilinks to be available
+function waitForInferredWikilinks() {
+    if (window.inferredWikilinksAPI) {
         fixDisplayCounts();
     } else {
-        console.log('⏳ Waiting for SNW API...');
-        setTimeout(waitForSNW, 1000);
+        console.log('⏳ Waiting for InferredWikilinks API...');
+        setTimeout(waitForInferredWikilinks, 1000);
     }
 }
 
 async function fixDisplayCounts() {
-    console.log('✅ SNW API found, fixing display counts...');
+    console.log('✅ InferredWikilinks API found, fixing display counts...');
     
-    const plugin = window.snwAPI.plugin;
+    const plugin = window.inferredWikilinksAPI.plugin;
     const currentFile = plugin.app.workspace.getActiveFile();
     
     console.log(`📄 Current file: ${currentFile.path}`);
     
-    // Get the SNW cache
-    const snwCache = await plugin.referenceCountingPolicy.getSNWCacheByFile(currentFile);
-    console.log('\n📊 SNW Cache:');
+    // Get the InferredWikilinks cache
+    const snwCache = await plugin.referenceCountingPolicy.getInferredWikilinksCacheByFile(currentFile);
+    console.log('\n📊 InferredWikilinks Cache:');
     console.log('- Links in cache:', snwCache.links?.length || 0);
     
     if (snwCache.links && snwCache.links.length > 0) {
@@ -33,7 +33,7 @@ async function fixDisplayCounts() {
             console.log(`  ${index + 1}. ${link.key}: ${link.references.length} references`);
         });
         
-        // Remove existing SNW indicators
+        // Remove existing InferredWikilinks indicators
         console.log('\n🧹 Removing existing indicators...');
         const existingIndicators = document.querySelectorAll('.snw-ref-count');
         existingIndicators.forEach(indicator => {
@@ -91,7 +91,7 @@ async function fixDisplayCounts() {
                 // Add click handler
                 indicator.addEventListener('click', () => {
                     console.log(`Clicked indicator for ${cacheEntry.key} (${cacheEntry.references.length} references)`);
-                    // You can add SNW view activation here if needed
+                    // You can add InferredWikilinks view activation here if needed
                 });
                 
                 // Insert after the link
@@ -113,4 +113,4 @@ async function fixDisplayCounts() {
 }
 
 // Start the fix
-waitForSNW();
+waitForInferredWikilinks();

@@ -2,7 +2,7 @@
 
 import { setIcon } from "obsidian";
 import { render } from "preact";
-import type SNWPlugin from "src/main";
+import type InferredWikilinksPlugin from "src/main";
 import type { Link } from "src/types";
 import type { ReferenceCountingPolicy } from "../../policies/reference-counting";
 import type { SortOption } from "../../settings";
@@ -11,7 +11,7 @@ import { getUIC_Ref_Item } from "./uic-ref-item";
 import { getUIC_Ref_Title_Div } from "./uic-ref-title";
 import { ATTR } from "../attr";
 
-export function setPluginVariableUIC_RefArea(snwPlugin: SNWPlugin) {
+export function setPluginVariableUIC_RefArea(inferredWikilinksPlugin: InferredWikilinksPlugin) {
 	// No longer needed - plugin is injected as parameter
 }
 
@@ -23,7 +23,7 @@ export const getUIC_Ref_Area = async (
 	filePath: string,
 	lineNu: number,
 	isHoverView: boolean,
-	plugin: SNWPlugin,
+	plugin: InferredWikilinksPlugin,
 	display?: string,
 ): Promise<HTMLElement> => {
 	const refAreaItems = await getRefAreaItems(refType, realLink, key, filePath, plugin);
@@ -77,7 +77,7 @@ const sortLinks = (links: Link[], option: SortOption): Link[] => {
 };
 
 // Creates a DIV for a collection of reference blocks to be displayed
-const getRefAreaItems = async (refType: string, realLink: string, key: string, filePath: string, plugin: SNWPlugin): Promise<{ response: HTMLElement; refCount: number }> => {
+const getRefAreaItems = async (refType: string, realLink: string, key: string, filePath: string, plugin: InferredWikilinksPlugin): Promise<{ response: HTMLElement; refCount: number }> => {
 	let linksToLoop: Link[] = [];
 
 	if (refType === "File") {

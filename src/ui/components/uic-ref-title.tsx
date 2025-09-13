@@ -1,7 +1,7 @@
 // Component to display the title at the top of a uic-ref-area
 
 import { render } from "preact";
-import type SNWPlugin from "src/main";
+import type InferredWikilinksPlugin from "src/main";
 import { hideAll } from "tippy.js";
 import { ATTR } from "../attr";
 // IconMoreDetails and SortOrderDropdown removed - files were deleted
@@ -13,7 +13,7 @@ export const getUIC_Ref_Title_Div = (
 	filePath: string,
 	refCount: number,
 	lineNu: number,
-	plugin: SNWPlugin,
+	plugin: InferredWikilinksPlugin,
 	display?: string,
 	handleSortOptionChangeCallback?: () => void,
 ): HTMLElement => {

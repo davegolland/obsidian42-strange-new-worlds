@@ -5,8 +5,8 @@ import { Transaction } from "@codemirror/state";
  */
 import { Decoration, type DecorationSet, type EditorView, MatchDecorator, ViewPlugin, type ViewUpdate, WidgetType } from "@codemirror/view";
 import { type TFile, editorInfoField, parseLinktext, stripHeading } from "obsidian";
-import type SNWPlugin from "src/main";
-import SnwAPI from "src/snwApi";
+import type InferredWikilinksPlugin from "src/main";
+import InferredWikilinksAPI from "src/inferredWikilinksApi";
 import type { ReferenceCountingPolicy } from "../policies/reference-counting";
 import type { TransformedCachedItem } from "../types";
 import { buildHoverPopover } from "../ui/components/hover-content";
@@ -15,18 +15,18 @@ import tippy from "tippy.js";
 import "tippy.js/dist/tippy.css";
 // htmlDecorationForReferencesElement removed - was from deleted htmlDecorations.tsx
 
-let plugin: SNWPlugin;
+let plugin: InferredWikilinksPlugin;
 let referenceCountingPolicy: ReferenceCountingPolicy;
 
-export function setPluginVariableForCM6InlineReferences(snwPlugin: SNWPlugin) {
-	plugin = snwPlugin;
+export function setPluginVariableForCM6InlineReferences(inferredWikilinksPlugin: InferredWikilinksPlugin) {
+	plugin = inferredWikilinksPlugin;
 	referenceCountingPolicy = plugin.referenceCountingPolicy;
 }
 
 /**
  * Factory function that creates a CM6 extension bound to a specific plugin instance
  */
-export const inlineDecorationsExtension = (plugin: SNWPlugin) =>
+export const inlineDecorationsExtension = (plugin: InferredWikilinksPlugin) =>
 	ViewPlugin.fromClass(
 		class {
 			decorator: MatchDecorator | undefined;
@@ -38,7 +38,7 @@ export const inlineDecorationsExtension = (plugin: SNWPlugin) =>
 				(this as any)._plugin = plugin;
 				
 				// The constructor seems to be called only once when a file is viewed. The decorator is called multipe times.
-				const p: SNWPlugin = (this as any)._plugin;
+				const p: InferredWikilinksPlugin = (this as any)._plugin;
 				this.regxPattern = "(\\s\\^)(\\S+)$";
 				this.regxPattern += `|!\\[\\[[^\\]]+?\\]\\]`;
 				this.regxPattern += `|\\[\\[[^\\]]+?\\]\\]`;
@@ -69,7 +69,7 @@ export const inlineDecorationsExtension = (plugin: SNWPlugin) =>
 							if (key) {
 								const refType = match.input.startsWith("!") ? "embed" : "link";
 								mdViewFile = p.app.metadataCache.getFirstLinkpathDest(parseLinktext(ref).path, "/") as TFile;
-								const references = p.snwAPI.references.get(key);
+								const references = p.inferredWikilinksAPI.references.get(key);
 
 								const newTransformedCachedItem = [
 									{
@@ -90,7 +90,7 @@ export const inlineDecorationsExtension = (plugin: SNWPlugin) =>
 								});
 							}
 						} else {
-							// If we get this far, then it is a file, and process it using getSNWCacheByFile
+							// If we get this far, then it is a file, and process it using getInferredWikilinksCacheByFile
 
 							// In minimal mode, we always show inline references
 
@@ -98,7 +98,7 @@ export const inlineDecorationsExtension = (plugin: SNWPlugin) =>
 
 							// For now, use a synchronous approach - this will be updated in a future version
 							// to properly handle virtual links
-							const transformedCache = referenceCountingPolicy.getSNWCacheByFile(mdViewFile) as any;
+							const transformedCache = referenceCountingPolicy.getInferredWikilinksCacheByFile(mdViewFile) as any;
 
 							if (
 								(transformedCache.links || transformedCache.headings || transformedCache.embeds || transformedCache.blocks) &&
@@ -221,7 +221,7 @@ export const inlineDecorationsExtension = (plugin: SNWPlugin) =>
 				
 				// Hard guard: if the bridge isn't ready, render nothing (prevents TypeError)
 				const p = (this as any)._plugin;
-				if (!p || typeof p.getSNWCacheByFile !== "function") {
+				if (!p || typeof p.getInferredWikilinksCacheByFile !== "function") {
 					this.decorations = Decoration.none;
 					return;
 				}
@@ -243,7 +243,7 @@ export const inlineDecorationsExtension = (plugin: SNWPlugin) =>
 			decorations: (v) => {
 				// Hard guard: if the bridge isn't ready, render nothing (prevents TypeError)
 				const p = (v as any)._plugin;
-				if (!p || typeof p.getSNWCacheByFile !== "function") {
+				if (!p || typeof p.getInferredWikilinksCacheByFile !== "function") {
 					return Decoration.none;
 				}
 				return v.decorations;
@@ -261,7 +261,7 @@ const constructWidgetForInlineReference = (
 	references: TransformedCachedItem[],
 	filePath: string,
 	fileExtension: string,
-	plugin: SNWPlugin,
+	plugin: InferredWikilinksPlugin,
 ): InlineReferenceWidget | null => {
 	let modifyKey = key;
 
@@ -319,9 +319,9 @@ export class InlineReferenceWidget extends WidgetType {
 	filePath: string;
 	addCssClass: string; //if a reference need special treatment, this class can be assigned
 	lineNu: number; //number of line within the file
-	plugin: SNWPlugin; // Store plugin reference
+	plugin: InferredWikilinksPlugin; // Store plugin reference
 
-	constructor(refCount: number, cssclass: string, realLink: string, key: string, filePath: string, addCSSClass: string, lineNu: number, plugin: SNWPlugin) {
+	constructor(refCount: number, cssclass: string, realLink: string, key: string, filePath: string, addCSSClass: string, lineNu: number, plugin: InferredWikilinksPlugin) {
 		super();
 		this.referenceCount = refCount;
 		this.referenceType = cssclass;

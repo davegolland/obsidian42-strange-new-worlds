@@ -1,10 +1,10 @@
 import { type TFile, parseLinktext, stripHeading } from "obsidian";
-import type SNWPlugin from "../main";
+import type InferredWikilinksPlugin from "../main";
 import type { Link, TransformedCache, TransformedCachedItem, VirtualLinkProvider } from "../types";
 import { log, ProgressTracker, yieldToUI } from "../diag";
 
 // Minimal mode guard
-const MINIMAL = process.env.SNW_MINIMAL === "true";
+const MINIMAL = process.env.IW_MINIMAL === "true";
 
 // --- Inlined helpers (used to live in linkKeyUtils.ts) ---
 function extractSubpath(link: Link): string | undefined {
@@ -67,7 +67,7 @@ class SimpleCaseInsensitivePolicy {
 }
 
 export class ReferenceCountingPolicy {
-	private plugin: SNWPlugin;
+	private plugin: InferredWikilinksPlugin;
 	private cacheCurrentPages: Map<string, TransformedCache>;
 	private lastUpdateToReferences: number;
 	/**
@@ -80,7 +80,7 @@ export class ReferenceCountingPolicy {
 	/** Registered virtual link providers */
 	private virtualLinkProviders: Set<VirtualLinkProvider> = new Set();
 
-	constructor(plugin: SNWPlugin) {
+	constructor(plugin: InferredWikilinksPlugin) {
 		this.plugin = plugin;
 		this.cacheCurrentPages = new Map<string, TransformedCache>();
 		this.lastUpdateToReferences = 0;
@@ -202,10 +202,10 @@ export class ReferenceCountingPolicy {
 
 	/**
 	 * Set the plugin variable for the policy
-	 * @param snwPlugin The SNWPlugin instance
+	 * @param inferredWikilinksPlugin The InferredWikilinksPlugin instance
 	 */
-	setPluginVariable(snwPlugin: SNWPlugin): void {
-		this.plugin = snwPlugin;
+	setPluginVariable(inferredWikilinksPlugin: InferredWikilinksPlugin): void {
+		this.plugin = inferredWikilinksPlugin;
 		this.setActivePolicyFromSettings();
 	}
 
@@ -374,7 +374,7 @@ export class ReferenceCountingPolicy {
 		}
 
 		log.debug(`refcount.build completed with ${this.indexedReferences.size} indexed references`);
-		if (window.snwAPI) window.snwAPI.references = this.indexedReferences;
+		if (window.inferredWikilinksAPI) window.inferredWikilinksAPI.references = this.indexedReferences;
 		this.lastUpdateToReferences = Date.now();
 		log.timeEnd("refcount.build");
 	}
@@ -453,7 +453,7 @@ export class ReferenceCountingPolicy {
 	 * @param file The file to get cache for
 	 * @returns The transformed cache
 	 */
-	getSNWCacheByFile(file: TFile): TransformedCache {
+	getInferredWikilinksCacheByFile(file: TFile): TransformedCache {
 		// Debug flags
 		const logDebugInfo = this.debugMode;
 

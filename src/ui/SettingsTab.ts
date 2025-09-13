@@ -1,10 +1,10 @@
 import { type App, PluginSettingTab, Setting } from "obsidian";
-import type SNWPlugin from "../main";
+import type InferredWikilinksPlugin from "../main";
 
 export class SettingsTab extends PluginSettingTab {
-	plugin: SNWPlugin;
+	plugin: InferredWikilinksPlugin;
 
-	constructor(app: App, plugin: SNWPlugin) {
+	constructor(app: App, plugin: InferredWikilinksPlugin) {
 		super(app, plugin);
 		this.plugin = plugin;
 	}

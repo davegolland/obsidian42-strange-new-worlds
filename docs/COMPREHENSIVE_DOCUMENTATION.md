@@ -1,108 +1,127 @@
-# Strange New Worlds - Comprehensive Documentation
+# Inferred Wikilinks - Comprehensive Documentation
 
 ## Overview
 
-Strange New Worlds is an Obsidian plugin that reveals the interconnected nature of your vault by providing visual indicators for wikilinks, block references, and embeds. The plugin shows reference counts and allows you to explore connections between different parts of your vault through hover popovers and inline decorations.
+Inferred Wikilinks is an Obsidian plugin that reveals the interconnected nature of your vault by providing visual indicators for wikilinks, block references, and embeds. The plugin shows reference counts and allows you to explore connections between different parts of your vault through hover popovers and inline decorations.
 
 ## Architecture
 
 ### Core Components
 
-#### 1. Main Plugin (`src/main.ts`)
+#### 1\. Main Plugin (`src/main.ts`)
+
 The central plugin class that orchestrates all functionality:
-- **SNWPlugin**: Main plugin class extending Obsidian's Plugin
-- **Settings Management**: Handles plugin configuration
-- **API Initialization**: Sets up the SNW API for external access
-- **Backend Integration**: Manages connection to external backend services
-- **Minimal Surface**: Initializes UI components for rendering inferred links
 
-#### 2. Reference Counting System (`src/policies/reference-counting.ts`)
+*   **InferredWikilinksPlugin**: Main plugin class extending Obsidian's Plugin
+*   **Settings Management**: Handles plugin configuration
+*   **API Initialization**: Sets up the InferredWikilinks API for external access
+*   **Backend Integration**: Manages connection to external backend services
+*   **Minimal Surface**: Initializes UI components for rendering inferred links
+
+#### 2\. Reference Counting System (`src/policies/reference-counting.ts`)
+
 The heart of the plugin's link analysis:
-- **ReferenceCountingPolicy**: Manages link indexing and reference counting
-- **Policy System**: Modular approach to determining link equivalence
-- **Virtual Link Providers**: Support for dynamic link generation
-- **Cache Management**: Optimized caching for performance
 
-#### 3. Backend Integration (`src/backend/`)
+*   **ReferenceCountingPolicy**: Manages link indexing and reference counting
+*   **Policy System**: Modular approach to determining link equivalence
+*   **Virtual Link Providers**: Support for dynamic link generation
+*   **Cache Management**: Optimized caching for performance
+
+#### 3\. Backend Integration (`src/backend/`)
+
 External service integration for AI-powered suggestions:
-- **BackendClient**: HTTP client for backend communication
-- **Provider**: Virtual link provider that converts backend responses to links
-- **Types**: TypeScript interfaces for backend communication
 
-#### 4. UI Components (`src/ui/`)
+*   **BackendClient**: HTTP client for backend communication
+*   **Provider**: Virtual link provider that converts backend responses to links
+*   **Types**: TypeScript interfaces for backend communication
+
+#### 4\. UI Components (`src/ui/`)
+
 User interface elements and interactions:
-- **SettingsTab**: Plugin settings configuration
-- **Hover Components**: Interactive popover system
-- **Inline Decorations**: CodeMirror 6 extensions for inline reference counts
 
-#### 5. View Extensions (`src/view-extensions/`)
+*   **SettingsTab**: Plugin settings configuration
+*   **Hover Components**: Interactive popover system
+*   **Inline Decorations**: CodeMirror 6 extensions for inline reference counts
+
+#### 5\. View Extensions (`src/view-extensions/`)
+
 CodeMirror 6 extensions for editor integration:
-- **references-cm6.ts**: Inline reference count decorations
-- **register.ts**: Extension registration factory
+
+*   **references-cm6.ts**: Inline reference count decorations
+*   **register.ts**: Extension registration factory
 
 ## Key Features
 
-### 1. Visual Reference Indicators
-- **Inline Counts**: Shows reference counts next to wikilinks, embeds, and block references
-- **Hover Popovers**: Detailed information about references on hover
-- **Real-time Updates**: Counts update as you navigate and edit
+### 1\. Visual Reference Indicators
 
-### 2. Backend Integration
-- **AI-Powered Suggestions**: Connect to external services for intelligent link recommendations
-- **Zero-Config Setup**: Automatic vault registration with backend
-- **Graceful Fallback**: Works without backend when unavailable
+*   **Inline Counts**: Shows reference counts next to wikilinks, embeds, and block references
+*   **Hover Popovers**: Detailed information about references on hover
+*   **Real-time Updates**: Counts update as you navigate and edit
 
-### 3. Virtual Links System
-- **Dynamic Link Providers**: Other plugins can register custom link sources
-- **Flexible Integration**: Support for various data sources (frontmatter, computed relationships)
-- **API Access**: Simple registration system for external providers
+### 2\. Backend Integration
 
-### 4. Policy System
-- **Modular Design**: Self-contained policies for link equivalence
-- **Case Insensitive**: Built-in case-insensitive matching
-- **Extensible**: Easy to add new policy types
+*   **AI-Powered Suggestions**: Connect to external services for intelligent link recommendations
+*   **Zero-Config Setup**: Automatic vault registration with backend
+*   **Graceful Fallback**: Works without backend when unavailable
+
+### 3\. Virtual Links System
+
+*   **Dynamic Link Providers**: Other plugins can register custom link sources
+*   **Flexible Integration**: Support for various data sources (frontmatter, computed relationships)
+*   **API Access**: Simple registration system for external providers
+
+### 4\. Policy System
+
+*   **Modular Design**: Self-contained policies for link equivalence
+*   **Case Insensitive**: Built-in case-insensitive matching
+*   **Extensible**: Easy to add new policy types
 
 ## Technical Implementation
 
 ### Link Processing Pipeline
 
-1. **File Scanning**: Plugin scans all markdown files in the vault
-2. **Link Extraction**: Extracts wikilinks, embeds, block references, and frontmatter links
-3. **Policy Application**: Applies active policy to determine link equivalence
-4. **Index Building**: Creates indexed map of all references
-5. **Cache Management**: Maintains optimized cache for UI components
-6. **Virtual Link Integration**: Applies registered virtual link providers
+1.  **File Scanning**: Plugin scans all markdown files in the vault
+2.  **Link Extraction**: Extracts wikilinks, embeds, block references, and frontmatter links
+3.  **Policy Application**: Applies active policy to determine link equivalence
+4.  **Index Building**: Creates indexed map of all references
+5.  **Cache Management**: Maintains optimized cache for UI components
+6.  **Virtual Link Integration**: Applies registered virtual link providers
 
 ### CodeMirror 6 Integration
 
 The plugin uses CodeMirror 6 for editor integration:
-- **MatchDecorator**: Finds and decorates link patterns
-- **Widget System**: Renders inline reference counts
-- **ViewPlugin**: Manages decoration updates
-- **Transaction Handling**: Responds to document changes
+
+*   **MatchDecorator**: Finds and decorates link patterns
+*   **Widget System**: Renders inline reference counts
+*   **ViewPlugin**: Manages decoration updates
+*   **Transaction Handling**: Responds to document changes
 
 ### Backend Communication
 
 Backend integration follows a RESTful API pattern:
-- **Registration**: Vault registration with backend service
-- **Candidates API**: Retrieves keyword candidates for files
-- **References API**: Gets detailed reference information
-- **Error Handling**: Graceful degradation when backend unavailable
+
+*   **Registration**: Vault registration with backend service
+*   **Candidates API**: Retrieves keyword candidates for files
+*   **References API**: Gets detailed reference information
+*   **Error Handling**: Graceful degradation when backend unavailable
 
 ## Configuration
 
 ### Settings
-- **Backend URL**: Base URI for backend service (default: `http://localhost:8000`)
-- **Require Modifier for Hover**: Toggle for Cmd/Ctrl requirement on hover
+
+*   **Backend URL**: Base URI for backend service (default: `http://localhost:8000`)
+*   **Require Modifier for Hover**: Toggle for Cmd/Ctrl requirement on hover
 
 ### Frontmatter Controls
-- **snw-index-exclude**: Exclude file from indexing
-- **snw-file-exclude**: Exclude file from display
-- **snw-canvas-exclude-edit**: Exclude from canvas editing
+
+*   **snw-index-exclude**: Exclude file from indexing
+*   **snw-file-exclude**: Exclude file from display
+*   **snw-canvas-exclude-edit**: Exclude from canvas editing
 
 ## API Reference
 
-### SNW API (`src/snwApi.ts`)
+### InferredWikilinks API (`src/inferredWikilinksApi.ts`)
+
 Public API for external access:
 
 ```typescript
@@ -200,7 +219,8 @@ src/
 ## Development
 
 ### Building
-```bash
+
+```
 npm run build          # Production build
 npm run dev            # Development build
 npm run check-build    # Verify build
@@ -208,41 +228,49 @@ npm run lint           # Lint code
 ```
 
 ### Testing
+
 The plugin includes several test scripts in the `scripts/` directory:
-- Backend integration tests
-- Virtual links tests
-- Custom phrases tests
-- Dictionary detector tests
+
+*   Backend integration tests
+*   Virtual links tests
+*   Custom phrases tests
+*   Dictionary detector tests
 
 ### Key Dependencies
-- **Obsidian**: Core plugin framework
-- **CodeMirror 6**: Editor integration
-- **Preact**: UI components
-- **Tippy.js**: Tooltip system
+
+*   **Obsidian**: Core plugin framework
+*   **CodeMirror 6**: Editor integration
+*   **Preact**: UI components
+*   **Tippy.js**: Tooltip system
 
 ## Performance Considerations
 
 ### Caching Strategy
-- **File-level Caching**: Cached metadata per file
-- **Reference Index**: In-memory map of all references
-- **Lazy Loading**: UI components load data on demand
-- **Debounced Updates**: Prevents excessive re-rendering
+
+*   **File-level Caching**: Cached metadata per file
+*   **Reference Index**: In-memory map of all references
+*   **Lazy Loading**: UI components load data on demand
+*   **Debounced Updates**: Prevents excessive re-rendering
 
 ### Memory Management
-- **Provider Cleanup**: Proper unregistration of virtual link providers
-- **Cache Invalidation**: Smart cache invalidation on file changes
-- **Progress Tracking**: UI yields during large operations
+
+*   **Provider Cleanup**: Proper unregistration of virtual link providers
+*   **Cache Invalidation**: Smart cache invalidation on file changes
+*   **Progress Tracking**: UI yields during large operations
 
 ## Troubleshooting
 
 ### Common Issues
-1. **Missing Reference Counts**: Check if file is excluded via frontmatter
-2. **Backend Not Working**: Verify backend URL and service availability
-3. **Performance Issues**: Check for large vaults and consider excluding folders
-4. **UI Not Updating**: Ensure proper plugin initialization order
+
+1.  **Missing Reference Counts**: Check if file is excluded via frontmatter
+2.  **Backend Not Working**: Verify backend URL and service availability
+3.  **Performance Issues**: Check for large vaults and consider excluding folders
+4.  **UI Not Updating**: Ensure proper plugin initialization order
 
 ### Debug Mode
+
 Enable debug mode in the reference counting policy for detailed logging:
+
 ```typescript
 referenceCountingPolicy.setDebugMode(true);
 ```
@@ -250,6 +278,7 @@ referenceCountingPolicy.setDebugMode(true);
 ## Extension Points
 
 ### Custom Virtual Link Providers
+
 ```typescript
 const unregister = window.snwAPI.registerVirtualLinkProvider(({ file, cache, makeLink }) => {
   const links = [];
@@ -259,7 +288,9 @@ const unregister = window.snwAPI.registerVirtualLinkProvider(({ file, cache, mak
 ```
 
 ### Custom Policies
+
 Extend the policy system by implementing the policy interface:
+
 ```typescript
 class CustomPolicy {
   name = "custom-policy";
@@ -271,18 +302,19 @@ class CustomPolicy {
 
 ## Version History
 
-- **v2.3.2**: Current version with virtual links and backend integration
-- **v2.0+**: Major rewrite with CodeMirror 6 and modular architecture
-- **v1.x**: Original implementation with basic reference counting
+*   **v2.3.2**: Current version with virtual links and backend integration
+*   **v2.0+**: Major rewrite with CodeMirror 6 and modular architecture
+*   **v1.x**: Original implementation with basic reference counting
 
 ## Contributing
 
 When contributing to this plugin:
-1. Follow the existing code patterns and architecture
-2. Maintain backward compatibility where possible
-3. Add comprehensive tests for new features
-4. Update documentation for API changes
-5. Consider performance implications of changes
+
+1.  Follow the existing code patterns and architecture
+2.  Maintain backward compatibility where possible
+3.  Add comprehensive tests for new features
+4.  Update documentation for API changes
+5.  Consider performance implications of changes
 
 ## License
 

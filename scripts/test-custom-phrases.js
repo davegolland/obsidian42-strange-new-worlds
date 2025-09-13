@@ -5,7 +5,7 @@
  * Run this in the Obsidian console after enabling the plugin
  */
 
-console.log("Testing SNW Custom Phrases...");
+console.log("Testing InferredWikilinks Custom Phrases...");
 
 // Test configuration with custom phrases
 const testConfig = {
@@ -137,4 +137,4 @@ console.log("2. Set detectionMode to 'dictionary' in settings");
 console.log("3. Enable 'Include Custom Phrases'");
 console.log("4. Add custom phrases in the settings");
 console.log("5. Create a test file with the test text");
-console.log("6. Check if virtual links appear in the SNW sidebar");
+console.log("6. Check if virtual links appear in the InferredWikilinks sidebar");

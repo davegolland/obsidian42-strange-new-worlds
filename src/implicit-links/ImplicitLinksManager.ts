@@ -1,6 +1,6 @@
 import { Transaction } from "@codemirror/state";
 import type { CachedMetadata, TFile } from "obsidian";
-import type SNWPlugin from "../main";
+import type InferredWikilinksPlugin from "../main";
 import type { AutoLinkSettings } from "../settings";
 import type { VirtualLinkProvider } from "../types";
 import { getCleanSegments, offsetRangeToPos } from "./utils";
@@ -11,7 +11,7 @@ export class ImplicitLinksManager {
 	public providers: VirtualLinkProvider[] = [];
 
 	constructor(
-		private plugin: SNWPlugin,
+		private plugin: InferredWikilinksPlugin,
 		private settings: AutoLinkSettings,
 	) {
 		log.debug("ImplicitLinksManager: initializing (minimal mode)");
@@ -19,7 +19,7 @@ export class ImplicitLinksManager {
 	}
 
 	/**
-	 * Register the implicit links provider with the SNW API
+	 * Register the implicit links provider with the InferredWikilinks API
 	 */
 	registerProvider(registerFn: (provider: VirtualLinkProvider) => () => void): void {
 		if (this.unregisterProvider) {
@@ -67,9 +67,9 @@ export class ImplicitLinksManager {
 	}
 
 	/**
-	 * Get SNW cache by file (minimal mode - return empty cache)
+	 * Get InferredWikilinks cache by file (minimal mode - return empty cache)
 	 */
-	getSNWCacheByFile(fileOrPath: any): { byPhrase: Map<string, any>, version: number } {
+	getInferredWikilinksCacheByFile(fileOrPath: any): { byPhrase: Map<string, any>, version: number } {
 		// In minimal mode, return empty cache since detection is off
 		return { byPhrase: new Map(), version: 0 };
 	}

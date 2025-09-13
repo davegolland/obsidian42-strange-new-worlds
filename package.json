@@ -1,13 +1,13 @@
 {
-	"name": "obsidian42-strange-new-worlds",
+	"name": "obsidian42-inferred-wikilinks",
 	"version": "2.3.2",
-	"description": "Revealing networked thought and the strange new worlds created by your vault",
+	"description": "Inferred Wikilinks - Revealing networked thought through intelligent link detection",
 	"sideEffects": [
 		"styles/*.css"
 	],
 	"scripts": {
 		"dev": "node --no-warnings esbuild.config.mjs",
-		"build": "SNW_MINIMAL=true node --no-warnings esbuild.config.mjs production",
+		"build": "IW_MINIMAL=true node --no-warnings esbuild.config.mjs production",
 		"deadcode": "ts-prune | tee ts-prune.txt",
 		"check-build": "node scripts/check-build-clean.js",
 		"check-version": "node scripts/check-version-consistency.js",

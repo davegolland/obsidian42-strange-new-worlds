@@ -1,9 +1,9 @@
 {
-	"id": "obsidian42-strange-new-worlds-dev",
-	"name": "Strange New Worlds (Dev)",
+	"id": "obsidian42-inferred-wikilinks-dev",
+	"name": "Inferred Wikilinks (Dev)",
 	"version": "2.3.2",
 	"minAppVersion": "1.7.2",
-	"description": "Help see how your vault is interconnected with visual indicators. (Development version with Virtual Links)",
+	"description": "Inferred Wikilinks - Intelligent link detection and visualization. (Development version with Virtual Links)",
 	"author": "dsg",
 	"authorUrl": "https://twitter.com/TfTHacker",
 	"helpUrl": "https://tfthacker.com/SNW",

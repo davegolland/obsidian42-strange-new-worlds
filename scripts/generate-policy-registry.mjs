@@ -61,7 +61,7 @@ import { _registerPolicy } from "./registry";
 ${items.map(it => {
   if (it.needsConstructorParams) {
     // Skip policies that need constructor parameters for now
-    return `// _registerPolicy("${it.id}", new ${it.className}({ endpoint: "http://localhost:8787/snw/key", apiKey: "env:SNW_KEY" })); // TODO: Configure external service policy`;
+    return `// _registerPolicy("${it.id}", new ${it.className}({ endpoint: "http://localhost:8787/iw/key", apiKey: "env:IW_KEY" })); // TODO: Configure external service policy`;
   } else {
     return `_registerPolicy("${it.id}", new ${it.className}());`;
   }

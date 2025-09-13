@@ -1,6 +1,6 @@
 # Implicit Links Demo
 
-This file demonstrates the implicit links feature. With the right configuration, the following terms should appear as virtual links in the SNW sidebar:
+This file demonstrates the implicit links feature. With the right configuration, the following terms should appear as virtual links in the InferredWikilinks sidebar:
 
 ## Technology Terms
 
