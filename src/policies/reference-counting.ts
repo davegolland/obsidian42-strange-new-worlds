@@ -1,9 +1,70 @@
 import { type TFile, parseLinktext, stripHeading } from "obsidian";
 import type SNWPlugin from "../main";
 import type { Link, TransformedCache, TransformedCachedItem, VirtualLinkProvider } from "../types";
-import type { WikilinkEquivalencePolicy } from "./base/WikilinkEquivalencePolicy";
-import { getPolicyByType } from "./index";
 import { log, ProgressTracker, yieldToUI } from "../diag";
+
+// Minimal mode guard
+const MINIMAL = process.env.SNW_MINIMAL === "true";
+
+// --- Inlined helpers (used to live in linkKeyUtils.ts) ---
+function extractSubpath(link: Link): string | undefined {
+	const parsed = parseLinktext(link.reference.link);
+	return parsed.subpath ? `#${parsed.subpath}` : undefined;
+}
+
+function normalizeBase(link: Link, casing: "upper" | "lower" | "preserve" = "upper"): string {
+	// Get the base path from resolved file or real link
+	let path = link.resolvedFile?.path || link.realLink;
+
+	// Add subpath if present
+	const subpath = extractSubpath(link);
+	if (subpath) {
+		path += subpath;
+	}
+
+	// Add extension if not present and not a section link
+	if (!subpath && !path.includes('.')) {
+		// We default to .md for preserved or lower; .MD for upper for backward compat
+		path += casing === "upper" ? ".MD" : ".md";
+	}
+
+	// Apply casing
+	if (casing === "upper") return path.toUpperCase();
+	if (casing === "lower") return path.toLowerCase();
+	return path; // preserve
+}
+
+function getBasenameWithoutExt(path: string): string {
+	const lastSlash = path.lastIndexOf('/');
+	const filename = lastSlash >= 0 ? path.substring(lastSlash + 1) : path;
+	const lastDot = filename.lastIndexOf('.');
+	return lastDot >= 0 ? filename.substring(0, lastDot) : filename;
+}
+
+// Simple case-insensitive policy implementation
+class SimpleCaseInsensitivePolicy {
+	name = "case-insensitive";
+	
+	generateKey(link: Link): string {
+		return normalizeBase(link, "upper");
+	}
+	
+	generateKeyAsync(link: Link): Promise<string> {
+		return Promise.resolve(this.generateKey(link));
+	}
+	
+	isAsync(): boolean {
+		return false;
+	}
+	
+	countReferences(references: Link[]): number {
+		return references.length;
+	}
+	
+	filterReferences(references: Link[]): Link[] {
+		return references;
+	}
+}
 
 export class ReferenceCountingPolicy {
 	private plugin: SNWPlugin;
@@ -14,7 +75,7 @@ export class ReferenceCountingPolicy {
 	 * method maintained for backwards compatibility.
 	 */
 	public indexedReferences: Map<string, Link[]>;
-	private activePolicy: WikilinkEquivalencePolicy = getPolicyByType("case-insensitive");
+	private activePolicy = new SimpleCaseInsensitivePolicy();
 	private debugMode = false; // Can be toggled for diagnostics
 	/** Registered virtual link providers */
 	private virtualLinkProviders: Set<VirtualLinkProvider> = new Set();
@@ -24,14 +85,14 @@ export class ReferenceCountingPolicy {
 		this.cacheCurrentPages = new Map<string, TransformedCache>();
 		this.lastUpdateToReferences = 0;
 		this.indexedReferences = new Map();
-		this.setActivePolicyFromSettings();
 	}
 
 	/**
 	 * Sets the active equivalence policy based on the current settings
 	 */
 	private setActivePolicyFromSettings(): void {
-		this.activePolicy = getPolicyByType(this.plugin.settings.wikilinkEquivalencePolicy);
+		// In minimal mode, we only use case-insensitive policy
+		this.activePolicy = new SimpleCaseInsensitivePolicy();
 	}
 
 	/**
@@ -39,26 +100,17 @@ export class ReferenceCountingPolicy {
 	 * @param policyType The policy type to set as active
 	 */
 	setActivePolicy(policyType: string): void {
-		if (this.plugin.settings.wikilinkEquivalencePolicy !== policyType) {
-			this.plugin.settings.wikilinkEquivalencePolicy = policyType as any;
-			this.plugin.saveSettings();
-		}
-
+		// In minimal mode, we ignore policy changes and always use case-insensitive
 		this.setActivePolicyFromSettings();
 		this.invalidateCache();
 		this.buildLinksAndReferences().catch(console.error);
 	}
 
 	/**
-	 * NOTE: The generateKey method has been inlined throughout the code.
-	 * All calls now directly use this.activePolicy.generateKey(link)
-	 */
-
-	/**
 	 * Gets the currently active policy instance
-	 * @returns The active WikilinkEquivalencePolicy instance
+	 * @returns The active policy instance
 	 */
-	getActivePolicy(): WikilinkEquivalencePolicy {
+	getActivePolicy(): SimpleCaseInsensitivePolicy {
 		return this.activePolicy;
 	}
 
@@ -98,16 +150,7 @@ export class ReferenceCountingPolicy {
 				sourceFile: null,
 			};
 
-			// For async policies, we need to fall back to sync method in UI context
-			const useAsync = !!this.activePolicy.isAsync?.();
-			if (useAsync && this.activePolicy.generateKey) {
-				return this.activePolicy.generateKey(ghostLink);
-			} else if (useAsync) {
-				// Fallback for async-only policies
-				return (ghostLink.resolvedFile?.path ?? ghostLink.realLink).toUpperCase();
-			} else {
-				return this.activePolicy.generateKey!(ghostLink);
-			}
+			return this.activePolicy.generateKey(ghostLink);
 		}
 
 		// Create a temporary Link object with resolved file
@@ -123,21 +166,7 @@ export class ReferenceCountingPolicy {
 			sourceFile: null,
 		};
 
-		// For async policies, we need to fall back to sync method in UI context
-		const useAsync = !!this.activePolicy.isAsync?.();
-		let key: string;
-		if (useAsync && this.activePolicy.generateKey) {
-			key = this.activePolicy.generateKey(link);
-		} else if (useAsync) {
-			// Fallback for async-only policies
-			key = (link.resolvedFile?.path ?? link.realLink).toUpperCase();
-		} else {
-			key = this.activePolicy.generateKey!(link);
-		}
-
-		// Debug logging removed for production
-
-		return key;
+		return this.activePolicy.generateKey(link);
 	}
 
 	/**
@@ -195,8 +224,6 @@ export class ReferenceCountingPolicy {
 	 */
 	countReferences(references: Link[] | undefined): number {
 		if (!references) return 0;
-
-		// Delegate counting to the active policy
 		return this.activePolicy.countReferences(references);
 	}
 
@@ -207,8 +234,6 @@ export class ReferenceCountingPolicy {
 	 */
 	filterReferences(references: Link[] | undefined): Link[] {
 		if (!references) return [];
-
-		// Delegate filtering to the active policy
 		return this.activePolicy.filterReferences(references);
 	}
 
@@ -395,10 +420,7 @@ export class ReferenceCountingPolicy {
 						sourceFile: file,
 					};
 
-					const useAsync = !!this.activePolicy.isAsync?.();
-					const linkKey = useAsync ? await this.activePolicy.generateKeyAsync!(link) : this.activePolicy.generateKey!(link);
-
-					// Debug logging removed for production
+					const linkKey = this.activePolicy.generateKey(link);
 
 					this.indexedReferences.set(linkKey, [...(this.indexedReferences.get(linkKey) || []), link]);
 				} else {
@@ -416,10 +438,7 @@ export class ReferenceCountingPolicy {
 						sourceFile: file,
 					};
 
-					const useAsync = !!this.activePolicy.isAsync?.();
-					const linkKey = useAsync ? await this.activePolicy.generateKeyAsync!(ghostLink) : this.activePolicy.generateKey!(ghostLink);
-
-					// Debug logging removed for production
+					const linkKey = this.activePolicy.generateKey(ghostLink);
 
 					this.indexedReferences.set(linkKey, [...(this.indexedReferences.get(linkKey) || []), ghostLink]);
 				}
@@ -585,8 +604,6 @@ export class ReferenceCountingPolicy {
 
 					// Log lookups for debugging
 					if (logDebugInfo) {
-						// Debug logging removed for production
-
 						// Debug: find similar keys that might match
 						if (!this.indexedReferences.has(key)) {
 							const similarKeys = Array.from(this.indexedReferences.keys())
@@ -738,8 +755,6 @@ export class ReferenceCountingPolicy {
 
 		// Log when in debug mode
 		if (this.debugMode) {
-			// Debug logging removed for production
-
 			// Show available keys that might be similar
 			const possibleMatches = Array.from(this.indexedReferences.keys())
 				.filter((k) => {
@@ -764,7 +779,6 @@ export class ReferenceCountingPolicy {
 			const keyWithExt = key + ".MD";
 			refs = this.indexedReferences.get(keyWithExt);
 			if (refs && refs.length > 0) {
-				// Debug logging removed for production
 				return refs;
 			}
 		}
@@ -774,7 +788,6 @@ export class ReferenceCountingPolicy {
 			const fallbackKey = link.resolvedFile.path.toLocaleUpperCase();
 			refs = this.indexedReferences.get(fallbackKey);
 			if (refs && refs.length > 0) {
-				// Debug logging removed for production
 				return refs;
 			}
 
@@ -785,7 +798,6 @@ export class ReferenceCountingPolicy {
 					const fallbackKeyWithSubpath = (link.resolvedFile.path + subpath).toLocaleUpperCase();
 					refs = this.indexedReferences.get(fallbackKeyWithSubpath);
 					if (refs && refs.length > 0) {
-						// Debug logging removed for production
 						return refs;
 					}
 				}
@@ -796,7 +808,6 @@ export class ReferenceCountingPolicy {
 		const fallbackKeyOriginal = link.realLink.toLocaleUpperCase();
 		refs = this.indexedReferences.get(fallbackKeyOriginal);
 		if (refs && refs.length > 0) {
-			// Debug logging removed for production
 			return refs;
 		}
 
@@ -805,13 +816,11 @@ export class ReferenceCountingPolicy {
 			const fallbackWithExt = fallbackKeyOriginal + ".MD";
 			refs = this.indexedReferences.get(fallbackWithExt);
 			if (refs && refs.length > 0) {
-				// Debug logging removed for production
 				return refs;
 			}
 		}
 
 		// No references found
-		// Debug logging removed for production
 		return undefined;
 	}
 
@@ -820,7 +829,6 @@ export class ReferenceCountingPolicy {
 	 */
 	setDebugMode(enabled: boolean): void {
 		this.debugMode = enabled;
-		// Debug logging removed for production
 
 		if (enabled) {
 			// Print a summary of the references when enabling debug mode
@@ -856,9 +864,6 @@ export class ReferenceCountingPolicy {
 					break;
 				}
 			}
-
-			// Also list keys containing "project" to help find specific references
-			// Debug logging removed for production
 		}
 	}
 
@@ -878,8 +883,6 @@ export class ReferenceCountingPolicy {
 	 * @returns All references found for this link
 	 */
 	public findAllReferencesForLink(filePath: string, linkText: string): Link[] {
-		// Debug logging removed for production
-
 		// Generate key with current policy
 		const key = this.generateKeyFromPathAndLink(filePath, linkText);
 		let allRefs: Link[] = [];
@@ -888,68 +891,9 @@ export class ReferenceCountingPolicy {
 		const refsWithCurrentPolicy = this.indexedReferences.get(key);
 		if (refsWithCurrentPolicy && refsWithCurrentPolicy.length > 0) {
 			allRefs = allRefs.concat(refsWithCurrentPolicy);
-			// Debug logging removed for production
 		}
 
-		// If Same File policy is active, we need to check for references across all source files
-		const sameFilePolicy = getPolicyByType("same-file");
-		if (this.activePolicy.name === sameFilePolicy.name) {
-			// Try without the source file prefix to find CaseInsensitive-style keys
-			const { path, subpath } = parseLinktext(linkText);
-			const resolvedFile = this.plugin.app.metadataCache.getFirstLinkpathDest(path, filePath);
-
-			let alternateKey = "";
-			if (resolvedFile) {
-				alternateKey = resolvedFile.path.toLocaleUpperCase();
-				if (subpath) alternateKey += subpath.toLocaleUpperCase();
-			} else if (path) {
-				// Handle ghost links
-				alternateKey = path.toLowerCase().endsWith(".md") ? path.toLocaleUpperCase() : path.toLocaleUpperCase() + ".MD";
-			}
-
-			if (alternateKey && alternateKey !== key) {
-				const altRefs = this.indexedReferences.get(alternateKey);
-				if (altRefs && altRefs.length > 0) {
-					// Debug logging removed for production
-					allRefs = allRefs.concat(altRefs);
-				}
-			}
-
-			// Also search for any keys that might be prefixed with other source files
-			const sourceFilePrefix = filePath.toLocaleUpperCase() + ":";
-			const matchingKeys = Array.from(this.indexedReferences.keys()).filter((k) => k.includes(":") && k.split(":")[1] === alternateKey);
-
-			for (const matchKey of matchingKeys) {
-				if (matchKey !== key) {
-					const matchRefs = this.indexedReferences.get(matchKey);
-					if (matchRefs && matchRefs.length > 0) {
-						// Debug logging removed for production
-						allRefs = allRefs.concat(matchRefs);
-					}
-				}
-			}
-		}
-
-		// If we're using Case Insensitive or other policy, but Same File style keys exist
-		if (this.activePolicy.name !== sameFilePolicy.name) {
-			// Look for any Same File style keys (file:target format)
-			const potentialKeys = Array.from(this.indexedReferences.keys()).filter((k) => k.includes(":") && k.endsWith(":" + key));
-
-			for (const matchKey of potentialKeys) {
-				if (matchKey !== key) {
-					const matchRefs = this.indexedReferences.get(matchKey);
-					if (matchRefs && matchRefs.length > 0) {
-						// Debug logging removed for production
-						allRefs = allRefs.concat(matchRefs);
-					}
-				}
-			}
-		}
-
-		if (this.debugMode) {
-			// Debug logging removed for production
-		}
-
+		// In minimal mode, we only use case-insensitive policy, so no need for complex fallbacks
 		return allRefs;
 	}
 }

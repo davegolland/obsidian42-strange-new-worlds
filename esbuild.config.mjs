@@ -58,6 +58,9 @@ const context = await esbuild.context({
   entryPoints: ['src/main.ts'],
   bundle: true,
   minify: prod,
+  define: {
+    'process.env.SNW_MINIMAL': JSON.stringify(process.env.SNW_MINIMAL || 'false'),
+  },
   external: [
     'obsidian',
     'electron',

@@ -1,0 +1,66 @@
+examples/custom-detector-example.ts:211 - integrateCustomDetector
+examples/custom-detector-example.ts:298 - registerCustomDetector
+examples/custom-detector-example.ts:337 - examplePluginUsage
+examples/custom-detector-example.ts:64 - APIDetector (used in module)
+examples/custom-detector-example.ts:241 - CachedAPIDetector
+examples/custom-detector-example.ts:328 - ExtendedAutoLinkSettings
+src/diag.ts:19 - setDiagnosticFlags
+src/diag.ts:26 - getDiagnosticFlags
+src/diag.ts:33 - logDecoration
+src/diag.ts:46 - isLegacyForced
+src/diag.ts:6 - DiagnosticFlags (used in module)
+src/diag.ts:52 - SNW_TAG (used in module)
+src/types.ts:27 - ReferenceLocation
+src/types.ts:69 - ListItem (used in module)
+src/types.ts:74 - Section
+src/backend/types.ts:4 - LinkCandidate (used in module)
+src/backend/types.ts:14 - LinkCandidateList
+src/backend/types.ts:17 - WikilinkCandidate (used in module)
+src/backend/types.ts:29 - WikilinkCandidatesResponse
+src/backend/types.ts:43 - StatusSummary
+src/backend/types.ts:57 - APISpan (used in module)
+src/backend/types.ts:62 - KeywordResponse (used in module)
+src/backend/types.ts:77 - ErrorResponse
+src/backend/types.ts:84 - Reference (used in module)
+src/implicit-links/index.ts:2 - offsetRangeToPos
+src/implicit-links/index.ts:2 - stripCodeBlocksAndLinks
+src/implicit-links/index.ts:5 - createInferredLinksExtension
+src/implicit-links/index.ts:6 - inferredCacheField
+src/implicit-links/index.ts:6 - setInferredCache
+src/implicit-links/index.ts:6 - InferredCache
+src/implicit-links/index.ts:6 - PhraseInfo
+src/implicit-links/index.ts:7 - buildPhraseRegexChunks
+src/implicit-links/index.ts:7 - PhraseRegexOpts
+src/implicit-links/index.ts:8 - makeChunkPlugin
+src/implicit-links/index.ts:9 - generateReferenceKey
+src/implicit-links/index.ts:9 - getReferenceCount
+src/implicit-links/index.ts:9 - basenameNoExt
+src/implicit-links/regex.ts:11 - norm (used in module)
+src/ui/ui-inits.ts:28 - initImplicitLinksLivePreview
+src/ui/ui-inits.ts:9 - setPluginVariableForHtmlDecorations
+src/ui/ui-inits.ts:11 - setPluginVariableForMarkdownPreviewProcessor
+src/utils/index.ts:1 - getScrollParent
+src/utils/spanNavigation.ts:12 - openFileAndRevealCharSpan
+src/utils/spanNavigation.ts:23 - charSpanToLineCh
+src/utils/spanNavigation.ts:29 - buildContext
+src/utils/spanNavigation.ts:5 - CharSpan
+src/view-extensions/htmlDecorations.tsx:181 - updateAllSnwLiveUpdateReferences
+src/view-extensions/htmlDecorations.tsx:175 - processHtmlDecorationReferenceEvent (used in module)
+src/view-extensions/references-preview.ts:27 - default
+src/view-extensions/references-preview.ts:310 - showReferencePopover
+src/ui/components/index.ts:2 - DropdownProps
+src/ui/components/index.ts:3 - DropdownOptionProps
+src/ui/components/index.ts:4 - createSettingsHeading
+src/ui/components/index.ts:4 - createSettingsSeparator
+src/ui/components/index.ts:4 - SettingsHeadingProps
+src/ui/components/index.ts:5 - createSettingsSlider
+src/ui/components/index.ts:5 - SettingsSliderProps
+src/ui/components/index.ts:6 - createSettingsToggle
+src/ui/components/index.ts:6 - SettingsToggleProps
+src/ui/components/index.ts:7 - createSettingsToggleGroup
+src/ui/components/index.ts:7 - SettingsToggleGroupProps
+src/ui/components/index.ts:7 - ToggleItem
+src/ui/components/uic-ref--parent.ts:34 - getUIC_SidePane
+src/ui/lib/context.ts:10 - buildContext (used in module)
+src/ui/lib/context.ts:35 - buildContextHTML
+src/ui/components/context/formatting-utils.ts:4 - chainBreadcrumbs (used in module)

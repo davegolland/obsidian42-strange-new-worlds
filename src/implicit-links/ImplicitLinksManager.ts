@@ -3,12 +3,10 @@ import type { CachedMetadata, TFile } from "obsidian";
 import type SNWPlugin from "../main";
 import type { AutoLinkSettings } from "../settings";
 import type { VirtualLinkProvider } from "../types";
-import { DetectionManager } from "./DetectionManager";
 import { getCleanSegments, offsetRangeToPos } from "./utils";
 import { log } from "../diag";
 
 export class ImplicitLinksManager {
-	private detectionManager: DetectionManager;
 	private unregisterProvider: (() => void) | null = null;
 	public providers: VirtualLinkProvider[] = [];
 
@@ -16,14 +14,8 @@ export class ImplicitLinksManager {
 		private plugin: SNWPlugin,
 		private settings: AutoLinkSettings,
 	) {
-		log.debug("ImplicitLinksManager: initializing");
-		this.detectionManager = new DetectionManager(
-			plugin.app, 
-			settings, 
-			plugin.referenceCountingPolicy.getActivePolicy(),
-			plugin.settings.minimalMode
-		);
-		log.debug("ImplicitLinksManager: detection manager created");
+		log.debug("ImplicitLinksManager: initializing (minimal mode)");
+		// In minimal mode, detection is always "off" - no DetectionManager needed
 	}
 
 	/**
@@ -35,26 +27,8 @@ export class ImplicitLinksManager {
 		}
 
 		const provider: VirtualLinkProvider = async ({ file, cache, makeLink }) => {
-			if (this.settings.detectionMode === "off") return [];
-
-			const fullText = await this.plugin.app.vault.read(file);
-			// NEW: get "clean" *segments* of the full text instead of mutating the string
-			const segments = getCleanSegments(fullText, cache); // [{ text, baseOffset }]
-			const links = [];
-			for (const seg of segments) {
-				const found = await this.detectionManager.detect(file, seg.text);
-				for (const item of found) {
-					const adjusted = { start: item.span.start + seg.baseOffset, end: item.span.end + seg.baseOffset };
-					const pos = offsetRangeToPos(fullText, adjusted);
-					// Optional: resolve or fallback during debugging so underline always shows
-					const resolved = this.plugin.app.metadataCache.getFirstLinkpathDest(item.targetPath, file.path);
-					const target = resolved ? item.targetPath : file.path;
-					links.push(makeLink(target, item.display, pos));
-				}
-			}
-
-			// Debug logging removed for production
-			return links;
+			// In minimal mode, detection is always "off" - return empty array
+			return [];
 		};
 
 		// Store the provider for the CM6 extension to access
@@ -64,20 +38,11 @@ export class ImplicitLinksManager {
 	}
 
 	/**
-	 * Update settings and recreate the detection manager
+	 * Update settings (minimal mode - no detection manager to update)
 	 */
 	async updateSettings(settings: AutoLinkSettings): Promise<void> {
 		this.settings = settings;
-		this.detectionManager.updateSettings(settings, this.plugin.settings.minimalMode);
-
-		// Rebuild the detector when settings change so new phrases appear without reload
-		await this.detectionManager?.rebuild?.();
-
-		// Re-register the provider with updated settings
-		if (this.unregisterProvider) {
-			this.unregisterProvider();
-			this.registerProvider(this.plugin.snwAPI.registerVirtualLinkProvider.bind(this.plugin.snwAPI));
-		}
+		// In minimal mode, no detection manager to update
 	}
 
 	/**
@@ -99,6 +64,14 @@ export class ImplicitLinksManager {
 				});
 			}
 		}
+	}
+
+	/**
+	 * Get SNW cache by file (minimal mode - return empty cache)
+	 */
+	getSNWCacheByFile(fileOrPath: any): { byPhrase: Map<string, any>, version: number } {
+		// In minimal mode, return empty cache since detection is off
+		return { byPhrase: new Map(), version: 0 };
 	}
 
 	/**

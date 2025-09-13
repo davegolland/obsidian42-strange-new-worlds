@@ -94,8 +94,8 @@ const getRefAreaItems = async (refType: string, realLink: string, key: string, f
 		}
 		linksToLoop = referenceCountingPolicy.filterReferences(incomingLinks);
 	} else {
-		// In minimal mode, use backend references API for implicit links
-		if (plugin.settings.minimalMode && refType === 'implicit' && realLink.startsWith('keyword:')) {
+		// Use backend references API for implicit links
+		if (refType === 'implicit' && realLink.startsWith('keyword:')) {
 			try {
 				const linkId = realLink; // Use the realLink as linkId for backend keywords
 				const references = await plugin.backendClient?.getReferences(linkId, 20);

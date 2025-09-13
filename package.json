@@ -2,11 +2,13 @@
 	"name": "obsidian42-strange-new-worlds",
 	"version": "2.3.2",
 	"description": "Revealing networked thought and the strange new worlds created by your vault",
+	"sideEffects": [
+		"styles/*.css"
+	],
 	"scripts": {
-		"predev": "node scripts/generate-policy-registry.mjs",
 		"dev": "node --no-warnings esbuild.config.mjs",
-		"prebuild": "node scripts/generate-policy-registry.mjs",
-		"build": "node --no-warnings esbuild.config.mjs production",
+		"build": "SNW_MINIMAL=true node --no-warnings esbuild.config.mjs production",
+		"deadcode": "ts-prune | tee ts-prune.txt",
 		"check-build": "node scripts/check-build-clean.js",
 		"check-version": "node scripts/check-version-consistency.js",
 		"lint": "biome check ./src",
@@ -27,6 +29,7 @@
 		"esbuild": "0.24.0",
 		"obsidian": "^1.7.2",
 		"obsidian-typings": "^2.3.4",
+		"ts-prune": "^0.10.3",
 		"tslib": "^2.8.1",
 		"typescript": "5.7.2"
 	},
