@@ -31,23 +31,12 @@ export default class SNWPlugin extends Plugin {
 
 
 	async onload(): Promise<void> {
-		// 1) Always load settings FIRST
 		await this.initSettings();
 		this.addSettingTab(new SettingsTab(this.app, this));
-
-		// 2) Minimal mode only
-		console.log("SNW: 🚀 Minimal Mode (backend-only)");
-		
-		// 3) Construct API & policy up front (order matters)
-		await this.initAPI();   // lightweight surface
+		await this.initAPI();
 		this.referenceCountingPolicy = new ReferenceCountingPolicy(this);
-
-		// 4) Backend client init & registration
-		await this.initBackend();                // registers backend provider
-
-
-		// 7) Initialize minimal surface for rendering
-		await this.initMinimalSurface();         // render inferred links
+		await this.initBackend();
+		await this.initMinimalSurface();
 	}
 
 
