@@ -13,13 +13,12 @@ export const getUIC_Ref_Title_Div = (
 	filePath: string,
 	refCount: number,
 	lineNu: number,
-	isPopover: boolean,
 	plugin: SNWPlugin,
 	display?: string,
 	handleSortOptionChangeCallback?: () => void,
 ): HTMLElement => {
 	const titleElJsx = (
-		<div className={`${isPopover ? "snw-ref-title-popover" : "snw-ref-title-side-pane"} tree-item-self is-clickable`}>
+		<div className="snw-ref-title-popover tree-item-self is-clickable">
 			<div
 				className="snw-ref-title-popover-label"
 				{...{ [ATTR.titleType]: refType }}
@@ -40,28 +39,6 @@ export const getUIC_Ref_Title_Div = (
 				})()}
 			</div>
 			{/* SortOrderDropdown removed - file was deleted */}
-			{isPopover && (
-				<span
-					className="snw-ref-title-popover-open-sidepane-icon"
-					snw-ref-title-type={refType}
-					snw-ref-title-reallink={realLink}
-					snw-ref-title-key={key}
-					snw-data-file-name={filePath}
-					snw-data-line-number={lineNu.toString()}
-				>
-					{/* biome-ignore lint/a11y/useKeyWithClickEvents: <explanation> */}
-					<span
-						className="snw-ref-title-popover-icon"
-						onClick={(e: MouseEvent) => {
-							e.stopPropagation();
-							hideAll({ duration: 0 }); // hide popup
-							plugin.activateView(refType, realLink, key, filePath, Number(lineNu));
-						}}
-					>
-						{/* IconMoreDetails removed - file was deleted */}
-					</span>
-				</span>
-			)}
 		</div>
 	);
 

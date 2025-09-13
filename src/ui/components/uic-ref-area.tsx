@@ -31,7 +31,7 @@ export const getUIC_Ref_Area = async (
 
 	//get title header for this reference area
 	refAreaContainerEl.append(
-		getUIC_Ref_Title_Div(refType, realLink, key, filePath, refAreaItems.refCount, lineNu, isHoverView, plugin, display, async () => {
+		getUIC_Ref_Title_Div(refType, realLink, key, filePath, refAreaItems.refCount, lineNu, plugin, display, async () => {
 			// Callback to re-render the references area when the sort option is changed
 			const refAreaEl: HTMLElement | null = refAreaContainerEl.querySelector(".snw-ref-area");
 			if (refAreaEl) {

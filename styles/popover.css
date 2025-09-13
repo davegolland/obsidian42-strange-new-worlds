@@ -50,10 +50,6 @@
   align-items: center;
 }
 
-.snw-ref-title-popover-open-sidepane-icon {
-  width: 25px;
-  opacity: var(--snw-icon-opacity);
-}
 
 .snw-ref-title-popover-label {
   width: 100%;
