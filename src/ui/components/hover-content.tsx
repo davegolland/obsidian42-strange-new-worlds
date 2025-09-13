@@ -62,16 +62,10 @@ export const wireHoverEvents = async (plugin: SNWPlugin, rootElementForViewEl: H
 			return;
 		}
 
-		// Use Obsidian's native openLinkText for header/block navigation
+		// Use Obsidian's native openLinkText for all navigation
 		const titleKey = handlerElement.getAttribute(ATTR.titleKey);
-		if (titleKey) {
-			// Build linkText for Obsidian's openLinkText (e.g., "path#Heading" or "path#^blockid")
-			const linkText = `${filePath}${titleKey}`;
-			plugin.app.workspace.openLinkText(linkText, "", Keymap.isModEvent(e));
-		} else {
-			// Fallback to simple file open
-			plugin.app.workspace.getLeaf(Keymap.isModEvent(e)).openFile(fileT);
-		}
+		const linkText = titleKey ? `${filePath}${titleKey}` : filePath;
+		plugin.app.workspace.openLinkText(linkText, "", Keymap.isModEvent(e));
 	});
 
 	// MOUSEOVER event delegation
