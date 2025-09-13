@@ -155,6 +155,10 @@ export default class SNWPlugin extends Plugin {
 
 		log.info("settings snapshot", JSON.stringify(this.settings));
 		log.debug("minimalMode value:", this.settings.minimalMode);
+		log.debug("Settings loaded, minimalMode check:", {
+			minimalMode: this.settings.minimalMode,
+			settingsSnapshot: JSON.stringify(this.settings)
+		});
 
 		// Always add settings tab early for toggling
 		this.addSettingTab(new SettingsTab(this.app, this));
@@ -168,6 +172,7 @@ export default class SNWPlugin extends Plugin {
 		this.featureManager.updateSettings(this.settings);
 		this.featureManager.updateShowCountsActive(this.showCountsActive);
 		
+		log.debug("About to check minimalMode:", this.settings.minimalMode);
 		if (this.settings.minimalMode) {
 			log.info("🚀 Minimal mode ENABLED — backend-only path");
 			log.time("initAPI(minimal)");
@@ -690,6 +695,10 @@ export default class SNWPlugin extends Plugin {
 		}
 		
 		log.debug("settings.after.migrate:", this.settings);
+		log.debug("Settings loaded, minimalMode check:", {
+			minimalMode: this.settings.minimalMode,
+			settingsSnapshot: JSON.stringify(this.settings)
+		});
 		log.timeEnd("settings.load");
 	}
 

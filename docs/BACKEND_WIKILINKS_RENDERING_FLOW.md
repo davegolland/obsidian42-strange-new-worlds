@@ -2,7 +2,7 @@
 
 This document outlines the logical steps to render inferred wikilinks from the backend, with specific line number references to the codebase.
 
-## 1. Backend Integration Setup ✅
+## 1\. Backend Integration Setup ✅
 
 **Location**: `src/main.ts:426-458`
 
@@ -21,10 +21,11 @@ await this._backendClient.register(vaultName, basePath);
 ```
 
 **Backend Client Registration**: `src/backend/client.ts:11-35`
-- Line 18-22: HTTP POST to `/register` endpoint
-- Line 28-30: Store vault information for later use
 
-## 2. Backend Provider Registration ✅
+*   Line 18-22: HTTP POST to `/register` endpoint
+*   Line 28-30: Store vault information for later use
+
+## 2\. Backend Provider Registration ✅
 
 **Location**: `src/main.ts:463-477`
 
@@ -38,9 +39,10 @@ this.unregisterBackendProvider = this.snwAPI.registerVirtualLinkProvider(
 ```
 
 **Provider Registration**: `src/backend/provider.ts:11-13`
-- Line 13: Provider function that returns virtual links for a given file
 
-## 3. Keyword Fetching ✅
+*   Line 13: Provider function that returns virtual links for a given file
+
+## 3\. Keyword Fetching ✅
 
 **Location**: `src/backend/provider.ts:30-32`
 
@@ -52,11 +54,12 @@ const res = await client.getKeywordCandidatesForFile(file.path);
 ```
 
 **API Call**: `src/backend/client.ts:146-153`
-- Line 152: Calls `getKeywordCandidates()` with vault and file path
-- Line 112: HTTP GET to `/candidates?vault={vault}&path={file}`
-- Line 136-138: Parse `CandidatesResponse` with keywords and spans
 
-## 4. Virtual Link Conversion ✅
+*   Line 152: Calls `getKeywordCandidates()` with vault and file path
+*   Line 112: HTTP GET to `/candidates?vault={vault}&path={file}`
+*   Line 136-138: Parse `CandidatesResponse` with keywords and spans
+
+## 4\. Virtual Link Conversion ✅
 
 **Location**: `src/backend/provider.ts:38-43`
 
@@ -70,7 +73,7 @@ const virtualLinks = res.keywords.map(kw => {
 });
 ```
 
-## 5. Implicit Links Processing ✅
+## 5\. Implicit Links Processing ✅
 
 **Location**: `src/implicit-links/manager.ts:25-113`
 
@@ -92,7 +95,7 @@ const batches = await Promise.all(
 const links = batches.flat();
 ```
 
-## 6. Phrase Info Computation ✅
+## 6\. Phrase Info Computation ✅
 
 **Location**: `src/implicit-links/manager.ts:94-107`
 
@@ -115,7 +118,7 @@ for (const l of links) {
 }
 ```
 
-## 7. Cache Update ✅
+## 7\. Cache Update ✅
 
 **Location**: `src/implicit-links/manager.ts:141-149`
 
@@ -133,7 +136,7 @@ const newCache: InferredCache = {
 view.dispatch({ effects: setInferredCache.of(newCache) });
 ```
 
-## 8. Regex Chunk Building ✅
+## 8\. Regex Chunk Building ✅
 
 **Location**: `src/implicit-links/manager.ts:151-163`
 
@@ -159,7 +162,7 @@ view.dispatch({
 });
 ```
 
-## 9. Decoration Creation ✅
+## 9\. Decoration Creation ✅
 
 **Location**: `src/implicit-links/decorators.ts:56-97`
 
@@ -187,7 +190,7 @@ const decorator = new MatchDecorator({
 });
 ```
 
-## 10. Visual Rendering ✅
+## 10\. Visual Rendering ✅
 
 **Location**: `src/implicit-links/decorators.ts:39-53`
 
@@ -213,10 +216,11 @@ add(to, to, Decoration.widget({ side: 1, widget: new CountBadge(info.count, key,
 ```
 
 **Count Badge Widget**: `src/implicit-links/decorators.ts:10-36`
-- Line 22-24: Create badge element with count
-- Line 28-32: Bind hover functionality
 
-## 11. Interaction Handling ✅
+*   Line 22-24: Create badge element with count
+*   Line 28-32: Bind hover functionality
+
+## 11\. Interaction Handling ✅
 
 **Location**: `src/implicit-links/manager.ts:193-208`
 
@@ -246,38 +250,42 @@ click(ev, view) {
 ## Key Integration Points
 
 ### Backend Provider
-- **File**: `src/backend/provider.ts`
-- **Purpose**: Bridges backend API to virtual link system
-- **Key Lines**: 13 (provider function), 31 (API call), 39-43 (conversion)
+
+*   **File**: `src/backend/provider.ts`
+*   **Purpose**: Bridges backend API to virtual link system
+*   **Key Lines**: 13 (provider function), 31 (API call), 39-43 (conversion)
 
 ### Implicit Links Manager
-- **File**: `src/implicit-links/manager.ts`
-- **Purpose**: Orchestrates the entire flow
-- **Key Lines**: 25-113 (phrase computation), 133-164 (refresh logic)
+
+*   **File**: `src/implicit-links/manager.ts`
+*   **Purpose**: Orchestrates the entire flow
+*   **Key Lines**: 25-113 (phrase computation), 133-164 (refresh logic)
 
 ### Decorators
-- **File**: `src/implicit-links/decorators.ts`
-- **Purpose**: Handles visual rendering and interactions
-- **Key Lines**: 39-53 (decoration creation), 56-97 (chunk plugin)
+
+*   **File**: `src/implicit-links/decorators.ts`
+*   **Purpose**: Handles visual rendering and interactions
+*   **Key Lines**: 39-53 (decoration creation), 56-97 (chunk plugin)
 
 ### Main Plugin
-- **File**: `src/main.ts`
-- **Purpose**: Initializes backend integration and manages lifecycle
-- **Key Lines**: 426-458 (backend init), 463-477 (provider registration)
+
+*   **File**: `src/main.ts`
+*   **Purpose**: Initializes backend integration and manages lifecycle
+*   **Key Lines**: 426-458 (backend init), 463-477 (provider registration)
 
 ## Performance Optimizations
 
-- **Debouncing**: 120ms delay to avoid excessive API calls (`src/implicit-links/manager.ts:127`)
-- **Chunking**: Phrases split into chunks of max 300 for efficient regex matching (`src/implicit-links/manager.ts:127`)
-- **Caching**: Inferred cache prevents redundant processing (`src/implicit-links/cache.ts`)
-- **Active File Only**: Backend provider only processes currently active file (`src/backend/provider.ts:15-19`)
+*   **Debouncing**: 120ms delay to avoid excessive API calls (`src/implicit-links/manager.ts:127`)
+*   **Chunking**: Phrases split into chunks of max 300 for efficient regex matching (`src/implicit-links/manager.ts:127`)
+*   **Caching**: Inferred cache prevents redundant processing (`src/implicit-links/cache.ts`)
+*   **Active File Only**: Backend provider only processes currently active file (`src/backend/provider.ts:15-19`)
 
 ## Data Flow Summary
 
-1. **Backend API** → `CandidatesResponse` with keywords and spans
-2. **Virtual Links** → Converted to `makeLink()` format
-3. **Phrase Info** → Map of normalized phrases to targets and counts
-4. **Inferred Cache** → CodeMirror state field with phrase data
-5. **Regex Chunks** → Optimized patterns for text matching
-6. **Decorations** → Visual marks and widgets in editor
-7. **User Interactions** → Click navigation and hover previews
+1.  **Backend API** → `CandidatesResponse` with keywords and spans
+2.  **Virtual Links** → Converted to `makeLink()` format
+3.  **Phrase Info** → Map of normalized phrases to targets and counts
+4.  **Inferred Cache** → CodeMirror state field with phrase data
+5.  **Regex Chunks** → Optimized patterns for text matching
+6.  **Decorations** → Visual marks and widgets in editor
+7.  **User Interactions** → Click navigation and hover previews
