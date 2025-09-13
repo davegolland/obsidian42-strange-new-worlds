@@ -9,7 +9,7 @@ import type SNWPlugin from "src/main";
 import SnwAPI from "src/snwApi";
 import type { ReferenceCountingPolicy } from "../policies/reference-counting";
 import type { TransformedCachedItem } from "../types";
-import { getUIC_Hoverview } from "../ui/components/uic-ref--parent";
+import { getUIC_HoverviewElement } from "../ui/components/uic-ref--parent";
 import tippy from "tippy.js";
 import "tippy.js/dist/tippy.css";
 // htmlDecorationForReferencesElement removed - was from deleted htmlDecorations.tsx
@@ -345,15 +345,19 @@ export class InlineReferenceWidget extends WidgetType {
 		
 		// Set up tippy hover with proper configuration
 		const tip = tippy(el, {
+			theme: "snw-tippy",
 			interactive: true,
 			appendTo: () => document.body,
 			allowHTML: true,
 			zIndex: 9999,
 			trigger: this.plugin?.settings?.requireModifierForHover ? "manual" : "mouseenter focus",
 			onShow: async (instance) => {
-				// Build popover DOM using getUIC_Hoverview
-				// getUIC_Hoverview handles setting the content internally
-				await getUIC_Hoverview(instance);
+				// Build popover DOM (do NOT append inline) and assign to Tippy
+				const contentEl = await getUIC_HoverviewElement({
+					referenceEl: el,
+					plugin: this.plugin
+				});
+				if (contentEl) instance.setContent(contentEl);
 			},
 		});
 		

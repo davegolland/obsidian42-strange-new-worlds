@@ -1,9 +1,7 @@
-import { RangeSetBuilder } from "@codemirror/state";
 import { Decoration, type EditorView, MatchDecorator, ViewPlugin, type ViewUpdate, WidgetType } from "@codemirror/view";
 import { isInsideCode, isInsideMarkdownLink, isInsideWikiLink } from "../view-extensions/text-guards";
 import { type PhraseInfo, inferredCacheField } from "./cache";
-import { generateReferenceKey } from "./shared-utils";
-import { getUIC_Hoverview } from "../ui/components/uic-ref--parent";
+import { getUIC_HoverviewElement } from "../ui/components/uic-ref--parent";
 import tippy from "tippy.js";
 
 // Using shared guard functions from text-guards.ts
@@ -37,27 +35,32 @@ class CountBadge extends WidgetType {
 		el.setAttribute("data-snw-display", this.display);
 
 		// Set up tippy hover
-		tippy(el, {
+		const tip = tippy(el, {
 			content: "Loading...",
 			theme: "snw-tippy",
-			trigger: "mouseenter focus",
+			appendTo: () => document.body,
+			trigger: this.plugin?.settings?.requireModifierForHover ? "manual" : "mouseenter focus",
 			interactive: true,
 			allowHTML: true,
+			onTrigger(instance, ev) {
+				const requireMod = this.plugin?.settings?.requireModifierForHover ?? false;
+				(instance as any).__snwShouldShow = !requireMod || ((ev as MouseEvent).metaKey || (ev as MouseEvent).ctrlKey);
+			},
 			onShow: async (instance) => {
-				// Check if modifier key is required
-				const requireModifier = this.plugin?.settings?.requireModifierForHover ?? false;
-				if (requireModifier && !this.plugin?.app?.keyboard?.isModifierPressed?.("Mod")) {
-					return false;
-				}
-				
-				// Load the hover content
-				await getUIC_Hoverview(instance);
+				if (!(instance as any).__snwShouldShow) return false;
+				// Build the hover DOM and set it as tooltip content
+				const contentEl = await getUIC_HoverviewElement({ 
+					referenceEl: instance.reference as HTMLElement, 
+					plugin: this.plugin 
+				});
+				if (contentEl) instance.setContent(contentEl);
 				return true;
 			},
 			onHide: () => {
 				// Clean up if needed
 			}
 		});
+
 
 		return el;
 	}
@@ -77,13 +80,14 @@ function addLinkDecos(add: any, from: number, to: number, text: string, info: Ph
 			},
 		}),
 	);
-	// Get the current file for fromFilePath
-	const fromFile = plugin?.app?.workspace?.getActiveFile?.() ?? null;
-	
 	// Log the badge construction (only in dev mode)
 	if (plugin?.settings?.dev?.diagDecorations) {
+		const fromFile = plugin?.app?.workspace?.getActiveFile?.() ?? null;
 		console.log("[SNW badge] key=%s count=%d target=%s from=%s", key, info.count, info.target, fromFile?.path ?? "");
 	}
+	
+	// Get the current file for fromFilePath
+	const fromFile = plugin?.app?.workspace?.getActiveFile?.() ?? null;
 	
 	add(to, to, Decoration.widget({ 
 		side: 1, 
@@ -119,7 +123,7 @@ export function makeChunkPlugin(regex: RegExp, plugin: any) {
 		},
 	});
 
-	return ViewPlugin.fromClass(
+		return ViewPlugin.fromClass(
 		class {
 			decorations = Decoration.none;
 			constructor(private view: EditorView) {
@@ -130,7 +134,7 @@ export function makeChunkPlugin(regex: RegExp, plugin: any) {
 				// If cache changed (phrasesVersion bump), we must rebuild; handled by the "manager" below.
 			}
 		},
-		{ decorations: (v) => (v as any).decorations },
+		{ decorations: (v) => v.decorations },
 	);
 }
 

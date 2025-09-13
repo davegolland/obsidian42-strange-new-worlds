@@ -30,6 +30,38 @@ export const getUIC_Hoverview = async (instance: Instance) => {
 	scrollResultsIntoView(popoverEl);
 };
 
+/**
+ * Pure builder function that returns an HTMLElement for hover content
+ * Used by the new non-mutating approach
+ */
+export const getUIC_HoverviewElement = async (ctx: { referenceEl: HTMLElement, plugin: SNWPlugin }): Promise<HTMLElement> => {
+	const { referenceEl, plugin } = ctx;
+	
+	// Read data attributes from referenceEl
+	const refType = referenceEl.getAttribute("data-snw-type") || "";
+	const realLink = referenceEl.getAttribute("data-snw-realLink") 
+		?? referenceEl.getAttribute("data-snw-reallink") 
+		?? "";
+	const key = referenceEl.getAttribute("data-snw-key") || "";
+	const filePath = referenceEl.getAttribute("data-snw-filepath") || "";
+	const lineNu = Number(referenceEl.getAttribute("snw-data-line-number")) || 0;
+	const display = referenceEl.getAttribute("data-snw-display") || undefined;
+	
+	// Build the popover DOM
+	const popoverEl = createDiv();
+	popoverEl.addClass("snw-popover-container");
+	popoverEl.addClass("search-result-container");
+	popoverEl.appendChild(await getUIC_Ref_Area(refType, realLink, key, filePath, lineNu, true, display));
+	
+	// Set up event handlers
+	setTimeout(async () => {
+		await setFileLinkHandlers(false, popoverEl);
+	}, 500);
+	scrollResultsIntoView(popoverEl);
+	
+	return popoverEl;
+};
+
 // Loads the references into the side pane, using the same logic as the HoverView
 export const getUIC_SidePane = async (
 	refType: string,
@@ -151,7 +183,9 @@ const getDataElements = async (
 }> => {
 	const parentElement: ReferenceElement = instance.reference;
 	const refType = parentElement.getAttribute("data-snw-type") || "";
-	const realLink = parentElement.getAttribute("data-snw-reallink") || "";
+	const realLink = parentElement.getAttribute("data-snw-realLink") 
+		?? parentElement.getAttribute("data-snw-reallink") 
+		?? "";
 	const key = parentElement.getAttribute("data-snw-key") || "";
 	const path = parentElement.getAttribute("data-snw-filepath") || "";
 	const lineNum = Number(parentElement.getAttribute("snw-data-line-number")) || 0;
