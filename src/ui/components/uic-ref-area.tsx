@@ -6,7 +6,7 @@ import type SNWPlugin from "src/main";
 import type { Link } from "src/types";
 import type { ReferenceCountingPolicy } from "../../policies/reference-counting";
 import type { SortOption } from "../../settings";
-import { setFileLinkHandlers } from "./uic-ref--parent";
+import { setFileLinkHandlers } from "./hover-content";
 import { getUIC_Ref_Item } from "./uic-ref-item";
 import { getUIC_Ref_Title_Div } from "./uic-ref-title";
 

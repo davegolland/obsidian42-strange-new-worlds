@@ -18,10 +18,7 @@ try {
   process.exit(1);
 }
 
-// Create styles directory in build if it doesn't exist
-if (!fs.existsSync('build/styles')) {
-  fs.mkdirSync('build/styles', { recursive: true });
-}
+// No need to create styles directory since we only output styles.css
 
 // Instead of just copying the files, let's combine all CSS files into one
 const concatenateCss = () => {
@@ -39,15 +36,7 @@ ${processedCss}`;
   
   fs.writeFileSync('build/styles.css', combinedCss);
   
-  // Also copy individual files for reference
-  const styleFiles = ['common.css', 'inline.css', 'gutter.css', 'popover.css', 'main.css'];
-  styleFiles.forEach(file => {
-    try {
-      fs.copyFileSync(path.join('styles', file), path.join('build/styles', file));
-    } catch (err) {
-      console.error(`Error copying ${file}:`, err);
-    }
-  });
+  // Individual CSS files are not needed in build - only the combined styles.css is used
 };
 
 concatenateCss();

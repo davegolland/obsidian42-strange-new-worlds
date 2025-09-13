@@ -9,7 +9,7 @@ import type SNWPlugin from "src/main";
 import SnwAPI from "src/snwApi";
 import type { ReferenceCountingPolicy } from "../policies/reference-counting";
 import type { TransformedCachedItem } from "../types";
-import { getUIC_HoverviewElement } from "../ui/components/uic-ref--parent";
+import { getUIC_HoverviewElement } from "../ui/components/hover-content";
 import tippy from "tippy.js";
 import "tippy.js/dist/tippy.css";
 // htmlDecorationForReferencesElement removed - was from deleted htmlDecorations.tsx
@@ -91,8 +91,7 @@ export const inlineDecorationsExtension = (plugin: SNWPlugin) =>
 						} else {
 							// If we get this far, then it is a file, and process it using getSNWCacheByFile
 
-							// @ts-ignore && Check if should show in source mode
-							if (p.settings.displayInlineReferencesInSourceMode === false && mdView.currentMode?.sourceMode === true) return null;
+							// In minimal mode, we always show inline references
 
 							mdViewFile = mdView.file as TFile;
 

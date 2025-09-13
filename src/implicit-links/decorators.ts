@@ -1,7 +1,7 @@
 import { Decoration, type EditorView, MatchDecorator, ViewPlugin, type ViewUpdate, WidgetType } from "@codemirror/view";
 import { isInsideCode, isInsideMarkdownLink, isInsideWikiLink } from "../view-extensions/text-guards";
 import { type PhraseInfo, inferredCacheField } from "./cache";
-import { getUIC_HoverviewElement } from "../ui/components/uic-ref--parent";
+import { getUIC_HoverviewElement } from "../ui/components/hover-content";
 import tippy from "tippy.js";
 
 // Using shared guard functions from text-guards.ts

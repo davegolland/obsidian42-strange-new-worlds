@@ -5,7 +5,7 @@ import type SNWPlugin from "../main";
 import { log } from "../diag";
 
 export { setPluginVariableUIC_RefArea } from "./components/uic-ref-area";
-export { setPluginVariableForUIC } from "./components/uic-ref--parent";
+export { setPluginVariableForUIC } from "./components/hover-content";
 export { setPluginVariableForCM6InlineReferences } from "../view-extensions/references-cm6";
 
 // Add the missing htmlDecorations initializer

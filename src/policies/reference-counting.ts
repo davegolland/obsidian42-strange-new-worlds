@@ -388,13 +388,7 @@ export class ReferenceCountingPolicy {
 		// Debug flags
 		const logDebugInfo = this.debugMode;
 
-		if (
-			this.plugin.settings.enableIgnoreObsExcludeFoldersLinksFrom &&
-			file?.path &&
-			this.plugin.app.metadataCache.isUserIgnored(file?.path)
-		) {
-			return;
-		}
+		// In minimal mode, we don't filter by ignored folders
 		for (const item of [cache?.links, cache?.embeds, cache?.frontmatterLinks]) {
 			if (!item) continue;
 			for (const ref of item) {
@@ -403,13 +397,7 @@ export class ReferenceCountingPolicy {
 					: parseLinktext(ref.link);
 				const tfileDestination = this.plugin.app.metadataCache.getFirstLinkpathDest(path, "/");
 				if (tfileDestination) {
-					if (
-						this.plugin.settings.enableIgnoreObsExcludeFoldersLinksTo &&
-						tfileDestination?.path &&
-						this.plugin.app.metadataCache.isUserIgnored(tfileDestination.path)
-					) {
-						continue;
-					}
+					// In minimal mode, we don't filter by ignored folders
 					// if the file has a property snw-index-exclude set to true, exclude it from the index
 					if (this.plugin.app.metadataCache.getFileCache(tfileDestination)?.frontmatter?.["snw-index-exclude"] === true) continue;
 

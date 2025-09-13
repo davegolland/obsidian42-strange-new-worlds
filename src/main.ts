@@ -131,6 +131,7 @@ export default class SNWPlugin extends Plugin {
 
 	/**
 	 * Initialize backend integration
+	 * This is the ONLY place where backend registration happens
 	 */
 	private async initBackend(): Promise<void> {
 		const url = (this.settings.backendUrl || "").trim();
