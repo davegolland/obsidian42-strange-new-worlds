@@ -99,7 +99,8 @@ const getRefAreaItems = async (refType: string, key: string, filePath: string): 
 		linksToLoop = referenceCountingPolicy.filterReferences(sortedCache);
 		
 		// Fallback: if nothing found and this is an implicit badge, show a friendly empty state
-		if (!linksToLoop.length && refType === 'implicit') {
+		// Also show fallback in Minimal Mode when there's no local index
+		if (!linksToLoop.length && (refType === 'implicit' || plugin.settings.minimalMode)) {
 			const hint = createDiv({ cls: "snw-ref-empty" });
 			hint.setText("No indexed backlinks (inferred link).");
 			const container = createDiv();

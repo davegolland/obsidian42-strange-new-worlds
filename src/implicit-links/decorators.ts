@@ -64,8 +64,10 @@ function addLinkDecos(add: any, from: number, to: number, text: string, info: Ph
 	// Get the current file for fromFilePath
 	const fromFile = plugin?.app?.workspace?.getActiveFile?.() ?? null;
 	
-	// Log the badge construction
-	console.log("[SNW badge] key=%s count=%d target=%s from=%s", key, info.count, info.target, fromFile?.path ?? "");
+	// Log the badge construction (only in dev mode)
+	if (plugin?.settings?.dev?.diagDecorations) {
+		console.log("[SNW badge] key=%s count=%d target=%s from=%s", key, info.count, info.target, fromFile?.path ?? "");
+	}
 	
 	add(to, to, Decoration.widget({ 
 		side: 1, 

@@ -87,6 +87,7 @@ export interface Settings {
 	autoLinks: AutoLinkSettings;
 	backend: BackendSettings;
 	minimalMode: boolean; // NEW: Enable minimal mode for debugging
+	enableLegacyFullMode: boolean; // NEW: Enable legacy full mode (deprecated)
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -148,7 +149,8 @@ export const DEFAULT_SETTINGS: Settings = {
 		baseUrl: "http://localhost:8000",
 		vaultName: undefined,
 	},
-	minimalMode: false,
+	minimalMode: true,
+	enableLegacyFullMode: false,
 };
 
 // For backward compatibility with older settings format
@@ -239,7 +241,8 @@ export function migrateSettings(legacySettings: LegacySettings): Settings {
 			baseUrl: "http://localhost:8000",
 			vaultName: undefined,
 		},
-		minimalMode: false,
+		minimalMode: true,
+		enableLegacyFullMode: false,
 		dev: {
 			diagDecorations: false,
 			forceLegacy: false,

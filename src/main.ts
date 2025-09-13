@@ -26,6 +26,7 @@ import * as uiInits from "./ui/ui-inits";
 import { updateAllSnwLiveUpdateReferences } from "./view-extensions/htmlDecorations";
 import { BackendClient } from "./backend/client";
 import { createBackendLinksProvider } from "./backend/provider";
+import { InlineReferenceExtension } from "./view-extensions/references-cm6";
 
 export const UPDATE_DEBOUNCE = 200;
 
@@ -66,6 +67,7 @@ export default class SNWPlugin extends Plugin {
 	// Backend integration
 	private _backendClient: BackendClient | null = null;
 	private unregisterBackendProvider: (() => void) | null = null;
+	private backendProvider: any = null;
 
 	// Public getter for backend client
 	get backendClient(): BackendClient | null {
@@ -124,82 +126,37 @@ export default class SNWPlugin extends Plugin {
 	}
 
 	async onload(): Promise<void> {
-		// Load settings first to get diagnostic flags
-		log.time("initSettings");
-		try {
-			await this.initSettings();
-			log.timeEnd("initSettings");
-		} catch (error) {
-			log.error("Failed to load settings:", error);
-			log.warn("Using default settings");
-		}
+		console.log(`loading ${this.appName}`);
 
-		// Now that settings are loaded, set up diagnostic logging
-		if (this.settings.dev?.diagDecorations) {
-			window.addEventListener("error", (e) => log.error("window.error", e.error || e));
-			window.addEventListener("unhandledrejection", (e) => log.error("unhandledrejection", e.reason));
-			
-			// Log all fetch calls for development
-			const _fetch = window.fetch;
-			window.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
-				const url = typeof input === "string" ? input : input.toString();
-				log.debug("NET:", init?.method || "GET", url);
-				const t = `NET ⏱ ${init?.method || "GET"} ${url}`;
-				log.time(t);
-				try {
-					const resp = await _fetch(input, init);
-					log.timeEnd(t);
-					log.debug("NET: status", resp.status, url);
-					return resp;
-				} catch (e) {
-					log.timeEnd(t);
-					log.error("NET: error", url, e);
-					throw e;
-				}
-			};
-		}
-		
-		log.info("🔌 onload(): start");
-		log.time("onload total");
-		log.mark("onload-start");
-
-		log.info("settings snapshot", JSON.stringify(this.settings));
-		log.debug("minimalMode value:", this.settings.minimalMode);
-		log.debug("Settings loaded, minimalMode check:", {
-			minimalMode: this.settings.minimalMode,
-			settingsSnapshot: JSON.stringify(this.settings)
-		});
-
-		// Always add settings tab early for toggling
+		// 1) Always load settings FIRST
+		await this.initSettings();
 		this.addSettingTab(new SettingsTab(this.app, this));
 
-		// Always initialize feature manager (needed for settings updates)
-		log.time("featureManager");
-		this.featureManager = new FeatureManager(this, this.settings, this.showCountsActive);
-		log.timeEnd("featureManager");
-
-		// Update feature manager with current settings and state (always needed)
-		this.featureManager.updateSettings(this.settings);
-		this.featureManager.updateShowCountsActive(this.showCountsActive);
-		
-		log.debug("About to check minimalMode:", this.settings.minimalMode);
+		// 2) Branch immediately
 		if (this.settings.minimalMode) {
-			log.info("🚀 Minimal mode ENABLED — backend-only path");
-			log.time("initAPI(minimal)");
-			await this.initAPI({ minimal: true });  // lightweight, no CM6/MD processors
-			log.timeEnd("initAPI(minimal)");
-
-			log.time("initBackend");
-			await this.initBackend();               // registers provider, starts status polling
-			log.timeEnd("initBackend");
-
-			log.timeEnd("onload total");
-			log.mark("onload-end");
-			log.measure("onload-total", "onload-start", "onload-end");
-			log.info("🎯 Minimal mode initialization complete");
+			console.log("SNW: 🚀 Minimal Mode (backend-only)");
+			// If you need more later, guard with: if (this.settings.dev?.diagDecorations) console.debug(...)
+			await this.initAPI({ minimal: true });   // lightweight surface
+			await this.initBackend();                // registers backend provider
+			await this.initMinimalSurface();         // <— NEW: render inferred links
+			console.log("SNW: 🎯 Minimal Mode ready");
 			return;
 		}
 
+		// 3) Legacy full mode (deprecated)
+		if (!this.settings.enableLegacyFullMode) {
+			console.log("SNW: ⚠️  LEGACY FULL MODE DISABLED — Switching to minimal mode");
+			console.log("SNW: To enable legacy full mode, set enableLegacyFullMode: true in settings");
+			this.settings.minimalMode = true;
+			await this.saveSettings();
+			await this.initAPI({ minimal: true });
+			await this.initBackend();
+			await this.initMinimalSurface();
+			console.log("SNW: 🎯 Switched to minimal mode");
+			return;
+		}
+
+		console.log("SNW: ⚠️  LEGACY FULL MODE — This mode will be deprecated");
 		log.info("🔧 Full mode initialization");
 
 		log.time("buildLinksAndReferences");
@@ -443,13 +400,68 @@ export default class SNWPlugin extends Plugin {
 	}
 
 	/**
+	 * Create API bridge to expose getSNWCacheByFile method for decorations/hover
+	 */
+	private ensureAPIBridge(): void {
+		const manager = this.implicitLinksManager;
+
+		// Forwarder used by decorations/hover. If manager isn't ready, return a harmless empty shape.
+		const getSNWCacheByFile = (fileOrPath: any) => {
+			const fn = manager?.getSNWCacheByFile?.bind(manager);
+			return fn ? fn(fileOrPath) : { byPhrase: new Map(), version: 0 };
+		};
+
+		// Expose as plugin method (legacy callers use this)
+		(this as any).getSNWCacheByFile = getSNWCacheByFile;
+
+		// Also expose on snwAPI if code reads it there
+		if (this.snwAPI && !(this.snwAPI as any).getSNWCacheByFile) {
+			(this.snwAPI as any).getSNWCacheByFile = getSNWCacheByFile;
+		}
+	}
+
+	/**
+	 * Initialize minimal surface for rendering inferred links
+	 */
+	private async initMinimalSurface(): Promise<void> {
+		// Only the pieces needed to draw inferred links:
+		// - implicit links manager (without local detectors / index)
+		// - CM6 decorations for inline marks + hover
+		// - the backend virtual provider
+
+		// 1) (Re)run the same UI "plugin variable" initializers that full mode uses
+		//    Call them here BEFORE registering extensions.
+		uiInits.setPluginVariableUIC_RefArea(this);
+		uiInits.setPluginVariableForUIC(this);
+
+		// 2) Start the implicit links manager in minimal mode
+		this.implicitLinksManager = new ImplicitLinksManager(this, this.settings.autoLinks);
+		this.ensureAPIBridge();           // <-- add this line
+
+		// 3) Backend provider already registered in initBackend() - don't duplicate
+
+		// 4) Wire the minimal editor surface (decorations + hover)
+		//    Use factory functions that bind plugin instance
+		const { inlineDecorationsExtension } = await import("./view-extensions/references-cm6");
+		this.registerEditorExtension(inlineDecorationsExtension(this)); // inline decorations
+		
+		// Import and register the implicit links extension (same as full mode)
+		const { createInferredLinksExtension } = await import("./implicit-links/manager");
+		const implicitExt = createInferredLinksExtension(this, {
+			debounceMs: 120,
+			boundaryMode: "word",
+			caseInsensitive: true,
+			maxPerChunk: 300,
+		});
+		this.registerEditorExtension(implicitExt);
+
+		console.log("SNW: 🧩 Minimal surface ready (decorations + hover)");
+	}
+
+	/**
 	 * Initialize backend integration
 	 */
 	private async initBackend(): Promise<void> {
-		// ADD: Diagnostic logging for initBackend start
-		console.log("SNW: initBackend start",
-			{ enabled: this.settings.backend.enabled, baseUrl: this.settings.backend.baseUrl });
-
 		// Only initialize backend if it's enabled in settings
 		if (!this.settings.backend.enabled) return;
 		if (!this._backendClient) {
@@ -458,8 +470,6 @@ export default class SNWPlugin extends Plugin {
 
 		// Register backend with the vault path (zero-config)
 		const basePath = (this.app.vault.adapter as any).getBasePath?.() ?? "";
-		// ADD: Diagnostic logging for basePath
-		console.log("SNW: initBackend basePath", { basePath });
 
 		if (!basePath) {
 			console.warn("SNW: Cannot get vault base path for backend registration");
@@ -471,16 +481,9 @@ export default class SNWPlugin extends Plugin {
 		try {
 			// Use vault name from settings or generate one from path
 			const vaultName = this.settings.backend.vaultName || this.app.vault.getName() || "default-vault";
-			// ADD: Diagnostic logging for registration attempt
-			console.log("SNW: initBackend registering", { vaultName, basePath });
 
 			await this._backendClient.register(vaultName, basePath);
-			// ADD: Diagnostic logging for successful registration
-			console.log("SNW: initBackend registered OK");
-			log.info("SNW: Backend registered successfully");
 		} catch (error) {
-			// ADD: Diagnostic logging for registration failure
-			console.error("SNW: initBackend register failed", error);
 			console.warn("SNW: Backend register failed — check server", error);
 			// Continue with provider registration even if register fails
 			// The backend might still be available for queries
@@ -500,12 +503,6 @@ export default class SNWPlugin extends Plugin {
 		// Turn off existing provider
 		this.unregisterBackendProvider?.();
 		this.unregisterBackendProvider = null;
-
-		// ADD: Diagnostic logging to check if provider registration is being skipped
-		console.log("SNW: refreshBackendProvider",
-			{ enabled: this.settings.backend.enabled,
-				hasSnwAPI: !!this.snwAPI,
-				canRegister: !!this.snwAPI?.registerVirtualLinkProvider });
 
 		if (!this.settings.backend.enabled) return;
 
@@ -710,6 +707,13 @@ export default class SNWPlugin extends Plugin {
 		} else {
 			this.settings = Object.assign({}, DEFAULT_SETTINGS, loadedData);
 		}
+
+		// Migration: if minimalMode is undefined, set to true (new default)
+		if (this.settings.minimalMode === undefined) {
+			log.info("Migrating to minimal mode as default");
+			this.settings.minimalMode = true;
+			await this.saveSettings(); // Save the migration
+		}
 		
 		log.debug("settings.after.migrate:", this.settings);
 		log.debug("Settings loaded, minimalMode check:", {
@@ -717,6 +721,21 @@ export default class SNWPlugin extends Plugin {
 			settingsSnapshot: JSON.stringify(this.settings)
 		});
 		log.timeEnd("settings.load");
+	}
+
+	async updateSettings(patch: Partial<Settings>): Promise<void> {
+		this.settings = { ...this.settings, ...patch };
+		await this.saveSettings(); // persist
+		
+		// If backend toggles changed, re-init provider for current mode
+		if (patch?.backend !== undefined || patch?.minimalMode !== undefined) {
+			if (this.settings.minimalMode) {
+				await this.initBackend();          // ensures backendClient + provider
+				// do NOT re-register CM6; initMinimalSurface already did it
+			} else {
+				await this.refreshBackendProvider();
+			}
+		}
 	}
 
 	async saveSettings(): Promise<void> {
