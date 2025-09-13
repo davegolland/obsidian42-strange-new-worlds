@@ -33,11 +33,20 @@ export const buildHoverPopover = async (ctx: { referenceEl: HTMLElement, plugin:
 	popoverEl.addClass("search-result-container");
 	popoverEl.appendChild(await getUIC_Ref_Area(refType, realLink, key, filePath, lineNu, true, plugin, display));
 	
-	// Set up event handlers
-	requestAnimationFrame(() => { void wireHoverEvents(plugin, popoverEl); });
-	scrollResultsIntoView(popoverEl);
+	// Attach hover behavior
+	attachHoverBehavior(plugin, popoverEl);
 	
 	return popoverEl;
+};
+
+/**
+ * Attaches hover behavior to a popover element
+ * @param plugin - SNW plugin instance
+ * @param el - The popover element to attach behavior to
+ */
+const attachHoverBehavior = (plugin: SNWPlugin, el: HTMLElement): void => {
+	requestAnimationFrame(() => { void wireHoverEvents(plugin, el); });
+	scrollResultsIntoView(el);
 };
 
 
