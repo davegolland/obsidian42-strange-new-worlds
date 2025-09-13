@@ -1,6 +1,6 @@
 import type { CachedMetadata, TFile } from "obsidian";
 import type SNWPlugin from "./main";
-import type { TransformedCache, VirtualLinkProvider, Link } from "./types";
+import type { TransformedCache, TransformedCacheMinimal, VirtualLinkProvider, Link } from "./types";
 import type { ReferenceCountingPolicy } from "./policies/reference-counting";
 
 /**
@@ -56,15 +56,16 @@ export default class SnwAPI {
 	}
 
 	// (If any UI piece still calls this, give it a safe fallback)
-	getSNWCacheByFile(file: TFile): TransformedCache {
-		return this.plugin?.referenceCountingPolicy?.getSNWCacheByFile?.(file) ?? {
-			blocks: [],
-			links: [],
-			headings: [],
-			embeds: [],
-			frontmatterLinks: [],
-			createDate: Date.now(),
-			cacheMetaData: null,
+	getSNWCacheByFile(file: TFile): TransformedCacheMinimal {
+		const cache = this.plugin?.referenceCountingPolicy?.getSNWCacheByFile?.(file);
+		return {
+			blocks: cache?.blocks ?? [],
+			links: cache?.links ?? [],
+			headings: cache?.headings ?? [],
+			embeds: cache?.embeds ?? [],
+			frontmatterLinks: cache?.frontmatterLinks ?? [],
+			createDate: cache?.createDate ?? Date.now(),
+			cacheMetaData: cache?.cacheMetaData ?? null,
 		};
 	}
 }

@@ -161,7 +161,7 @@ export default class SNWPlugin extends Plugin {
 		this.unregisterBackendProvider = null;
 
 		// Guard: api ready?
-		if (!this.snwAPI || !(this.snwAPI as any).registerVirtualLinkProvider) {
+		if (!this.snwAPI || typeof this.snwAPI.registerVirtualLinkProvider !== 'function') {
 			console.warn("SNW: snwAPI not ready; will try again soon");
 			return;
 		}

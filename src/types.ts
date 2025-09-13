@@ -53,6 +53,17 @@ export interface TransformedCache {
 	cacheMetaData?: CachedMetadata;
 }
 
+// Minimal mode version with required arrays
+export interface TransformedCacheMinimal {
+	blocks: TransformedCachedItem[];
+	links: TransformedCachedItem[];
+	headings: TransformedCachedItem[];
+	embeds: TransformedCachedItem[];
+	frontmatterLinks: TransformedCachedItem[];
+	createDate: number;
+	cacheMetaData: CachedMetadata | null;
+}
+
 
 /**
  * Providers can return additional virtual links (e.g., Dataview, properties, computed relationships)
