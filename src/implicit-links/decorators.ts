@@ -2,6 +2,7 @@ import { Decoration, type EditorView, MatchDecorator, ViewPlugin, type ViewUpdat
 import { isInsideCode, isInsideMarkdownLink, isInsideWikiLink } from "../view-extensions/text-guards";
 import { type PhraseInfo, inferredCacheField } from "./cache";
 import { getUIC_HoverviewElement } from "../ui/components/hover-content";
+import { ATTR } from "../ui/attr";
 import tippy from "tippy.js";
 
 // Using shared guard functions from text-guards.ts
@@ -27,12 +28,12 @@ class CountBadge extends WidgetType {
 		el.title = `${this.count} reference${this.count === 1 ? "" : "s"}`;
 
 		// Set all required attributes for hover functionality
-		el.setAttribute("data-snw-type", "implicit");
-		el.setAttribute("data-snw-reallink", this.realLink);
-		el.setAttribute("data-snw-key", this.key);
-		el.setAttribute("data-snw-filepath", this.fromFilePath);
-		el.setAttribute("snw-data-line-number", "0");
-		el.setAttribute("data-snw-display", this.display);
+		el.setAttribute(ATTR.type, "implicit");
+		el.setAttribute(ATTR.realLink, this.realLink);
+		el.setAttribute(ATTR.key, this.key);
+		el.setAttribute(ATTR.file, this.fromFilePath);
+		el.setAttribute(ATTR.line, "0");
+		el.setAttribute(ATTR.display, this.display);
 
 		// Set up tippy hover
 		const tip = tippy(el, {

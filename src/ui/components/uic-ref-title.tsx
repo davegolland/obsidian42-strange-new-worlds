@@ -3,6 +3,7 @@
 import { render } from "preact";
 import type SNWPlugin from "src/main";
 import { hideAll } from "tippy.js";
+import { ATTR } from "../attr";
 // IconMoreDetails and SortOrderDropdown removed - files were deleted
 
 export const getUIC_Ref_Title_Div = (
@@ -21,11 +22,11 @@ export const getUIC_Ref_Title_Div = (
 		<div className={`${isPopover ? "snw-ref-title-popover" : "snw-ref-title-side-pane"} tree-item-self is-clickable`}>
 			<div
 				className="snw-ref-title-popover-label"
-				snw-ref-title-type={refType}
-				snw-ref-title-reallink={realLink}
-				snw-ref-title-key={key}
-				snw-data-file-name={filePath}
-				snw-data-line-number={lineNu.toString()}
+				{...{ [ATTR.titleType]: refType }}
+				{...{ [ATTR.titleRealLink]: realLink }}
+				{...{ [ATTR.titleKey]: key }}
+				{...{ [ATTR.fileName]: filePath }}
+				{...{ [ATTR.line]: lineNu.toString() }}
 			>
 				{(() => {
 					// Use display if provided, otherwise fallback to existing logic

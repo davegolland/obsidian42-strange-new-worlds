@@ -10,6 +10,7 @@ import SnwAPI from "src/snwApi";
 import type { ReferenceCountingPolicy } from "../policies/reference-counting";
 import type { TransformedCachedItem } from "../types";
 import { getUIC_HoverviewElement } from "../ui/components/hover-content";
+import { ATTR } from "../ui/attr";
 import tippy from "tippy.js";
 import "tippy.js/dist/tippy.css";
 // htmlDecorationForReferencesElement removed - was from deleted htmlDecorations.tsx
@@ -344,11 +345,11 @@ export class InlineReferenceWidget extends WidgetType {
 		el.title = `${this.referenceType} • ${this.referenceCount} reference${this.referenceCount === 1 ? "" : "s"}`;
 		
 		// Add required data attributes for tooltip functionality
-		el.setAttribute("data-snw-type", this.referenceType);
-		el.setAttribute("data-snw-reallink", this.realLink);
-		el.setAttribute("data-snw-key", this.key);
-		el.setAttribute("data-snw-filepath", this.filePath);
-		el.setAttribute("snw-data-line-number", this.lineNu.toString());
+		el.setAttribute(ATTR.type, this.referenceType);
+		el.setAttribute(ATTR.realLink, this.realLink);
+		el.setAttribute(ATTR.key, this.key);
+		el.setAttribute(ATTR.file, this.filePath);
+		el.setAttribute(ATTR.line, this.lineNu.toString());
 		
 		// Set up tippy hover with proper configuration
 		const tip = tippy(el, {

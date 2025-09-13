@@ -1,22 +1,13 @@
-import { Keymap, MarkdownView, Notice } from "obsidian";
+import { Keymap, Notice } from "obsidian";
 import type SNWPlugin from "src/main";
 import { scrollResultsIntoView } from "src/utils";
 import { getUIC_Ref_Area } from "./uic-ref-area";
 import { setPluginVariableUIC_RefItem } from "./uic-ref-item";
-
-let plugin: SNWPlugin;
-
-function getAttr(el: HTMLElement, name: string): string {
-	return el.getAttribute(name) ?? "";
-}
-
-function getRealLink(el: HTMLElement): string {
-	return getAttr(el, "data-snw-reallink");
-}
+import { ATTR } from "../attr";
+import { passesHoverGate } from "../modifier";
 
 export function setPluginVariableForUIC(snwPlugin: SNWPlugin) {
-	plugin = snwPlugin;
-	setPluginVariableUIC_RefItem(plugin);
+	setPluginVariableUIC_RefItem(snwPlugin);
 }
 
 
@@ -28,21 +19,21 @@ export const getUIC_HoverviewElement = async (ctx: { referenceEl: HTMLElement, p
 	const { referenceEl, plugin } = ctx;
 	
 	// Read data attributes from referenceEl
-	const refType = referenceEl.getAttribute("data-snw-type") || "";
-	const realLink = getRealLink(referenceEl);
-	const key = referenceEl.getAttribute("data-snw-key") || "";
-	const filePath = referenceEl.getAttribute("data-snw-filepath") || "";
-	const lineNu = Number(referenceEl.getAttribute("snw-data-line-number")) || 0;
-	const display = referenceEl.getAttribute("data-snw-display") || undefined;
+	const refType = referenceEl.getAttribute(ATTR.type) || "";
+	const realLink = referenceEl.getAttribute(ATTR.realLink) || "";
+	const key = referenceEl.getAttribute(ATTR.key) || "";
+	const filePath = referenceEl.getAttribute(ATTR.file) || "";
+	const lineNu = Number(referenceEl.getAttribute(ATTR.line)) || 0;
+	const display = referenceEl.getAttribute(ATTR.display) || undefined;
 	
 	// Build the popover DOM
 	const popoverEl = createDiv();
 	popoverEl.addClass("snw-popover-container");
 	popoverEl.addClass("search-result-container");
-	popoverEl.appendChild(await getUIC_Ref_Area(refType, realLink, key, filePath, lineNu, true, display));
+	popoverEl.appendChild(await getUIC_Ref_Area(refType, realLink, key, filePath, lineNu, true, plugin, display));
 	
 	// Set up event handlers
-	requestAnimationFrame(() => { void setFileLinkHandlers(false, popoverEl); });
+	requestAnimationFrame(() => { void setFileLinkHandlers(plugin, false, popoverEl); });
 	scrollResultsIntoView(popoverEl);
 	
 	return popoverEl;
@@ -50,21 +41,21 @@ export const getUIC_HoverviewElement = async (ctx: { referenceEl: HTMLElement, p
 
 
 // Creates event handlers for components of the HoverView and sidepane
-export const setFileLinkHandlers = async (isHoverView: boolean, rootElementForViewEl: HTMLElement) => {
+export const setFileLinkHandlers = async (plugin: SNWPlugin, isHoverView: boolean, rootElementForViewEl: HTMLElement) => {
 	const linksToFiles: NodeList = rootElementForViewEl.querySelectorAll(
 		".snw-ref-item-file, .snw-ref-item-info, .snw-ref-title-popover-label",
 	);
 	// biome-ignore lint/complexity/noForEach: <explanation>
-	linksToFiles.forEach((node: Element) => {
-		if (!node.getAttribute("snw-has-handler")) {
-			node.setAttribute("snw-has-handler", "true"); //prevent the event from being added twice
+		linksToFiles.forEach((node: Element) => {
+			if (!node.getAttribute(ATTR.hasHandler)) {
+				node.setAttribute(ATTR.hasHandler, "true"); //prevent the event from being added twice
 			// CLICK event
 			node.addEventListener("click", async (e: MouseEvent) => {
 				e.preventDefault();
 				const handlerElement = (e.target as HTMLElement).closest(".snw-ref-item-file, .snw-ref-item-info, .snw-ref-title-popover-label");
 				if (!handlerElement) return;
-				let lineNu = Number(handlerElement.getAttribute("snw-data-line-number"));
-				const filePath = handlerElement.getAttribute("snw-data-file-name");
+				let lineNu = Number(handlerElement.getAttribute(ATTR.line));
+				const filePath = handlerElement.getAttribute(ATTR.fileName);
 				const fileT = app.metadataCache.getFirstLinkpathDest(filePath, filePath);
 
 				if (!fileT) {
@@ -72,44 +63,15 @@ export const setFileLinkHandlers = async (isHoverView: boolean, rootElementForVi
 					return;
 				}
 
-				plugin.app.workspace.getLeaf(Keymap.isModEvent(e)).openFile(fileT);
-
-				// for file titles, the embed handling for titles related to block id's and headers is hard to calculate, so its more efficient to do it here
-				const titleKey = handlerElement.getAttribute("snw-ref-title-key");
+				// Use Obsidian's native openLinkText for header/block navigation
+				const titleKey = handlerElement.getAttribute(ATTR.titleKey);
 				if (titleKey) {
-					if (titleKey.contains("#^")) {
-						// links to a block id
-						const destinationBlocks = Object.entries(plugin.app.metadataCache.getFileCache(fileT)?.blocks);
-						if (destinationBlocks) {
-							// @ts-ignore
-							const blockID = titleKey
-								.match(/#\^(.+)$/g)[0]
-								.replace("#^", "")
-								.toLowerCase();
-							const l = destinationBlocks.find((b) => b[0] === blockID);
-							lineNu = l[1].position.start.line;
-						}
-					} else if (titleKey.contains("#")) {
-						// possibly links to a header
-						const destinationHeadings = plugin.app.metadataCache.getFileCache(fileT)?.headings;
-						if (destinationHeadings) {
-							// @ts-ignore
-							const headingKey = titleKey.match(/#(.+)/g)[0].replace("#", "");
-							const l = destinationHeadings.find((h) => h.heading.toLocaleUpperCase() === headingKey);
-							// @ts-ignore
-							lineNu = l.position.start.line;
-						}
-					}
-				}
-
-				if (lineNu > 0) {
-					setTimeout(() => {
-						// jumps to the line of the file where the reference is located
-						try {
-							const activeView = plugin.app.workspace.getActiveViewOfType(MarkdownView);
-							if (activeView) activeView.setEphemeralState({ line: lineNu });
-						} catch (error) {}
-					}, 400);
+					// Build linkText for Obsidian's openLinkText (e.g., "path#Heading" or "path#^blockid")
+					const linkText = `${filePath}${titleKey}`;
+					plugin.app.workspace.openLinkText(linkText, "", Keymap.isModEvent(e));
+				} else {
+					// Fallback to simple file open
+					plugin.app.workspace.getLeaf(Keymap.isModEvent(e)).openFile(fileT);
 				}
 			});
 			// mouseover event
@@ -118,12 +80,12 @@ export const setFileLinkHandlers = async (isHoverView: boolean, rootElementForVi
 				node.addEventListener("mouseover", (e: PointerEvent) => {
 					e.preventDefault();
 					const hoverMetaKeyRequired = plugin.settings.requireModifierForHover;
-					if (!hoverMetaKeyRequired || (hoverMetaKeyRequired && Keymap.isModifier(e, "Mod"))) {
+					if (passesHoverGate(hoverMetaKeyRequired, e)) {
 						const target = e.target as HTMLElement;
 						const previewLocation = {
-							scroll: Number(target.getAttribute("snw-data-line-number")),
+							scroll: Number(target.getAttribute(ATTR.line)),
 						};
-						const filePath = target.getAttribute("snw-data-file-name");
+						const filePath = target.getAttribute(ATTR.fileName);
 						if (filePath) {
 							// parameter signature for link-hover parent: HoverParent, targetEl: HTMLElement, linkText: string, sourcePath: string, eState: EphemeralState
 							app.workspace.trigger("link-hover", {}, target, filePath, "", previewLocation);

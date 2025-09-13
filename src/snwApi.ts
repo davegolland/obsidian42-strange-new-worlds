@@ -1,6 +1,6 @@
 import type { CachedMetadata, TFile } from "obsidian";
 import type SNWPlugin from "./main";
-import type { TransformedCache, VirtualLinkProvider } from "./types";
+import type { TransformedCache, VirtualLinkProvider, Link } from "./types";
 import type { ReferenceCountingPolicy } from "./policies/reference-counting";
 
 /**
@@ -9,7 +9,7 @@ import type { ReferenceCountingPolicy } from "./policies/reference-counting";
  */
 export default class SnwAPI {
 	plugin: SNWPlugin;
-	references: any;
+	references: Map<string, Link[]>;
 
 
 	constructor(snwPlugin: SNWPlugin) {
@@ -45,8 +45,7 @@ export default class SnwAPI {
 	 * Returns an unregister function; call it to remove the provider.
 	 */
 	registerVirtualLinkProvider(provider: VirtualLinkProvider): () => void {
-		const policy = this.plugin.referenceCountingPolicy as ReferenceCountingPolicy;
-		return policy.registerVirtualLinkProvider(provider);
+		return this.plugin.referenceCountingPolicy.registerVirtualLinkProvider(provider);
 	}
 
 
@@ -54,16 +53,19 @@ export default class SnwAPI {
 	 * Get all registered virtual link providers
 	 */
 	get virtualLinkProviders(): VirtualLinkProvider[] {
-		const policy = this.plugin?.referenceCountingPolicy as ReferenceCountingPolicy;
-		return policy?.getVirtualLinkProviders() ?? [];
+		return this.plugin?.referenceCountingPolicy?.getVirtualLinkProviders() ?? [];
 	}
 
 	// (If any UI piece still calls this, give it a safe fallback)
 	getSNWCacheByFile(file: TFile): TransformedCache {
-		const policy = this.plugin?.referenceCountingPolicy as ReferenceCountingPolicy;
-		return policy?.getSNWCacheByFile?.(file) ?? {
-			cacheMetaData: null,
+		return this.plugin?.referenceCountingPolicy?.getSNWCacheByFile?.(file) ?? {
+			blocks: [],
+			links: [],
+			headings: [],
+			embeds: [],
+			frontmatterLinks: [],
 			createDate: Date.now(),
+			cacheMetaData: null,
 		};
 	}
 }

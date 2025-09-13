@@ -9,13 +9,10 @@ import type { SortOption } from "../../settings";
 import { setFileLinkHandlers } from "./hover-content";
 import { getUIC_Ref_Item } from "./uic-ref-item";
 import { getUIC_Ref_Title_Div } from "./uic-ref-title";
-
-let plugin: SNWPlugin;
-let referenceCountingPolicy: ReferenceCountingPolicy;
+import { ATTR } from "../attr";
 
 export function setPluginVariableUIC_RefArea(snwPlugin: SNWPlugin) {
-	plugin = snwPlugin;
-	referenceCountingPolicy = plugin.referenceCountingPolicy;
+	// No longer needed - plugin is injected as parameter
 }
 
 //Creates the primarhy "AREA" body for displaying refrences. This is the overall wrapper for the title and individaul references
@@ -26,9 +23,10 @@ export const getUIC_Ref_Area = async (
 	filePath: string,
 	lineNu: number,
 	isHoverView: boolean,
+	plugin: SNWPlugin,
 	display?: string,
 ): Promise<HTMLElement> => {
-	const refAreaItems = await getRefAreaItems(refType, realLink, key, filePath);
+	const refAreaItems = await getRefAreaItems(refType, realLink, key, filePath, plugin);
 	const refAreaContainerEl = createDiv();
 
 	//get title header for this reference area
@@ -42,11 +40,11 @@ export const getUIC_Ref_Area = async (
 					refAreaEl.removeChild(refAreaEl.firstChild);
 				}
 				refAreaEl.style.visibility = "visible";
-				const refAreaItems = await getRefAreaItems(refType, realLink, key, filePath);
+				const refAreaItems = await getRefAreaItems(refType, realLink, key, filePath, plugin);
 				refAreaEl.prepend(refAreaItems.response);
 
 				setTimeout(async () => {
-					await setFileLinkHandlers(false, refAreaEl);
+					await setFileLinkHandlers(plugin, false, refAreaEl);
 				}, 500);
 			}
 		}),
@@ -79,11 +77,11 @@ const sortLinks = (links: Link[], option: SortOption): Link[] => {
 };
 
 // Creates a DIV for a collection of reference blocks to be displayed
-const getRefAreaItems = async (refType: string, realLink: string, key: string, filePath: string): Promise<{ response: HTMLElement; refCount: number }> => {
+const getRefAreaItems = async (refType: string, realLink: string, key: string, filePath: string, plugin: SNWPlugin): Promise<{ response: HTMLElement; refCount: number }> => {
 	let linksToLoop: Link[] = [];
 
 	if (refType === "File") {
-		const allLinks = referenceCountingPolicy.getIndexedReferences();
+		const allLinks = plugin.referenceCountingPolicy.getIndexedReferences();
 		const incomingLinks: Link[] = [];
 		for (const items of allLinks.values()) {
 			for (const item of items) {
@@ -190,8 +188,8 @@ const getRefAreaItems = async (refType: string, realLink: string, key: string, f
 		refItemFileEl.addClass("tree-item-self");
 		refItemFileEl.addClass("search-result-file-title");
 		refItemFileEl.addClass("is-clickable");
-		refItemFileEl.setAttribute("snw-data-line-number", "-1");
-		refItemFileEl.setAttribute("snw-data-file-name", file_path.sourceFile.path);
+		refItemFileEl.setAttribute(ATTR.line, "-1");
+		refItemFileEl.setAttribute(ATTR.fileName, file_path.sourceFile.path);
 		refItemFileEl.setAttribute("data-href", file_path.sourceFile.path);
 		refItemFileEl.setAttribute("href", file_path.sourceFile.path);
 
@@ -240,7 +238,7 @@ const getRefAreaItems = async (refType: string, realLink: string, key: string, f
 		for (const ref of linksToLoop) {
 			if (file_path.sourceFile?.path === ref.sourceFile?.path && itemsDisplayedCounter < maxItemsToShow) {
 				itemsDisplayedCounter += 1;
-				refItemsCollectionE.appendChild(await getUIC_Ref_Item(ref));
+				refItemsCollectionE.appendChild(await getUIC_Ref_Item(ref, plugin));
 			}
 		}
 	}

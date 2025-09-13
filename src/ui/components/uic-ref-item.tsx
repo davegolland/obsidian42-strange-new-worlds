@@ -4,6 +4,7 @@ import { MarkdownRenderer } from "obsidian";
 import { render } from "preact";
 import type SNWPlugin from "src/main";
 import type { Link } from "../../types";
+import { ATTR } from "../attr";
 // Context imports removed - context directory was deleted
 // Simple fallback implementations below
 
@@ -35,24 +36,22 @@ function formatListWithDescendants(fileContents: string, item: any): string {
 	return item.text || "";
 }
 
-let plugin: SNWPlugin;
-
 export function setPluginVariableUIC_RefItem(snwPlugin: SNWPlugin) {
-	plugin = snwPlugin;
+	// No longer needed - plugin is injected as parameter
 }
 
-export const getUIC_Ref_Item = async (ref: Link): Promise<HTMLElement> => {
+export const getUIC_Ref_Item = async (ref: Link, plugin: SNWPlugin): Promise<HTMLElement> => {
 	const startLine = ref.reference.position !== undefined ? ref.reference.position.start.line.toString() : "0";
 
 	const itemElJsx = (
 		<div
 			className="snw-ref-item-info search-result-file-match"
-			snw-data-line-number={startLine}
-			snw-data-file-name={ref?.sourceFile?.path}
+			{...{ [ATTR.line]: startLine }}
+			{...{ [ATTR.fileName]: ref?.sourceFile?.path }}
 			data-href={ref?.sourceFile?.path}
 			// biome-ignore lint/security/noDangerouslySetInnerHtml: <explanation>
 			dangerouslySetInnerHTML={{
-				__html: (await grabChunkOfFile(ref)).innerHTML,
+				__html: (await grabChunkOfFile(ref, plugin)).innerHTML,
 			}}
 		/>
 	);
@@ -69,7 +68,7 @@ export const getUIC_Ref_Item = async (ref: Link): Promise<HTMLElement> => {
  * @param {Link} ref
  * @return {*}  {Promise<string>}
  */
-const grabChunkOfFile = async (ref: Link): Promise<HTMLElement> => {
+const grabChunkOfFile = async (ref: Link, plugin: SNWPlugin): Promise<HTMLElement> => {
 	const fileContents = await plugin.app.vault.cachedRead(ref.sourceFile);
 	const fileCache = plugin.app.metadataCache.getFileCache(ref.sourceFile);
 	const linkPosition = ref.reference.position;
