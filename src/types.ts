@@ -91,6 +91,10 @@ export type VirtualLinkProvider = (args: {
 	 * Use this to avoid constructing Link by hand.
 	 */
 	makeLink: (linkText: string, displayText?: string, pos?: Pos) => Link;
+	/**
+	 * Obsidian app instance for reading file content and other operations
+	 */
+	app?: any;
 }) => Link[] | Promise<Link[]>;
 
 // Implicit Links Types

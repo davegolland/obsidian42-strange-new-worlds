@@ -17,7 +17,12 @@ export class ImplicitLinksManager {
 		private settings: AutoLinkSettings,
 	) {
 		log.debug("ImplicitLinksManager: initializing");
-		this.detectionManager = new DetectionManager(plugin.app, settings, plugin.referenceCountingPolicy.getActivePolicy());
+		this.detectionManager = new DetectionManager(
+			plugin.app, 
+			settings, 
+			plugin.referenceCountingPolicy.getActivePolicy(),
+			plugin.settings.minimalMode
+		);
 		log.debug("ImplicitLinksManager: detection manager created");
 	}
 
@@ -63,7 +68,7 @@ export class ImplicitLinksManager {
 	 */
 	async updateSettings(settings: AutoLinkSettings): Promise<void> {
 		this.settings = settings;
-		this.detectionManager.updateSettings(settings);
+		this.detectionManager.updateSettings(settings, this.plugin.settings.minimalMode);
 
 		// Rebuild the detector when settings change so new phrases appear without reload
 		await this.detectionManager?.rebuild?.();

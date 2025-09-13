@@ -78,18 +78,28 @@ export default class SNWPlugin extends Plugin {
 	updateAllSnwLiveUpdateReferencesDebounced: (() => void) | null = null;
 
 	// Collection of all UI initializers
-	private UI_INITIALIZERS: Array<(plugin: SNWPlugin) => void> = [
-		uiInits.setPluginVariableUIC_RefArea,
-		uiInits.setPluginVariableForHtmlDecorations,
-		uiInits.setPluginVariableForCM6Gutter,
-		uiInits.setPluginVariableForHeaderRefCount,
-		uiInits.setPluginVariableForFrontmatterLinksRefCount,
-		uiInits.setPluginVariableForMarkdownPreviewProcessor,
-		uiInits.setPluginVariableForCM6InlineReferences,
-		uiInits.initImplicitLinksLivePreview,
-		uiInits.setPluginVariableForUIC,
-		uiInits.initDebouncedHelpers,
-	];
+	private getUI_INITIALIZERS(): Array<(plugin: SNWPlugin) => void> {
+		const initializers = [
+			uiInits.setPluginVariableUIC_RefArea,
+			uiInits.setPluginVariableForHtmlDecorations,
+			uiInits.setPluginVariableForMarkdownPreviewProcessor,
+			uiInits.setPluginVariableForCM6InlineReferences,
+			uiInits.initImplicitLinksLivePreview,
+			uiInits.setPluginVariableForUIC,
+			uiInits.initDebouncedHelpers,
+		];
+
+		// Skip non-essential UI components in minimal mode
+		if (!this.settings.minimalMode) {
+			initializers.push(
+				uiInits.setPluginVariableForCM6Gutter,
+				uiInits.setPluginVariableForHeaderRefCount,
+				uiInits.setPluginVariableForFrontmatterLinksRefCount
+			);
+		}
+
+		return initializers;
+	}
 
 	/**
 	 * Helper to wire up multiple debounced event handlers in a DRY way
@@ -244,10 +254,11 @@ export default class SNWPlugin extends Plugin {
 			return;
 		}
 		
-		log.info(`Initializing ${this.UI_INITIALIZERS.length} UI components`);
+		const uiInitializers = this.getUI_INITIALIZERS();
+		log.info(`Initializing ${uiInitializers.length} UI components`);
 		// Initialize all UI components by calling each initializer
-		for (let i = 0; i < this.UI_INITIALIZERS.length; i++) {
-			const init = this.UI_INITIALIZERS[i];
+		for (let i = 0; i < uiInitializers.length; i++) {
+			const init = uiInitializers[i];
 			log.time(`UI.init.${i}`);
 			init(this);
 			log.timeEnd(`UI.init.${i}`);
@@ -401,6 +412,12 @@ export default class SNWPlugin extends Plugin {
 	 * Initialize plugin commands
 	 */
 	private async initCommands(): Promise<void> {
+		// Skip rebuild command in minimal mode
+		if (this.settings.minimalMode) {
+			log.info("Minimal mode - skipping rebuild references command");
+			return;
+		}
+
 		// Add command to force rebuild of references
 		this.addCommand({
 			id: "rebuild-references",

@@ -18,11 +18,15 @@ export class DetectionManager {
 		private app: App,
 		private settings: AutoLinkSettings,
 		private policy: WikilinkEquivalencePolicy,
+		private minimalMode: boolean = false,
 	) {
+		// Force detection mode to "off" in minimal mode
+		const effectiveMode = minimalMode ? "off" : settings.detectionMode;
+		
 		// Initialize detector based on settings
-		if (settings.detectionMode === "regex") {
+		if (effectiveMode === "regex") {
 			this.detector = new RegexDetector(settings);
-		} else if (settings.detectionMode === "dictionary") {
+		} else if (effectiveMode === "dictionary") {
 			this.detector = new DictionaryDetector(app, settings, policy);
 		}
 	}
@@ -56,11 +60,14 @@ export class DetectionManager {
 		return picked;
 	}
 
-	updateSettings(settings: AutoLinkSettings): void {
+	updateSettings(settings: AutoLinkSettings, minimalMode: boolean = false): void {
 		this.settings = settings;
-		if (settings.detectionMode === "regex") {
+		// Force detection mode to "off" in minimal mode
+		const effectiveMode = minimalMode ? "off" : settings.detectionMode;
+		
+		if (effectiveMode === "regex") {
 			this.detector = new RegexDetector(settings);
-		} else if (settings.detectionMode === "dictionary") {
+		} else if (effectiveMode === "dictionary") {
 			this.detector = new DictionaryDetector(this.app, settings, this.policy);
 		} else {
 			this.detector = null;

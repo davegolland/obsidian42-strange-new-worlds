@@ -284,7 +284,7 @@ export class ReferenceCountingPolicy {
 		const makeLink = (lt: string, dt?: string, p?: any) => this.makeLinkFor(file, lt, dt, p);
 		for (const provider of this.virtualLinkProviders) {
 			try {
-				const links = await Promise.resolve(provider({ file, cache, makeLink }));
+				const links = await Promise.resolve(provider({ file, cache, makeLink, app: this.plugin.app }));
 				console.log("SNW: applyVirtualProviders: provider returned", (links || []).length, "links");
 				if (links && links.length > 0) {
 					console.log("SNW: applyVirtualProviders: sample link:", links[0]);

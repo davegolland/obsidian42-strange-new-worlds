@@ -406,20 +406,31 @@ export class SettingsTab extends PluginSettingTab {
 		// Implicit Links section
 		new Setting(containerEl).setHeading().setName("Implicit Links");
 
-		new Setting(containerEl)
-			.setName("Detection Mode")
-			.setDesc("Choose how implicit links are detected in your documents.")
-			.addDropdown((dropdown) => {
-				dropdown
-					.addOption("off", "Disabled")
-					.addOption("regex", "Regex Patterns")
-					.addOption("dictionary", "Dictionary (Notes & Aliases)")
-					.setValue(this.plugin.settings.autoLinks.detectionMode)
-					.onChange(async (value) => {
-						this.plugin.settings.autoLinks.detectionMode = value as "off" | "regex" | "dictionary";
-						await this.plugin.saveSettings();
-					});
-			});
+		// Skip detection mode setting in minimal mode
+		if (!this.plugin.settings.minimalMode) {
+			new Setting(containerEl)
+				.setName("Detection Mode")
+				.setDesc("Choose how implicit links are detected in your documents.")
+				.addDropdown((dropdown) => {
+					dropdown
+						.addOption("off", "Disabled")
+						.addOption("regex", "Regex Patterns")
+						.addOption("dictionary", "Dictionary (Notes & Aliases)")
+						.setValue(this.plugin.settings.autoLinks.detectionMode)
+						.onChange(async (value) => {
+							this.plugin.settings.autoLinks.detectionMode = value as "off" | "regex" | "dictionary";
+							await this.plugin.saveSettings();
+						});
+				});
+		} else {
+			// Show disabled state in minimal mode
+			new Setting(containerEl)
+				.setName("Detection Mode")
+				.setDesc("Local detection disabled in minimal mode. Only backend keywords are used.")
+				.addText((text) => {
+					text.setValue("Backend Only").setDisabled(true);
+				});
+		}
 
 		// Regex Rules section (only show if detection mode is regex)
 		if (this.plugin.settings.autoLinks.detectionMode === "regex") {
