@@ -29,20 +29,3 @@ function assertValidExtensions(exts: any[], label: string) {
 	return flat;
 }
 
-// Initialize implicit links Live Preview (flicker-free)
-export function initImplicitLinksLivePreview(plugin: SNWPlugin) {
-	// ❌ Commented out to avoid double-badging with inline-references extension
-	// The inline-references extension already handles badge creation and hover functionality
-	// log.debug("initImplicitLinksLivePreview: creating implicit links extension");
-	// const implicitExt = createInferredLinksExtension(plugin, {
-	// 	debounceMs: 120,
-	// 	boundaryMode: "word",
-	// 	caseInsensitive: true,
-	// 	maxPerChunk: 300,
-	// });
-	// const validExtensions = assertValidExtensions(implicitExt, "implicit-links");
-
-	// log.debug("initImplicitLinksLivePreview: registering editor extension");
-
-	// plugin.registerEditorExtension(validExtensions);
-}

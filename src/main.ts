@@ -45,11 +45,6 @@ export default class SNWPlugin extends Plugin {
 		// 4) Backend client init & registration
 		await this.initBackend();                // registers backend provider
 
-		// 5) Now that policy exists, flush any queued providers
-		this.snwAPI.flushQueuedProviders?.();
-
-		// 6) (Re)register the backend virtual provider cleanly
-		this.refreshBackendProvider();
 
 		// 7) Initialize minimal surface for rendering
 		await this.initMinimalSurface();         // render inferred links
@@ -125,7 +120,7 @@ export default class SNWPlugin extends Plugin {
 		this.registerEditorExtension(implicitExt);
 
 		// 5) Initialize implicit links Live Preview (creates the numbered badges)
-		uiInits.initImplicitLinksLivePreview(this);
+		// (removed: no-op in minimal mode)
 
 		// 6) Trigger refresh when switching files for better responsiveness
 		this.registerEvent(
