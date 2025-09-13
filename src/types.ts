@@ -1,11 +1,6 @@
 import type { CachedMetadata, ListItemCache, Pos, TFile } from "obsidian";
 import type SnwAPI from "./snwApi";
 
-declare global {
-	interface Window {
-		snwAPI?: SnwAPI;
-	}
-}
 
 declare module "obsidian" {
 	interface Workspace {}

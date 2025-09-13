@@ -5,7 +5,6 @@ import type { ReferenceCountingPolicy } from "./policies/reference-counting";
 
 /**
  * Provide a simple API for use with Templater, Dataview and debugging the complexities of various pages.
- * main.ts will attach this to window.snwAPI
  */
 export default class SnwAPI {
 	plugin: SNWPlugin;

@@ -56,8 +56,6 @@ export default class SNWPlugin extends Plugin {
 	 */
 	private async initAPI(): Promise<void> {
 		this.snwAPI ??= new SnwAPI(this);
-		// Debug use only - exposes API for console access and reference counting
-		(window as any).snwAPI = this.snwAPI;
 	}
 
 	/**
