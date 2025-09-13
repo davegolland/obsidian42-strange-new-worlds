@@ -40,7 +40,7 @@ ${processedCss}`;
   fs.writeFileSync('build/styles.css', combinedCss);
   
   // Also copy individual files for reference
-  const styleFiles = ['common.css', 'inline.css', 'gutter.css', 'popover.css', 'sidepane.css', 'main.css'];
+  const styleFiles = ['common.css', 'inline.css', 'gutter.css', 'popover.css', 'main.css'];
   styleFiles.forEach(file => {
     try {
       fs.copyFileSync(path.join('styles', file), path.join('build/styles', file));
@@ -60,7 +60,9 @@ const context = await esbuild.context({
   minify: prod,
   define: {
     'process.env.SNW_MINIMAL': JSON.stringify(process.env.SNW_MINIMAL || 'false'),
+    'process.env.NODE_ENV': JSON.stringify(prod ? 'production' : 'development'),
   },
+  drop: prod ? ['console', 'debugger'] : [],
   external: [
     'obsidian',
     'electron',

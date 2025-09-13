@@ -6,9 +6,7 @@ import { log } from "../diag";
 
 export { setPluginVariableUIC_RefArea } from "./components/uic-ref-area";
 export { setPluginVariableForUIC } from "./components/uic-ref--parent";
-export { setPluginVariableForHtmlDecorations } from "../view-extensions/htmlDecorations";
 export { setPluginVariableForCM6InlineReferences } from "../view-extensions/references-cm6";
-export { setPluginVariableForMarkdownPreviewProcessor } from "../view-extensions/references-preview";
 
 import { createInferredLinksExtension } from "../implicit-links/manager";
 

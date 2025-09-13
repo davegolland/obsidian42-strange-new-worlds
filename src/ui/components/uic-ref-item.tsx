@@ -4,9 +4,36 @@ import { MarkdownRenderer } from "obsidian";
 import { render } from "preact";
 import type SNWPlugin from "src/main";
 import type { Link } from "../../types";
-import { ContextBuilder } from "./context/ContextBuilder";
-import { formatHeadingBreadCrumbs, formatListBreadcrumbs, formatListWithDescendants } from "./context/formatting-utils";
-import { getTextAtPosition } from "./context/position-utils";
+// Context imports removed - context directory was deleted
+// Simple fallback implementations below
+
+// Fallback implementations for deleted context functions
+function getTextAtPosition(text: string, pos: any): string {
+	if (!pos || typeof pos.start !== 'object' || typeof pos.start.offset !== 'number') return "";
+	const start = pos.start.offset;
+	const end = pos.end?.offset ?? start;
+	return text.slice(start, end);
+}
+
+class ContextBuilder {
+	constructor(private fileContents: string, private fileCache: any) {}
+	
+	buildContextForLink(link: Link): string {
+		return `Reference to ${link.reference.link}`;
+	}
+}
+
+function formatHeadingBreadCrumbs(breadcrumbs: any[]): string {
+	return breadcrumbs.map(b => b.heading).join(" > ");
+}
+
+function formatListBreadcrumbs(fileContents: string, breadcrumbs: any[]): string {
+	return breadcrumbs.map(b => b.text || "").join(" > ");
+}
+
+function formatListWithDescendants(fileContents: string, item: any): string {
+	return item.text || "";
+}
 
 let plugin: SNWPlugin;
 

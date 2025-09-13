@@ -1,5 +1,5 @@
 import { Plugin } from "obsidian";
-import { ImplicitLinksManager } from "./implicit-links";
+import { ImplicitLinksManager } from "./implicit-links/ImplicitLinksManager";
 import { DEFAULT_SETTINGS, type Settings, loadSettings, saveSettings } from "./settings";
 import SnwAPI from "./snwApi";
 import { SettingsTab } from "./ui/SettingsTab";
@@ -76,26 +76,6 @@ export default class SNWPlugin extends Plugin {
 
 
 
-	/**
-	 * Create API bridge to expose getSNWCacheByFile method for decorations/hover
-	 */
-	private ensureAPIBridge(): void {
-		const manager = this.implicitLinksManager;
-
-		// Forwarder used by decorations/hover. If manager isn't ready, return a harmless empty shape.
-		const getSNWCacheByFile = (fileOrPath: any) => {
-			const fn = manager?.getSNWCacheByFile?.bind(manager);
-			return fn ? fn(fileOrPath) : { byPhrase: new Map(), version: 0 };
-		};
-
-		// Expose as plugin method (legacy callers use this)
-		(this as any).getSNWCacheByFile = getSNWCacheByFile;
-
-		// Also expose on snwAPI if code reads it there
-		if (this.snwAPI && !(this.snwAPI as any).getSNWCacheByFile) {
-			(this.snwAPI as any).getSNWCacheByFile = getSNWCacheByFile;
-		}
-	}
 
 	/**
 	 * Initialize minimal surface for rendering inferred links
@@ -125,7 +105,6 @@ export default class SNWPlugin extends Plugin {
 				customPhrases: [],
 			},
 		});
-		this.ensureAPIBridge();
 
 		// 3) Backend provider already registered in initBackend() - don't duplicate
 
@@ -216,35 +195,6 @@ export default class SNWPlugin extends Plugin {
 		console.log("SNW: backend virtual provider registered");
 	}
 
-	/**
-	 * Poll backend status to show readiness
-	 */
-	private async pollBackendStatus(): Promise<void> {
-		if (!this._backendClient) return;
-		
-		const delay = (ms: number) => new Promise(r => setTimeout(r, ms));
-		const maxAttempts = 10;
-		let attempts = 0;
-		
-		while (attempts < maxAttempts) {
-			try {
-				const status = await this._backendClient.status();
-				if (status.ready) {
-					new Notice(`SNW: Backend ready (${status.files || 0} files indexed)`);
-					return;
-				}
-				attempts++;
-				await delay(2000); // Poll every 2 seconds
-			} catch (error) {
-				attempts++;
-				if (attempts >= maxAttempts) {
-					console.warn("SNW: Backend status polling timed out");
-					return;
-				}
-				await delay(2000);
-			}
-		}
-	}
 
 
 

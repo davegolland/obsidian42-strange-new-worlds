@@ -15,16 +15,9 @@ src/implicit-links/manager.ts
 src/implicit-links/decorators.ts
 src/implicit-links/shared-utils.ts
 src/implicit-links/utils.ts
-src/implicit-links/regex.ts
 src/implicit-links/cache.ts
-src/implicit-links/DetectionManager.ts
-src/implicit-links/DictionaryDetector.ts
-src/implicit-links/RegexDetector.ts
-src/implicit-links/index.ts
-src/view-extensions/references-preview.ts
 src/view-extensions/references-cm6.ts
 src/view-extensions/text-guards.ts
-src/view-extensions/htmlDecorations.tsx
 src/ui/components/uic-ref--parent.ts
 src/ui/components/uic-ref-area.tsx
 src/ui/components/uic-ref-item.tsx

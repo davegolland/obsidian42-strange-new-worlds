@@ -24,14 +24,6 @@ declare module "obsidian" {
 	}
 }
 
-export interface ReferenceLocation {
-	type: "block" | "heading" | "embed" | "link" | string;
-	pos: number;
-	count: number;
-	key: string; //identifier for the reference
-	link: string; // full link to reference
-	attachClass: string; // allows a custom class to be attached when processing cm6 references
-}
 
 export interface Link {
 	reference: {
@@ -66,18 +58,6 @@ export interface TransformedCache {
 	cacheMetaData?: CachedMetadata;
 }
 
-export interface ListItem extends ListItemCache {
-	pos: number;
-	key: string;
-}
-
-export interface Section {
-	id?: string;
-	items?: ListItem[];
-	position: Pos;
-	pos?: number;
-	type: string;
-}
 
 /**
  * Providers can return additional virtual links (e.g., Dataview, properties, computed relationships)

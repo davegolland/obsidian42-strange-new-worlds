@@ -9,7 +9,7 @@ import type SNWPlugin from "src/main";
 import SnwAPI from "src/snwApi";
 import type { ReferenceCountingPolicy } from "../policies/reference-counting";
 import type { TransformedCachedItem } from "../types";
-import { htmlDecorationForReferencesElement } from "./htmlDecorations";
+// htmlDecorationForReferencesElement removed - was from deleted htmlDecorations.tsx
 
 let plugin: SNWPlugin;
 let referenceCountingPolicy: ReferenceCountingPolicy;
@@ -324,15 +324,16 @@ export class InlineReferenceWidget extends WidgetType {
 	// }
 
 	toDOM() {
-		return htmlDecorationForReferencesElement(
-			this.referenceCount,
-			this.referenceType,
-			this.realLink,
-			this.key,
-			this.filePath,
-			this.addCssClass,
-			this.lineNu,
-		);
+		// Simple replacement for deleted htmlDecorationForReferencesElement
+		const el = document.createElement("span");
+		el.className = `snw-inline-ref ${this.addCssClass || ""}`;
+		el.textContent = this.referenceCount.toString();
+		el.title = `${this.referenceType} • ${this.referenceCount} reference${this.referenceCount === 1 ? "" : "s"}`;
+		el.setAttribute("data-snw-type", this.referenceType);
+		el.setAttribute("data-snw-realLink", this.realLink);
+		el.setAttribute("data-snw-key", this.key);
+		el.setAttribute("data-snw-filepath", this.filePath);
+		return el;
 	}
 
 	destroy() {}

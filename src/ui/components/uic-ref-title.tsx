@@ -3,8 +3,7 @@
 import { render } from "preact";
 import type SNWPlugin from "src/main";
 import { hideAll } from "tippy.js";
-import { IconMoreDetails } from "../IconMoreDetails";
-import { SortOrderDropdown } from "../SortOrderDropdown";
+// IconMoreDetails and SortOrderDropdown removed - files were deleted
 
 export const getUIC_Ref_Title_Div = (
 	refType: string,
@@ -39,7 +38,7 @@ export const getUIC_Ref_Title_Div = (
 					return pretty;
 				})()}
 			</div>
-			<SortOrderDropdown plugin={plugin} onChange={handleSortOptionChangeCallback || (() => {})} />
+			{/* SortOrderDropdown removed - file was deleted */}
 			{isPopover && (
 				<span
 					className="snw-ref-title-popover-open-sidepane-icon"
@@ -58,7 +57,7 @@ export const getUIC_Ref_Title_Div = (
 							plugin.activateView(refType, realLink, key, filePath, Number(lineNu));
 						}}
 					>
-						<IconMoreDetails />
+						{/* IconMoreDetails removed - file was deleted */}
 					</span>
 				</span>
 			)}

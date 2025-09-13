@@ -1,6 +1,6 @@
 import { RangeSetBuilder } from "@codemirror/state";
 import { Decoration, type EditorView, MatchDecorator, ViewPlugin, type ViewUpdate, WidgetType } from "@codemirror/view";
-import { bindReferenceHover } from "../view-extensions/references-preview";
+// bindReferenceHover removed - was from deleted references-preview.ts
 import { isInsideCode, isInsideMarkdownLink, isInsideWikiLink } from "../view-extensions/text-guards";
 import { type PhraseInfo, inferredCacheField } from "./cache";
 import { generateReferenceKey } from "./shared-utils";
@@ -31,17 +31,9 @@ class CountBadge extends WidgetType {
 		el.setAttribute("data-snw-reallink", this.realLink);
 		el.setAttribute("data-snw-filepath", this.fromFilePath);
 
-		// Use unified hover system - same as native SNW counters
-		try {
-			bindReferenceHover(el, this.key, this.plugin, {
-				realLink: this.realLink,
-				filePath: this.fromFilePath,
-				display: this.display,
-				refType: "implicit",
-			});
-		} catch (e) {
-			console.warn("[ImplicitLinks decorators] Failed to bind hover:", e);
-		}
+		// Hover binding removed - references-preview.ts was deleted
+		// Simple fallback: just show basic info on hover
+		el.title = `${this.display} • ${this.count} reference${this.count === 1 ? "" : "s"}`;
 
 		return el;
 	}
