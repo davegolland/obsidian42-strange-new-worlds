@@ -8,7 +8,6 @@ import { ExternalServicePolicy } from "./policies/ExternalServicePolicy";
 import { PrefixOverlapPolicy } from "./policies/PrefixOverlapPolicy";
 import { SameFilePolicy } from "./policies/SameFilePolicy";
 import { UniqueFilesPolicy } from "./policies/UniqueFilesPolicy";
-import { WordFormPolicy } from "./policies/WordFormPolicy";
 import { _registerPolicy } from "./registry";
 
 // Instantiate and register each discovered policy
@@ -19,4 +18,3 @@ _registerPolicy("case-sensitive", new CaseSensitivePolicy());
 _registerPolicy("prefix-overlap", new PrefixOverlapPolicy());
 _registerPolicy("same-file", new SameFilePolicy());
 _registerPolicy("unique-files", new UniqueFilesPolicy());
-_registerPolicy("word-form", new WordFormPolicy());
