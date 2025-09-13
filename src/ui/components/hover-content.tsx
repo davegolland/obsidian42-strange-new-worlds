@@ -34,7 +34,7 @@ export const buildHoverPopover = async (ctx: { referenceEl: HTMLElement, plugin:
 	popoverEl.appendChild(await getUIC_Ref_Area(refType, realLink, key, filePath, lineNu, true, plugin, display));
 	
 	// Set up event handlers
-	requestAnimationFrame(() => { void wireHoverEvents(plugin, false, popoverEl); });
+	requestAnimationFrame(() => { void wireHoverEvents(plugin, popoverEl); });
 	scrollResultsIntoView(popoverEl);
 	
 	return popoverEl;
@@ -44,10 +44,9 @@ export const buildHoverPopover = async (ctx: { referenceEl: HTMLElement, plugin:
 /**
  * Wires hover events for file links and reference items
  * @param plugin - SNW plugin instance
- * @param isHoverView - Whether this is for hover view (unused)
  * @param rootElementForViewEl - Root element to attach handlers to
  */
-export const wireHoverEvents = async (plugin: SNWPlugin, isHoverView: boolean, rootElementForViewEl: HTMLElement) => {
+export const wireHoverEvents = async (plugin: SNWPlugin, rootElementForViewEl: HTMLElement) => {
 	const linksToFiles: NodeList = rootElementForViewEl.querySelectorAll(
 		".snw-ref-item-file, .snw-ref-item-info, .snw-ref-title-popover-label",
 	);
