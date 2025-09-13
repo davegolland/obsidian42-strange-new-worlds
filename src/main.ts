@@ -105,19 +105,9 @@ export default class SNWPlugin extends Plugin {
 		// 3) Backend provider already registered in initBackend() - don't duplicate
 
 		// 4) Wire the minimal editor surface (decorations + hover)
-		//    Use factory functions that bind plugin instance
-		const { inlineDecorationsExtension } = await import("./view-extensions/references-cm6");
-		this.registerEditorExtension(inlineDecorationsExtension(this)); // inline decorations
-		
-		// Import and register the implicit links extension (same as full mode)
-		const { createInferredLinksExtension } = await import("./implicit-links/manager");
-		const implicitExt = createInferredLinksExtension(this, {
-			debounceMs: 120,
-			boundaryMode: "word",
-			caseInsensitive: true,
-			maxPerChunk: 300,
-		});
-		this.registerEditorExtension(implicitExt);
+		//    Use factory function to separate extension logic from boot logic
+		const { registerInlineAndImplicit } = await import("./view-extensions/register");
+		await registerInlineAndImplicit(this);
 
 		// 5) Initialize implicit links Live Preview (creates the numbered badges)
 		// (removed: no-op in minimal mode)
