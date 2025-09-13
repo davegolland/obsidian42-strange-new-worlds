@@ -9,7 +9,7 @@ import type SNWPlugin from "src/main";
 import SnwAPI from "src/snwApi";
 import type { ReferenceCountingPolicy } from "../policies/reference-counting";
 import type { TransformedCachedItem } from "../types";
-import { getUIC_HoverviewElement } from "../ui/components/hover-content";
+import { buildHoverPopover } from "../ui/components/hover-content";
 import { ATTR } from "../ui/attr";
 import tippy from "tippy.js";
 import "tippy.js/dist/tippy.css";
@@ -361,7 +361,7 @@ export class InlineReferenceWidget extends WidgetType {
 			trigger: this.plugin?.settings?.requireModifierForHover ? "manual" : "mouseenter focus",
 			onShow: async (instance) => {
 				// Build popover DOM (do NOT append inline) and assign to Tippy
-				const contentEl = await getUIC_HoverviewElement({
+				const contentEl = await buildHoverPopover({
 					referenceEl: el,
 					plugin: this.plugin
 				});

@@ -6,7 +6,7 @@ import type SNWPlugin from "src/main";
 import type { Link } from "src/types";
 import type { ReferenceCountingPolicy } from "../../policies/reference-counting";
 import type { SortOption } from "../../settings";
-import { setFileLinkHandlers } from "./hover-content";
+import { wireHoverEvents } from "./hover-content";
 import { getUIC_Ref_Item } from "./uic-ref-item";
 import { getUIC_Ref_Title_Div } from "./uic-ref-title";
 import { ATTR } from "../attr";
@@ -44,7 +44,7 @@ export const getUIC_Ref_Area = async (
 				refAreaEl.prepend(refAreaItems.response);
 
 				setTimeout(async () => {
-					await setFileLinkHandlers(plugin, false, refAreaEl);
+					await wireHoverEvents(plugin, false, refAreaEl);
 				}, 500);
 			}
 		}),

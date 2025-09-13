@@ -12,10 +12,11 @@ export function setPluginVariableForUIC(snwPlugin: SNWPlugin) {
 
 
 /**
- * Pure builder function that returns an HTMLElement for hover content
- * Used by the new non-mutating approach
+ * Builds a hover popover element for displaying reference information
+ * @param ctx - Context containing reference element and plugin instance
+ * @returns Promise resolving to the hover popover HTMLElement
  */
-export const getUIC_HoverviewElement = async (ctx: { referenceEl: HTMLElement, plugin: SNWPlugin }): Promise<HTMLElement> => {
+export const buildHoverPopover = async (ctx: { referenceEl: HTMLElement, plugin: SNWPlugin }): Promise<HTMLElement> => {
 	const { referenceEl, plugin } = ctx;
 	
 	// Read data attributes from referenceEl
@@ -33,15 +34,20 @@ export const getUIC_HoverviewElement = async (ctx: { referenceEl: HTMLElement, p
 	popoverEl.appendChild(await getUIC_Ref_Area(refType, realLink, key, filePath, lineNu, true, plugin, display));
 	
 	// Set up event handlers
-	requestAnimationFrame(() => { void setFileLinkHandlers(plugin, false, popoverEl); });
+	requestAnimationFrame(() => { void wireHoverEvents(plugin, false, popoverEl); });
 	scrollResultsIntoView(popoverEl);
 	
 	return popoverEl;
 };
 
 
-// Creates event handlers for components of the HoverView and sidepane
-export const setFileLinkHandlers = async (plugin: SNWPlugin, isHoverView: boolean, rootElementForViewEl: HTMLElement) => {
+/**
+ * Wires hover events for file links and reference items
+ * @param plugin - SNW plugin instance
+ * @param isHoverView - Whether this is for hover view (unused)
+ * @param rootElementForViewEl - Root element to attach handlers to
+ */
+export const wireHoverEvents = async (plugin: SNWPlugin, isHoverView: boolean, rootElementForViewEl: HTMLElement) => {
 	const linksToFiles: NodeList = rootElementForViewEl.querySelectorAll(
 		".snw-ref-item-file, .snw-ref-item-info, .snw-ref-title-popover-label",
 	);

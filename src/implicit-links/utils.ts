@@ -44,31 +44,6 @@ function upperBound(arr: number[], target: number): number {
 	return lo;
 }
 
-/**
- * Strip code blocks and existing links from text to avoid detecting links in those areas
- */
-export function stripCodeBlocksAndLinks(text: string, cache: any): string {
-	// This is a simplified version - in a full implementation,
-	// you'd want to use the cache.sections to identify code blocks
-	// and existing links to exclude them from detection
-
-	// For now, we'll just strip basic markdown code blocks
-	let stripped = text;
-
-	// Remove code blocks (```...```)
-	stripped = stripped.replace(/```[\s\S]*?```/g, "");
-
-	// Remove inline code (`...`)
-	stripped = stripped.replace(/`[^`]*`/g, "");
-
-	// Remove existing markdown links [text](url)
-	stripped = stripped.replace(/\[([^\]]*)\]\([^)]*\)/g, "$1");
-
-	// Remove existing wikilinks [[text]]
-	stripped = stripped.replace(/\[\[([^\]]*)\]\]/g, "$1");
-
-	return stripped;
-}
 
 /**
  * Return non-code, non-existing-link segments with base offsets into the original text.

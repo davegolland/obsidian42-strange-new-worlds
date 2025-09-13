@@ -13,6 +13,7 @@ export class SettingsTab extends PluginSettingTab {
 		const { containerEl } = this;
 		containerEl.empty();
 
+		// Minimal mode: only two settings supported
 		// Backend URL setting
 		new Setting(containerEl)
 			.setName("Backend URL")

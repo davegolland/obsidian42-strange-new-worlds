@@ -11,8 +11,6 @@ export type LinkCandidate = {
   count?: number;  // For virtual links
   spans?: APISpan[]; // Multiple spans for keywords
 };
-export type LinkCandidateList = { items: LinkCandidate[] };
-
 // For WLX candidates view - enhanced version with spans and file information
 export type WikilinkCandidate = {
 	text: string; // phrase
@@ -23,29 +21,6 @@ export type WikilinkCandidate = {
 	// Enhanced fields for future backend support
 	files?: string[]; // files containing the phrase
 	spansByFile?: Record<string, Span[]>; // spans per file
-};
-
-// Enhanced response with pagination
-export type WikilinkCandidatesResponse = {
-	candidates: WikilinkCandidate[];
-	total_candidates: number;
-	fuzzy_resolved: number;
-	resolution_rate: number;
-	// Pagination fields
-	page: number;
-	page_size: number;
-	total_pages: number;
-	// Optional debug information
-	effective_params?: Record<string, unknown>;
-	debug_counters?: Record<string, unknown>;
-};
-
-export type StatusSummary = {
-	ready: boolean;
-	vaultPath: string | null;
-	files?: number;
-	apiVersion?: string;
-	commit?: string;
 };
 
 // New types for OpenAPI spec compliance
@@ -74,11 +49,6 @@ export type StatusResponse = {
 	status: "healthy" | "unhealthy" | "degraded";
 };
 
-export type ErrorResponse = {
-	detail: string;
-	error_code?: string | null;
-	timestamp?: string | null;
-};
 
 // References API types
 export type Reference = {

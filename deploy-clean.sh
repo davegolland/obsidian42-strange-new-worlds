@@ -39,9 +39,8 @@ rm -rf "$VAULT_PLUGIN_DIR"/*
 echo "📦 Copying built files..."
 cp -r "$BUILD_DIR"/* "$VAULT_PLUGIN_DIR/"
 
-# Copy manifest file (required for Obsidian to recognize the plugin)
-echo "📋 Copying manifest file..."
-cp "./manifest.dev.json" "$VAULT_PLUGIN_DIR/manifest.json"
+# Manifest file is already copied by esbuild config
+echo "📋 Manifest file already in build directory"
 
 # Copy media if it exists
 if [ -d "./media" ]; then

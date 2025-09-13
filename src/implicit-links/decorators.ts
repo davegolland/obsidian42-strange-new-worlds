@@ -1,7 +1,7 @@
 import { Decoration, type EditorView, MatchDecorator, ViewPlugin, type ViewUpdate, WidgetType } from "@codemirror/view";
 import { isInsideCode, isInsideMarkdownLink, isInsideWikiLink } from "../view-extensions/text-guards";
 import { type PhraseInfo, inferredCacheField } from "./cache";
-import { getUIC_HoverviewElement } from "../ui/components/hover-content";
+import { buildHoverPopover } from "../ui/components/hover-content";
 import { ATTR } from "../ui/attr";
 import tippy from "tippy.js";
 
@@ -50,7 +50,7 @@ class CountBadge extends WidgetType {
 			onShow: async (instance) => {
 				if (!(instance as any).__snwShouldShow) return false;
 				// Build the hover DOM and set it as tooltip content
-				const contentEl = await getUIC_HoverviewElement({ 
+				const contentEl = await buildHoverPopover({ 
 					referenceEl: instance.reference as HTMLElement, 
 					plugin: this.plugin 
 				});
