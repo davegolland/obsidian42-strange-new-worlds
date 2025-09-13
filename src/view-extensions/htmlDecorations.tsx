@@ -60,7 +60,7 @@ function attachClickHandler(refCountBox: HTMLElement) {
  * @returns The tippy instance
  */
 function addTippyToElement(refCountBox: HTMLElement) {
-	const requireModifierKey = plugin.settings.requireModifierKeyToActivateSNWView;
+	const requireModifierKey = plugin.settings.requireModifierForHover;
 	// defaults to showing tippy on hover, but if requireModifierKey is true, then only show on ctrl/meta key
 	let showTippy = true;
 	const tippyObject = tippy(refCountBox, {
@@ -182,7 +182,7 @@ export function updateAllSnwLiveUpdateReferences() {
 	const elements = document.querySelectorAll(".snw-liveupdate");
 	for (const el of Array.from(elements) as HTMLElement[]) {
 		const newCount = plugin.snwAPI.references.get(el.dataset.snwKey)?.length ?? 0;
-		if (newCount < plugin.settings.minimumRefCountThreshold) {
+		if (newCount < 1) {
 			el.remove();
 			continue;
 		}

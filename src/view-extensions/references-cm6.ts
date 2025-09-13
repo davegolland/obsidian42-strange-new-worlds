@@ -35,10 +35,10 @@ export const inlineDecorationsExtension = (plugin: SNWPlugin) =>
 				
 				// The constructor seems to be called only once when a file is viewed. The decorator is called multipe times.
 				const p: SNWPlugin = (this as any)._plugin;
-				if (p.settings.render.blockIdInLivePreview) this.regxPattern = "(\\s\\^)(\\S+)$";
-				if (p.settings.render.embedsInLivePreview) this.regxPattern += `${this.regxPattern !== "" ? "|" : ""}!\\[\\[[^\\]]+?\\]\\]`;
-				if (p.settings.render.linksInLivePreview) this.regxPattern += `${this.regxPattern !== "" ? "|" : ""}\\[\\[[^\\]]+?\\]\\]`;
-				if (p.settings.render.headersInLivePreview) this.regxPattern += `${this.regxPattern !== "" ? "|" : ""}^#+\\s.+`;
+				this.regxPattern = "(\\s\\^)(\\S+)$";
+				this.regxPattern += `|!\\[\\[[^\\]]+?\\]\\]`;
+				this.regxPattern += `|\\[\\[[^\\]]+?\\]\\]`;
+				this.regxPattern += `|^#+\\s.+`;
 
 				//if there is no regex pattern, then don't go further
 				if (this.regxPattern === "") return;
@@ -59,7 +59,7 @@ export const inlineDecorationsExtension = (plugin: SNWPlugin) =>
 						let mdViewFile: TFile | null = null;
 
 						// there is no file, likely a canvas file, look for links and embeds, process it with snwApi.references
-						if (!mdView.file && (p.settings.render.embedsInLivePreview || p.settings.render.linksInLivePreview)) {
+						if (!mdView.file) {
 							const ref = match[0].replace(/^\[\[|\]\]$|^!\[\[|\]\]$/g, "");
 							const key = referenceCountingPolicy.generateKeyFromPathAndLink("/", ref);
 							if (key) {
@@ -128,7 +128,7 @@ export const inlineDecorationsExtension = (plugin: SNWPlugin) =>
 										from: to,
 										to: to,
 									});
-									if (p.settings.render.linksInLivePreview) {
+									if (true) {
 										// this was not working with mobile from 0.16.4 so had to convert it to a string
 										const linksinHeader = match[0].match(/\[\[(.*?)\]\]|!\[\[(.*?)\]\]/g);
 										if (linksinHeader)
@@ -282,7 +282,7 @@ const constructWidgetForInlineReference = (
 			const filePath = ref?.references[0]?.resolvedFile
 				? ref.references[0].resolvedFile.path.replace(`.${ref.references[0].resolvedFile}`, "")
 				: modifyKey;
-			if (refCount >= plugin.settings.minimumRefCountThreshold)
+			if (refCount >= 1)
 				return new InlineReferenceWidget(
 					refCount,
 					ref.type,

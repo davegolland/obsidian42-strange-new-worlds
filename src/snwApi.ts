@@ -10,6 +10,9 @@ export default class SnwAPI {
 	plugin: SNWPlugin;
 	references: any;
 
+	/** Queue for providers if policy isn't ready yet */
+	private _queuedProviders: Set<VirtualLinkProvider> | undefined;
+
 	constructor(snwPlugin: SNWPlugin) {
 		this.plugin = snwPlugin;
 	}
@@ -88,13 +91,48 @@ export default class SnwAPI {
 	 * Returns an unregister function; call it to remove the provider.
 	 */
 	registerVirtualLinkProvider(provider: VirtualLinkProvider): () => void {
-		return this.plugin.referenceCountingPolicy.registerVirtualLinkProvider(provider);
+		const policy = this.plugin?.referenceCountingPolicy as any;
+
+		if (policy && typeof policy.registerVirtualLinkProvider === "function") {
+			// Normal, fast path
+			return policy.registerVirtualLinkProvider(provider);
+		}
+
+		// Fallback: queue providers until policy exists
+		if (!this._queuedProviders) this._queuedProviders = new Set();
+		this._queuedProviders.add(provider);
+
+		// Return an unregister that removes from the queue
+		return () => this._queuedProviders?.delete(provider);
+	}
+
+	/**
+	 * Called once policy is definitely constructed
+	 */
+	flushQueuedProviders(): void {
+		if (!this._queuedProviders?.size) return;
+		const policy = this.plugin?.referenceCountingPolicy as any;
+		if (!policy?.registerVirtualLinkProvider) return;
+
+		for (const p of this._queuedProviders) policy.registerVirtualLinkProvider(p);
+		this._queuedProviders.clear();
 	}
 
 	/**
 	 * Get all registered virtual link providers
 	 */
 	get virtualLinkProviders(): VirtualLinkProvider[] {
-		return this.plugin.referenceCountingPolicy.getVirtualLinkProviders();
+		const policy = this.plugin?.referenceCountingPolicy as any;
+		if (policy?.getVirtualLinkProviders) return policy.getVirtualLinkProviders();
+		return Array.from(this._queuedProviders ?? []);
+	}
+
+	// (If any UI piece still calls this, give it a safe fallback)
+	getSNWCacheByFile(file: any) {
+		const policy = this.plugin?.referenceCountingPolicy as any;
+		return policy?.getSNWCacheByFile?.(file) ?? {
+			countForKey: () => 0,
+			getLinksForKey: () => [],
+		};
 	}
 }

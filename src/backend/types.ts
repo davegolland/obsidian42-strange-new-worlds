@@ -1,19 +1,4 @@
 // New API types based on OpenAPI spec
-export type APISpan = {
-  start: number;
-  end: number;
-};
-
-export type KeywordResponse = {
-  keyword: string;
-  spans: APISpan[];
-};
-
-export type CandidatesResponse = {
-  vault: string;
-  path: string;
-  keywords: KeywordResponse[];
-};
 
 // Legacy types for backward compatibility (temporarily disabled)
 export type LinkCandidate = { 

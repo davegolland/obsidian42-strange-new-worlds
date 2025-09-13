@@ -158,11 +158,11 @@ const getRefAreaItems = async (refType: string, realLink: string, key: string, f
 		})
 		.filter((link): link is Link => link !== undefined);
 
-	const sortedFileKeys = sortLinks(uniqueFileKeys, plugin.settings.sortOptionDefault);
+	const sortedFileKeys = sortLinks(uniqueFileKeys, "name-asc");
 
 	const wrapperEl = createDiv();
 
-	let maxItemsToShow = plugin.settings.maxFileCountToDisplay;
+	let maxItemsToShow = 100;
 
 	if (countOfRefs < maxItemsToShow) {
 		maxItemsToShow = countOfRefs;
@@ -171,8 +171,8 @@ const getRefAreaItems = async (refType: string, realLink: string, key: string, f
 	let itemsDisplayedCounter = 0;
 
 	let customProperties = null;
-	if (plugin.settings.displayCustomPropertyList.trim() !== "")
-		customProperties = plugin.settings.displayCustomPropertyList.split(",").map((x) => x.trim());
+	if (false)
+		customProperties = [].map((x) => x.trim());
 
 	for (let index = 0; index < sortedFileKeys.length; index++) {
 		if (itemsDisplayedCounter > maxItemsToShow) continue;

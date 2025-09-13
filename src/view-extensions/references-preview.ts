@@ -39,7 +39,7 @@ export default function markdownPreviewProcessor(el: HTMLElement, ctx: MarkdownP
 		ctx.addChild(new snwChildComponentMardkownWithoutFile(el));
 	} else {
 		//this is run if the processor is run within a markdown file
-		if (plugin.settings.pluginSupportKanban === false) {
+		if (false) {
 			const fileCache = plugin.app.metadataCache.getFileCache(currentFile);
 			if (fileCache?.frontmatter?.["kanban-plugin"]) return;
 		}
@@ -65,7 +65,7 @@ class snwChildComponentMardkownWithoutFile extends MarkdownRenderChild {
 			const references = referenceCountingPolicy.findAllReferencesForLink("/", ref);
 			const refCount = references.length;
 
-			if (refCount <= 0 || refCount < plugin.settings.minimumRefCountThreshold) continue;
+			if (refCount <= 0 || refCount < 1) continue;
 
 			const refType = link.classList.contains("internal-link") ? "link" : "embed";
 			const key = referenceCountingPolicy.generateKeyFromPathAndLink("/", ref);
@@ -100,7 +100,7 @@ class snwChildComponentForMarkdownFile extends MarkdownRenderChild {
 	}
 
 	onload(): void {
-		const minRefCountThreshold = plugin.settings.minimumRefCountThreshold;
+		const minRefCountThreshold = 1;
 		// For now, use a synchronous approach - this will be updated in a future version
 		// to properly handle virtual links
 		const transformedCache = referenceCountingPolicy.getSNWCacheByFile(this.currentFile) as any;
@@ -109,7 +109,7 @@ class snwChildComponentForMarkdownFile extends MarkdownRenderChild {
 		if (transformedCache?.cacheMetaData?.frontmatter?.["snw-canvas-exclude-preview"] === true) return;
 
 		if (transformedCache?.blocks || transformedCache.embeds || transformedCache.headings || transformedCache.links) {
-			if (plugin.settings.render.blockIdInMarkdown && transformedCache?.blocks && this.sectionInfo) {
+			if (true && transformedCache?.blocks && this.sectionInfo) {
 				for (const value of transformedCache.blocks) {
 					if (
 						value.references.length >= minRefCountThreshold &&
@@ -146,7 +146,7 @@ class snwChildComponentForMarkdownFile extends MarkdownRenderChild {
 				}
 			}
 
-			if (plugin.settings.render.embedsInMarkdown && transformedCache?.embeds) {
+			if (true && transformedCache?.embeds) {
 				// biome-ignore lint/complexity/noForEach: <explanation>
 				this.containerEl.querySelectorAll('.internal-embed:not([data-snw-has-badge="1"])').forEach((element) => {
 					const src = element.getAttribute("src");
@@ -176,7 +176,7 @@ class snwChildComponentForMarkdownFile extends MarkdownRenderChild {
 				});
 			}
 
-			if (plugin.settings.render.linksInMarkdown && transformedCache?.links) {
+			if (true && transformedCache?.links) {
 				// biome-ignore lint/complexity/noForEach: <explanation>
 				// Avoid duplicating badges when the post-processor runs multiple times
 				this.containerEl.querySelectorAll('a.internal-link:not([data-snw-has-badge="1"])').forEach((element) => {
@@ -207,7 +207,7 @@ class snwChildComponentForMarkdownFile extends MarkdownRenderChild {
 				});
 			}
 
-			if (plugin.settings.render.headersInMarkdown) {
+			if (true) {
 				const headerKey = this.containerEl.querySelector("[data-heading]");
 				if (transformedCache?.headings && headerKey) {
 					const textContext = headerKey.getAttribute("data-heading");
@@ -268,7 +268,7 @@ export function bindReferenceHover(
 	if (!el.hasAttribute("snw-data-line-number")) el.setAttribute("snw-data-line-number", "0");
 
 	// Add tippy tooltip with the same configuration as native SNW counters
-	const requireModifierKey = snwPlugin.settings.requireModifierKeyToActivateSNWView;
+	const requireModifierKey = snwPlugin.settings.requireModifierForHover;
 	let showTippy = true;
 
 	const tippyInstance = tippy(el, {

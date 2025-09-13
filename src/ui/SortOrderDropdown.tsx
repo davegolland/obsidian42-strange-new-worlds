@@ -42,12 +42,12 @@ export const SortOrderDropdown: FunctionComponent<SortOrderDropdownProps> = ({ p
 
 	const handleOptionClick = async (value: string) => {
 		setIsOpen(false);
-		plugin.settings.sortOptionDefault = value as SortOption;
+		// plugin.settings.sortOptionDefault = value as SortOption;
 		await plugin.saveSettings();
 		onChange();
 	};
 
-	const currentSortOption = sortOptions[plugin.settings.sortOptionDefault];
+	const currentSortOption = sortOptions["name-asc"];
 
 	// biome-ignore lint/security/noDangerouslySetInnerHtml: SVG icon rendering
 	const buttonContent = <div dangerouslySetInnerHTML={{ __html: currentSortOption.icon }} />;

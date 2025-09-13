@@ -48,12 +48,13 @@ export function isLegacyForced(): boolean {
 }
 
 // Enhanced logging system for startup performance diagnostics
+const DEBUG = false; // default false in minimal mode
 export const SNW_TAG = "SNW";
 export const log = {
 	info: (...a: any[]) => console.log(`${SNW_TAG}:`, ...a),
 	warn: (...a: any[]) => console.warn(`${SNW_TAG}:`, ...a),
 	error: (...a: any[]) => console.error(`${SNW_TAG}:`, ...a),
-	debug: (...a: any[]) => console.debug(`${SNW_TAG}:`, ...a),
+	debug: (...a: any[]) => { if (DEBUG) console.debug(`${SNW_TAG}:`, ...a); },
 	time: (label: string) => console.time(`${SNW_TAG} ⏱ ${label}`),
 	timeEnd: (label: string) => console.timeEnd(`${SNW_TAG} ⏱ ${label}`),
 	mark: (name: string) => performance.mark(`${SNW_TAG}:${name}`),

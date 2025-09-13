@@ -105,7 +105,7 @@ async function computePhraseInfo(text: string, plugin: any): Promise<Map<string,
 			// For native phrases, apply the threshold filter
 			const effectiveCount = isBackendKeyword ? 1 : count;
 			
-			if (!isBackendKeyword && effectiveCount < (plugin?.settings?.minimumRefCountThreshold ?? 0)) {
+			if (!isBackendKeyword && effectiveCount < 1) {
 				continue;
 			}
 
