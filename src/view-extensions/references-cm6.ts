@@ -181,8 +181,16 @@ export const inlineDecorationsExtension = (plugin: SNWPlugin) =>
 						// first see if it is a heading, as it should be sorted to the end, then sort by position
 						const sortWidgets = widgetsToAdd.sort((a, b) => (a.to === b.to ? (a.refType === "heading" ? 1 : -1) : a.to - b.to));
 
+						// Belt-and-suspenders de-dupe to prevent accidental doubles
+						const seen = new Set<string>();
+
 						for (const ref of widgetsToAdd) {
 							if (ref.key !== "") {
+								// Create a unique key for this reference to prevent duplicates
+								const uniqueKey = `${ref.refType}:${ref.key}:${ref.from}:${ref.to}`;
+								if (seen.has(uniqueKey)) continue;
+								seen.add(uniqueKey);
+
 								const wdgt = constructWidgetForInlineReference(
 									ref.refType,
 									ref.key,
