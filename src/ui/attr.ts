@@ -6,7 +6,6 @@ export const ATTR = {
 	line: "snw-data-line-number",
 	titleKey: "snw-ref-title-key",
 	display: "data-snw-display",
-	hasHandler: "snw-has-handler",
 	fileName: "snw-data-file-name",
 	titleType: "snw-ref-title-type",
 	titleRealLink: "snw-ref-title-reallink",
