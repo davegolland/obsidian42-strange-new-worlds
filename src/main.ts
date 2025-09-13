@@ -136,6 +136,7 @@ export default class SNWPlugin extends Plugin {
 		const url = (this.settings.backendUrl || "").trim();
 		if (!url) {
 			console.warn("SNW: backend URL not set; skipping initBackend");
+			this.unregisterBackendProvider?.(); // ensure no stale provider
 			return;
 		}
 
