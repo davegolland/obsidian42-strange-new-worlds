@@ -90,7 +90,8 @@ export default class SNWPlugin extends Plugin {
 		//    Call them here BEFORE registering extensions.
 		uiInits.setPluginVariableUIC_RefArea(this);
 		uiInits.setPluginVariableForUIC(this);
-		uiInits.setPluginVariableForCM6InlineReferences?.(this);   // ← add back
+		uiInits.setPluginVariableForCM6InlineReferences?.(this);
+		uiInits.setPluginVariableForHtmlDecorations(this);  // ← critical: powers tippy hover
 
 		// 2) Start the implicit links manager in minimal mode
 		this.implicitLinksManager = new ImplicitLinksManager(this, {
@@ -123,7 +124,10 @@ export default class SNWPlugin extends Plugin {
 		});
 		this.registerEditorExtension(implicitExt);
 
-		// 5) Trigger refresh when switching files for better responsiveness
+		// 5) Initialize implicit links Live Preview (creates the numbered badges)
+		uiInits.initImplicitLinksLivePreview(this);
+
+		// 6) Trigger refresh when switching files for better responsiveness
 		this.registerEvent(
 			this.app.workspace.on("active-leaf-change", () => {
 				this.implicitLinksManager?.triggerRefresh?.();

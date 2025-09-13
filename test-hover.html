@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SNW Hover Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .test-container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        .test-text {
+            font-size: 16px;
+            line-height: 1.6;
+            margin: 20px 0;
+        }
+        .snw-reference {
+            background: #e3f2fd;
+            color: #1976d2;
+            padding: 2px 6px;
+            border-radius: 3px;
+            cursor: pointer;
+            font-weight: 500;
+        }
+        .snw-reference:hover {
+            background: #bbdefb;
+        }
+        .instructions {
+            background: #fff3e0;
+            border: 1px solid #ffb74d;
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>SNW Hover Popover Test</h1>
+        
+        <div class="instructions">
+            <h3>Test Instructions:</h3>
+            <ol>
+                <li>Hover over the reference numbers below</li>
+                <li>You should see a popover with reference information</li>
+                <li>If "Require Cmd/Ctrl to open hover" is enabled, hold Cmd/Ctrl while hovering</li>
+            </ol>
+        </div>
+
+        <div class="test-text">
+            <p>This is a test document with some reference numbers: <span class="snw-reference snw-inline-ref" data-snw-type="link" data-snw-reallink="Test File" data-snw-key="TESTFILE" data-snw-filepath="/test-file.md" snw-data-line-number="5">3</span> and <span class="snw-reference snw-inline-ref" data-snw-type="heading" data-snw-reallink="#Test Heading" data-snw-key="TESTFILE#TESTHEADING" data-snw-filepath="/test-file.md" snw-data-line-number="10">7</span>.</p>
+            
+            <p>Another paragraph with more references: <span class="snw-reference snw-inline-ref" data-snw-type="embed" data-snw-reallink="![[Embedded File]]" data-snw-key="EMBEDDEDFILE" data-snw-filepath="/embedded-file.md" snw-data-line-number="15">2</span> and <span class="snw-reference snw-inline-ref" data-snw-type="block" data-snw-reallink="#^block-id" data-snw-key="TESTFILE#^BLOCKID" data-snw-filepath="/test-file.md" snw-data-line-number="20">5</span>.</p>
+        </div>
+
+        <div class="instructions">
+            <h3>Expected Behavior:</h3>
+            <ul>
+                <li>Hovering should show a floating popover (not inline content)</li>
+                <li>The popover should contain reference information</li>
+                <li>The popover should be styled with Tippy.js CSS</li>
+                <li>If modifier key is required, popover should only show with Cmd/Ctrl held</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Load Tippy.js for testing -->
+    <script src="https://unpkg.com/tippy.js@6/dist/tippy.umd.min.js"></script>
+    <script>
+        // Initialize Tippy on all reference elements
+        document.querySelectorAll('.snw-reference').forEach(el => {
+            tippy(el, {
+                content: 'Loading...',
+                theme: 'snw-tippy',
+                trigger: 'mouseenter focus',
+                interactive: true,
+                allowHTML: true,
+                onShow: async (instance) => {
+                    // Simulate loading content
+                    const refType = el.getAttribute('data-snw-type');
+                    const realLink = el.getAttribute('data-snw-reallink');
+                    const key = el.getAttribute('data-snw-key');
+                    const filePath = el.getAttribute('data-snw-filepath');
+                    const lineNumber = el.getAttribute('snw-data-line-number');
+                    
+                    const content = `
+                        <div class="snw-popover-container">
+                            <div class="snw-ref-title-popover">
+                                <strong>${refType}</strong>: ${realLink}
+                            </div>
+                            <div class="snw-ref-area">
+                                <div class="snw-ref-item">
+                                    <div class="snw-ref-item-file">
+                                        <strong>File:</strong> ${filePath}
+                                    </div>
+                                    <div class="snw-ref-item-info">
+                                        <strong>Line:</strong> ${lineNumber}
+                                    </div>
+                                    <div class="snw-ref-item-info">
+                                        <strong>Key:</strong> ${key}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    
+                    instance.setContent(content);
+                }
+            });
+        });
+    </script>
+</body>
+</html>

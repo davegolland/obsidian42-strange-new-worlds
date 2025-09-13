@@ -1,9 +1,10 @@
 import { RangeSetBuilder } from "@codemirror/state";
 import { Decoration, type EditorView, MatchDecorator, ViewPlugin, type ViewUpdate, WidgetType } from "@codemirror/view";
-// bindReferenceHover removed - was from deleted references-preview.ts
 import { isInsideCode, isInsideMarkdownLink, isInsideWikiLink } from "../view-extensions/text-guards";
 import { type PhraseInfo, inferredCacheField } from "./cache";
 import { generateReferenceKey } from "./shared-utils";
+import { getUIC_Hoverview } from "../ui/components/uic-ref--parent";
+import tippy from "tippy.js";
 
 // Using shared guard functions from text-guards.ts
 
@@ -27,13 +28,36 @@ class CountBadge extends WidgetType {
 		el.textContent = String(this.count);
 		el.title = `${this.count} reference${this.count === 1 ? "" : "s"}`;
 
-		// Set attributes before binding the hover
+		// Set all required attributes for hover functionality
+		el.setAttribute("data-snw-type", "implicit");
 		el.setAttribute("data-snw-reallink", this.realLink);
+		el.setAttribute("data-snw-key", this.key);
 		el.setAttribute("data-snw-filepath", this.fromFilePath);
+		el.setAttribute("snw-data-line-number", "0");
+		el.setAttribute("data-snw-display", this.display);
 
-		// Hover binding removed - references-preview.ts was deleted
-		// Simple fallback: just show basic info on hover
-		el.title = `${this.display} • ${this.count} reference${this.count === 1 ? "" : "s"}`;
+		// Set up tippy hover
+		tippy(el, {
+			content: "Loading...",
+			theme: "snw-tippy",
+			trigger: "mouseenter focus",
+			interactive: true,
+			allowHTML: true,
+			onShow: async (instance) => {
+				// Check if modifier key is required
+				const requireModifier = this.plugin?.settings?.requireModifierForHover ?? false;
+				if (requireModifier && !this.plugin?.app?.keyboard?.isModifierPressed?.("Mod")) {
+					return false;
+				}
+				
+				// Load the hover content
+				await getUIC_Hoverview(instance);
+				return true;
+			},
+			onHide: () => {
+				// Clean up if needed
+			}
+		});
 
 		return el;
 	}

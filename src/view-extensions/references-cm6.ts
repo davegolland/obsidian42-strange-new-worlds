@@ -9,6 +9,9 @@ import type SNWPlugin from "src/main";
 import SnwAPI from "src/snwApi";
 import type { ReferenceCountingPolicy } from "../policies/reference-counting";
 import type { TransformedCachedItem } from "../types";
+import { getUIC_Hoverview } from "../ui/components/uic-ref--parent";
+import tippy from "tippy.js";
+import "tippy.js/dist/tippy.css";
 // htmlDecorationForReferencesElement removed - was from deleted htmlDecorations.tsx
 
 let plugin: SNWPlugin;
@@ -291,6 +294,7 @@ const constructWidgetForInlineReference = (
 					filePath,
 					"snw-liveupdate",
 					ref.pos.start.line,
+					plugin,
 				);
 			return null;
 		}
@@ -307,8 +311,9 @@ export class InlineReferenceWidget extends WidgetType {
 	filePath: string;
 	addCssClass: string; //if a reference need special treatment, this class can be assigned
 	lineNu: number; //number of line within the file
+	plugin: SNWPlugin; // Store plugin reference
 
-	constructor(refCount: number, cssclass: string, realLink: string, key: string, filePath: string, addCSSClass: string, lineNu: number) {
+	constructor(refCount: number, cssclass: string, realLink: string, key: string, filePath: string, addCSSClass: string, lineNu: number, plugin: SNWPlugin) {
 		super();
 		this.referenceCount = refCount;
 		this.referenceType = cssclass;
@@ -317,6 +322,7 @@ export class InlineReferenceWidget extends WidgetType {
 		this.filePath = filePath;
 		this.addCssClass = addCSSClass;
 		this.lineNu = lineNu;
+		this.plugin = plugin;
 	}
 
 	// eq(other: InlineReferenceWidget) {
@@ -324,15 +330,45 @@ export class InlineReferenceWidget extends WidgetType {
 	// }
 
 	toDOM() {
-		// Simple replacement for deleted htmlDecorationForReferencesElement
+		// Create the reference counter element
 		const el = document.createElement("span");
-		el.className = `snw-inline-ref ${this.addCssClass || ""}`;
+		el.className = `snw-reference snw-inline-ref ${this.addCssClass || ""}`;
 		el.textContent = this.referenceCount.toString();
 		el.title = `${this.referenceType} • ${this.referenceCount} reference${this.referenceCount === 1 ? "" : "s"}`;
+		
+		// Add required data attributes for tooltip functionality
 		el.setAttribute("data-snw-type", this.referenceType);
-		el.setAttribute("data-snw-realLink", this.realLink);
+		el.setAttribute("data-snw-reallink", this.realLink);
 		el.setAttribute("data-snw-key", this.key);
 		el.setAttribute("data-snw-filepath", this.filePath);
+		el.setAttribute("snw-data-line-number", this.lineNu.toString());
+		
+		// Set up tippy hover with proper configuration
+		const tip = tippy(el, {
+			interactive: true,
+			appendTo: () => document.body,
+			allowHTML: true,
+			zIndex: 9999,
+			trigger: this.plugin?.settings?.requireModifierForHover ? "manual" : "mouseenter focus",
+			onShow: async (instance) => {
+				// Build popover DOM using getUIC_Hoverview
+				// getUIC_Hoverview handles setting the content internally
+				await getUIC_Hoverview(instance);
+			},
+		});
+		
+		// Handle modifier key requirement
+		if (this.plugin?.settings?.requireModifierForHover) {
+			el.addEventListener("mouseenter", (e) => {
+				if (e instanceof MouseEvent && (e.ctrlKey || e.metaKey)) {
+					tip.show();
+				}
+			});
+			el.addEventListener("mouseleave", () => {
+				tip.hide();
+			});
+		}
+		
 		return el;
 	}
 
