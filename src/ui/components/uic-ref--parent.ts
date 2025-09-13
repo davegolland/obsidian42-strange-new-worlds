@@ -20,23 +20,6 @@ export function setPluginVariableForUIC(snwPlugin: SNWPlugin) {
 	setPluginVariableUIC_RefItem(plugin);
 }
 
-/**
- * Starting point for the hover popup control. Calls into uic-ref-area, then uic-ref-title and uic-ref-item
- *
- * @param {Instance} instance   the Tippy instance. Tippy provides the floating container.
- */
-export const getUIC_Hoverview = async (instance: Instance) => {
-	const { refType, realLink, key, filePath, lineNu, display } = await getDataElements(instance);
-	const popoverEl = createDiv();
-	popoverEl.addClass("snw-popover-container");
-	popoverEl.addClass("search-result-container");
-	popoverEl.appendChild(await getUIC_Ref_Area(refType, realLink, key, filePath, lineNu, true, display));
-	instance.setContent(popoverEl);
-	setTimeout(async () => {
-		await setFileLinkHandlers(false, popoverEl);
-	}, 500);
-	scrollResultsIntoView(popoverEl);
-};
 
 /**
  * Pure builder function that returns an HTMLElement for hover content
@@ -60,9 +43,7 @@ export const getUIC_HoverviewElement = async (ctx: { referenceEl: HTMLElement, p
 	popoverEl.appendChild(await getUIC_Ref_Area(refType, realLink, key, filePath, lineNu, true, display));
 	
 	// Set up event handlers
-	setTimeout(async () => {
-		await setFileLinkHandlers(false, popoverEl);
-	}, 500);
+	requestAnimationFrame(() => { void setFileLinkHandlers(false, popoverEl); });
 	scrollResultsIntoView(popoverEl);
 	
 	return popoverEl;
@@ -81,9 +62,7 @@ export const getUIC_SidePane = async (
 	sidepaneEL.addClass("search-result-container");
 	sidepaneEL.append(await getUIC_Ref_Area(refType, realLink, key, filePath, lineNu, false));
 
-	setTimeout(async () => {
-		await setFileLinkHandlers(false, sidepaneEL);
-	}, 500);
+	requestAnimationFrame(() => { void setFileLinkHandlers(false, sidepaneEL); });
 
 	return sidepaneEL;
 };
@@ -176,35 +155,3 @@ export const setFileLinkHandlers = async (isHoverView: boolean, rootElementForVi
 	});
 };
 
-// Utility function to extact key data points from the Tippy instance
-const getDataElements = async (
-	instance: Instance,
-): Promise<{
-	refType: string;
-	realLink: string;
-	key: string;
-	filePath: string;
-	lineNu: number;
-	display?: string;
-}> => {
-	const parentElement: ReferenceElement = instance.reference;
-	const refType = parentElement.getAttribute("data-snw-type") || "";
-	const realLink = getRealLink(parentElement);
-	const key = parentElement.getAttribute("data-snw-key") || "";
-	const path = parentElement.getAttribute("data-snw-filepath") || "";
-	const lineNum = Number(parentElement.getAttribute("snw-data-line-number")) || 0;
-	const display = parentElement.getAttribute("data-snw-display") || undefined;
-	
-	// Log what the tooltip receives
-	console.log("[SNW hover] key=%s, realLink=%s, filePath=%s, refType=%s, display=%s",
-		key, realLink, path, refType, display);
-	
-	return {
-		refType: refType,
-		realLink: realLink,
-		key: key,
-		filePath: path,
-		lineNu: lineNum,
-		display: display,
-	};
-};
