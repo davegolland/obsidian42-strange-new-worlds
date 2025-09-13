@@ -3,6 +3,7 @@ import { type EditorView, ViewPlugin, type ViewUpdate } from "@codemirror/view";
 import type { TFile } from "obsidian";
 import { type InferredCache, type PhraseInfo, inferredCacheField, setInferredCache } from "./cache";
 import { makeChunkPlugin } from "./decorators";
+import { ATTR } from "../ui/attr";
 // buildPhraseRegexChunks implementation (moved from deleted regex.ts)
 type PhraseRegexOpts = {
 	caseInsensitive?: boolean; // default true
@@ -245,7 +246,7 @@ export function createInferredLinksExtension(
 					const el = (ev.target as HTMLElement)?.closest?.(".snw-implicit-link") as HTMLElement | null;
 					if (!el) return;
 					ev.preventDefault();
-					const toPath = el.getAttribute("data-snw-target") || "";
+					const toPath = el.getAttribute(ATTR.target) || "";
 					const from = plugin?.app?.workspace?.getActiveFile?.()?.path ?? "";
 					const dest = plugin?.app?.metadataCache?.getFirstLinkpathDest?.(toPath, from);
 					plugin?.app?.workspace?.openLinkText?.(dest?.path ?? toPath, from, false);

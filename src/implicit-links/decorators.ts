@@ -75,8 +75,8 @@ function addLinkDecos(add: any, from: number, to: number, text: string, info: Ph
 		Decoration.mark({
 			class: "internal-link snw-implicit-link",
 			attributes: {
-				"data-snw-target": info.target,
-				"data-snw-linktext": text,
+				[ATTR.target]: info.target,
+				[ATTR.linkText]: text,
 				title: `${text} • ${info.count} reference${info.count === 1 ? "" : "s"}`,
 			},
 		}),

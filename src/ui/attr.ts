@@ -10,4 +10,6 @@ export const ATTR = {
 	fileName: "snw-data-file-name",
 	titleType: "snw-ref-title-type",
 	titleRealLink: "snw-ref-title-reallink",
+	target: "data-snw-target",
+	linkText: "data-snw-linktext",
 } as const;
