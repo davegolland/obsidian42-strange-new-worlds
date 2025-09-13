@@ -1,6 +1,5 @@
 import { Keymap, Notice } from "obsidian";
 import type SNWPlugin from "src/main";
-import { scrollResultsIntoView } from "src/utils";
 import { getUIC_Ref_Area } from "./uic-ref-area";
 import { setPluginVariableUIC_RefItem } from "./uic-ref-item";
 import { ATTR } from "../attr";
@@ -46,7 +45,8 @@ export const buildHoverPopover = async (ctx: { referenceEl: HTMLElement, plugin:
  */
 const attachHoverBehavior = (plugin: SNWPlugin, el: HTMLElement): void => {
 	requestAnimationFrame(() => { void wireHoverEvents(plugin, el); });
-	scrollResultsIntoView(el);
+	// Simple scroll to top - popover content is already visible
+	el.scrollTop = 0;
 };
 
 
