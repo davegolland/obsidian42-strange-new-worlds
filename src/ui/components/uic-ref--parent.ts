@@ -7,6 +7,14 @@ import { setPluginVariableUIC_RefItem } from "./uic-ref-item";
 
 let plugin: SNWPlugin;
 
+function getAttr(el: HTMLElement, name: string): string {
+	return el.getAttribute(name) ?? "";
+}
+
+function getRealLink(el: HTMLElement): string {
+	return getAttr(el, "data-snw-reallink") || getAttr(el, "data-snw-realLink");
+}
+
 export function setPluginVariableForUIC(snwPlugin: SNWPlugin) {
 	plugin = snwPlugin;
 	setPluginVariableUIC_RefItem(plugin);
@@ -39,9 +47,7 @@ export const getUIC_HoverviewElement = async (ctx: { referenceEl: HTMLElement, p
 	
 	// Read data attributes from referenceEl
 	const refType = referenceEl.getAttribute("data-snw-type") || "";
-	const realLink = referenceEl.getAttribute("data-snw-realLink") 
-		?? referenceEl.getAttribute("data-snw-reallink") 
-		?? "";
+	const realLink = getRealLink(referenceEl);
 	const key = referenceEl.getAttribute("data-snw-key") || "";
 	const filePath = referenceEl.getAttribute("data-snw-filepath") || "";
 	const lineNu = Number(referenceEl.getAttribute("snw-data-line-number")) || 0;
@@ -183,9 +189,7 @@ const getDataElements = async (
 }> => {
 	const parentElement: ReferenceElement = instance.reference;
 	const refType = parentElement.getAttribute("data-snw-type") || "";
-	const realLink = parentElement.getAttribute("data-snw-realLink") 
-		?? parentElement.getAttribute("data-snw-reallink") 
-		?? "";
+	const realLink = getRealLink(parentElement);
 	const key = parentElement.getAttribute("data-snw-key") || "";
 	const path = parentElement.getAttribute("data-snw-filepath") || "";
 	const lineNum = Number(parentElement.getAttribute("snw-data-line-number")) || 0;
