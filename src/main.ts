@@ -39,7 +39,7 @@ export default class SNWPlugin extends Plugin {
 		console.log("SNW: 🚀 Minimal Mode (backend-only)");
 		
 		// 3) Construct API & policy up front (order matters)
-		await this.initAPI({ minimal: true });   // lightweight surface
+		await this.initAPI();   // lightweight surface
 		this.referenceCountingPolicy = new ReferenceCountingPolicy(this);
 
 		// 4) Backend client init & registration
@@ -54,9 +54,8 @@ export default class SNWPlugin extends Plugin {
 	/**
 	 * Initialize the API for external access
 	 */
-	private async initAPI(options?: { minimal?: boolean }): Promise<void> {
-		// Hard guarantee: create snwAPI if it doesn't exist
-		if (!this.snwAPI) this.snwAPI = new SnwAPI(this);
+	private async initAPI(): Promise<void> {
+		this.snwAPI ??= new SnwAPI(this);
 		(window as any).snwAPI = this.snwAPI;
 	}
 
