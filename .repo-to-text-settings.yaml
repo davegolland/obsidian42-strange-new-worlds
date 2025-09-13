@@ -1,0 +1,56 @@
+# Details: https://github.com/kirill-markin/repo-to-text
+# Syntax: gitignore rules
+
+# Ignore files and directories for all sections from gitignore file
+# Default: True
+gitignore-import-and-ignore: True
+
+# Ignore files and directories for tree
+# and contents sections (<content full_path="...">...</content>)
+ignore-tree-and-content:
+  - ".repo-to-text-settings.yaml"
+  - "docs/"
+  - "examples/"
+  - "media/"
+  - "scripts/"
+  - "node_modules/"
+  - "build/"
+  - "DETAILED_IMPLEMENTATION_PLAN.md"
+  - "PHASE_BY_PHASE_IMPLEMENTATION_PLAN.md"
+  - "IMPLEMENTATION_PLAN_*.md"
+  - "status.md"
+  - "wikilink-equivalence-plan.md"
+  - "test-*.md"
+  - "test-*.js"
+  - "*.gif"
+  - "*.png"
+  - "*.jpg"
+  - "*.jpeg"
+
+# Ignore files and directories for contents sections
+ignore-content:
+  - "README.md"
+  - "LICENSE"
+  - "package-lock.json"
+  - "docs/"
+  - "examples/"
+  - "media/"
+  - "scripts/"
+  - "node_modules/"
+  - "build/"
+  - "DETAILED_IMPLEMENTATION_PLAN.md"
+  - "PHASE_BY_PHASE_IMPLEMENTATION_PLAN.md"
+  - "IMPLEMENTATION_PLAN_*.md"
+  - "status.md"
+  - "wikilink-equivalence-plan.md"
+  - "test-*.md"
+  - "test-*.js"
+  - "*.gif"
+  - "*.png"
+  - "*.jpg"
+  - "*.jpeg"
+
+# Optional: Maximum number of words per output file before splitting.
+# If not specified or null, no splitting based on word count will occur.
+# Must be a positive integer if set.
+# maximum_word_count_per_file: 10000
