@@ -261,6 +261,10 @@ export default class SNWPlugin extends Plugin {
 
 		if (this.settings.minimalMode) {
 			log.info("Minimal mode - skipping reference counting and UI setup");
+			// Force policy to case-insensitive in minimal mode for stability
+			this.settings.wikilinkEquivalencePolicy = "case-insensitive";
+			this.referenceCountingPolicy.setActivePolicy("case-insensitive");
+			log.info("Minimal mode - policy hard-set to case-insensitive");
 			return; // Settings tab added in onload() before this check
 		}
 

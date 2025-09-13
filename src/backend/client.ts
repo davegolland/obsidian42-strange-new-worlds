@@ -1,5 +1,5 @@
 import { log } from "../diag";
-import type { CandidatesResponse, StatusResponse, VaultCreate } from "./types";
+import type { CandidatesResponse, ReferencesResponse, StatusResponse, VaultCreate } from "./types";
 
 export class BackendClient {
 	private vaultName: string | null = null;
@@ -155,6 +155,40 @@ export class BackendClient {
 		
 		// Use the vault path as the vault parameter (as we discovered in testing)
 		return this.getKeywordCandidates(this.vaultPath, relativeFilePath);
+	}
+
+	/** Get references for a specific link ID using the new references API */
+	async getReferences(linkId: string, limit: number = 10): Promise<ReferencesResponse> {
+		const url = `${this.baseUrl}/references?linkId=${encodeURIComponent(linkId)}&limit=${limit}`;
+		log.debug("HTTP GET", url, { linkId, limit });
+		log.time(`HTTP ${url}`);
+
+		try {
+			const response = await fetch(url);
+			log.timeEnd(`HTTP ${url}`);
+			log.debug("HTTP status", response.status);
+
+			if (response.status === 503) {
+				log.warn("service warming up (503)");
+				return {
+					linkId,
+					references: [],
+					total: 0,
+				};
+			}
+
+			if (!response.ok) {
+				log.warn("non-OK response", response.status);
+				throw new Error(`Failed to fetch references: ${response.statusText}`);
+			}
+
+			const data: ReferencesResponse = await response.json();
+			log.debug("references response", { count: data?.references?.length, linkId: data?.linkId });
+			return data;
+		} catch (e) {
+			log.error("HTTP error", e);
+			throw e;
+		}
 	}
 
 	// TEMPORARILY DISABLED - Using new candidates endpoint instead

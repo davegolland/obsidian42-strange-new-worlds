@@ -94,3 +94,18 @@ export type ErrorResponse = {
 	error_code?: string | null;
 	timestamp?: string | null;
 };
+
+// References API types
+export type Reference = {
+	file: string;
+	title: string;
+	snippet: string;
+	line: number;
+	col: number;
+};
+
+export type ReferencesResponse = {
+	linkId: string;
+	references: Reference[];
+	total: number;
+};

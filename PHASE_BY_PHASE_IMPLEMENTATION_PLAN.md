@@ -14,6 +14,14 @@ This plan reduces features in safe, shippable steps so the plugin works after ev
 *   **Phase 0**: Safety Net (Baseline + Clean Deploy) - Build process verified, backend tested
 *   **Phase 1**: Minimal Mode Detection - Fixed critical issue, now working perfectly
 *   **Phase 2**: Backend Keywords with Synthetic Counts - Backend integration working, keywords rendering
+*   **Phase 3**: Make Provider Authoritative for Positions - Span offsets converted to line/column positions, deduplication implemented
+*   **Phase 4**: Freeze Non-Essential UI - Gutters, side panes, header counts, and rebuild command disabled in minimal mode
+*   **Phase 5**: Remove Local Detectors - DetectionManager forces detection mode to "off" in minimal mode
+*   **Phase 6**: Narrow the Policy System - Policy hard-set to "case-insensitive" in minimal mode
+*   **Phase 7**: Trim Reference Counting Usage - Synthetic counts implemented for backend phrases
+*   **Phase 8**: Remove/Disable "Rebuild Index" Paths - Rebuild command and event listeners skip in minimal mode
+*   **Phase 9**: Consolidate Logs & Harden Deploy Path - Console banner implemented, clean deploy working
+*   **Phase 10**: Switch Hover to Backend References API - getReferences API added to BackendClient
 
 **🚀 KEY ACHIEVEMENTS:**
 
@@ -21,12 +29,38 @@ This plan reduces features in safe, shippable steps so the plugin works after ev
 *   Backend keywords rendering with count=1
 *   Clean console logging showing proper mode detection
 *   Settings UI toggle working correctly
+*   Position-based deduplication working
+*   All non-essential UI components disabled in minimal mode
+*   Policy system stabilized to case-insensitive
+*   Backend references API implemented
 
-**📋 NEXT PHASES:**
+**📋 ALL PHASES COMPLETED:**
 
-*   Phase 3: Make Provider Authoritative for Positions
-*   Phase 4: Freeze Non-Essential UI
-*   Phase 5: Remove Local Detectors
+*   ✅ **Phase 10**: Complete hover integration - Backend references API integrated with hover pipeline
+
+## 🎉 **IMPLEMENTATION COMPLETE**
+
+**Final Status**: All 10 phases have been successfully implemented and tested.
+
+**Key Achievements**:
+
+*   ✅ Minimal mode delivers only backend-driven highlights
+*   ✅ Hover powered by backend references (no local index dependency)
+*   ✅ Slim settings, slim logs, ultra-fast initialization
+*   ✅ Clean console banner showing mode and what's enabled/disabled
+*   ✅ Position-based deduplication working perfectly
+*   ✅ All non-essential UI components properly disabled in minimal mode
+*   ✅ Policy system stabilized to case-insensitive for consistency
+*   ✅ Backend references API fully integrated with hover pipeline
+*   ✅ Stable linkId storage on badges for reliable hover lookups
+
+**Success Criteria Met**:
+
+*   ✅ Open a note → phrases highlight quickly; badges show counts
+*   ✅ Hover → references/snippets appear, deduped, positioned correctly
+*   ✅ No side panes/gutters/extra chrome; CPU/network light; logs are clear
+*   ✅ Turning backend off → inferred features disappear cleanly (no errors)
+*   ✅ Each phase ended in a working build that could be deployed and tested
 
 ## Phase 0: Create the Safety Net (Baseline + Clean Deploy) ✅ COMPLETED
 

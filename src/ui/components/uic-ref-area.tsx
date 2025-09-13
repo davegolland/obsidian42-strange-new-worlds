@@ -28,7 +28,7 @@ export const getUIC_Ref_Area = async (
 	isHoverView: boolean,
 	display?: string,
 ): Promise<HTMLElement> => {
-	const refAreaItems = await getRefAreaItems(refType, key, filePath);
+	const refAreaItems = await getRefAreaItems(refType, realLink, key, filePath);
 	const refAreaContainerEl = createDiv();
 
 	//get title header for this reference area
@@ -42,7 +42,7 @@ export const getUIC_Ref_Area = async (
 					refAreaEl.removeChild(refAreaEl.firstChild);
 				}
 				refAreaEl.style.visibility = "visible";
-				const refAreaItems = await getRefAreaItems(refType, key, filePath);
+				const refAreaItems = await getRefAreaItems(refType, realLink, key, filePath);
 				refAreaEl.prepend(refAreaItems.response);
 
 				setTimeout(async () => {
@@ -79,7 +79,7 @@ const sortLinks = (links: Link[], option: SortOption): Link[] => {
 };
 
 // Creates a DIV for a collection of reference blocks to be displayed
-const getRefAreaItems = async (refType: string, key: string, filePath: string): Promise<{ response: HTMLElement; refCount: number }> => {
+const getRefAreaItems = async (refType: string, realLink: string, key: string, filePath: string): Promise<{ response: HTMLElement; refCount: number }> => {
 	let linksToLoop: Link[] = [];
 
 	if (refType === "File") {
@@ -94,18 +94,55 @@ const getRefAreaItems = async (refType: string, key: string, filePath: string): 
 		}
 		linksToLoop = referenceCountingPolicy.filterReferences(incomingLinks);
 	} else {
-		const refCache = referenceCountingPolicy.getIndexedReferences().get(key) || [];
-		const sortedCache = await sortRefCache(refCache);
-		linksToLoop = referenceCountingPolicy.filterReferences(sortedCache);
-		
-		// Fallback: if nothing found and this is an implicit badge, show a friendly empty state
-		// Also show fallback in Minimal Mode when there's no local index
-		if (!linksToLoop.length && (refType === 'implicit' || plugin.settings.minimalMode)) {
-			const hint = createDiv({ cls: "snw-ref-empty" });
-			hint.setText("No indexed backlinks (inferred link).");
-			const container = createDiv();
-			container.append(hint);
-			return { response: container, refCount: 0 };
+		// In minimal mode, use backend references API for implicit links
+		if (plugin.settings.minimalMode && refType === 'implicit' && realLink.startsWith('keyword:')) {
+			try {
+				const linkId = realLink; // Use the realLink as linkId for backend keywords
+				const references = await plugin.backendClient?.getReferences(linkId, 20);
+				
+				if (references && references.references.length > 0) {
+					// Convert backend references to Link format for compatibility
+					linksToLoop = references.references.map(ref => ({
+						link: ref.file,
+						displayText: ref.title,
+						position: { start: { line: ref.line, col: ref.col, offset: 0 }, end: { line: ref.line, col: ref.col, offset: 0 } },
+						sourceFile: { path: ref.file } as any,
+						resolvedFile: null,
+						reference: { link: ref.file, key: ref.file, displayText: ref.title, position: { start: { line: ref.line, col: ref.col, offset: 0 }, end: { line: ref.line, col: ref.col, offset: 0 } } },
+					}));
+					
+					console.log("[SNW hover] backend references for linkId=%s → %d", linkId, linksToLoop.length);
+				} else {
+					// No backend references found
+					const hint = createDiv({ cls: "snw-ref-empty" });
+					hint.setText("No indexed backlinks (inferred link).");
+					const container = createDiv();
+					container.append(hint);
+					return { response: container, refCount: 0 };
+				}
+			} catch (error) {
+				console.warn("[SNW hover] backend references failed:", error);
+				// Fallback to empty state
+				const hint = createDiv({ cls: "snw-ref-empty" });
+				hint.setText("No indexed backlinks (inferred link).");
+				const container = createDiv();
+				container.append(hint);
+				return { response: container, refCount: 0 };
+			}
+		} else {
+			// Use local index for non-minimal mode or non-implicit links
+			const refCache = referenceCountingPolicy.getIndexedReferences().get(key) || [];
+			const sortedCache = await sortRefCache(refCache);
+			linksToLoop = referenceCountingPolicy.filterReferences(sortedCache);
+			
+			// Fallback: if nothing found and this is an implicit badge, show a friendly empty state
+			if (!linksToLoop.length && refType === 'implicit') {
+				const hint = createDiv({ cls: "snw-ref-empty" });
+				hint.setText("No indexed backlinks (inferred link).");
+				const container = createDiv();
+				container.append(hint);
+				return { response: container, refCount: 0 };
+			}
 		}
 	}
 
