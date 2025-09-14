@@ -15,7 +15,6 @@ export const getUIC_Ref_Title_Div = (
 	lineNu: number,
 	plugin: InferredWikilinksPlugin,
 	display?: string,
-	handleSortOptionChangeCallback?: () => void,
 ): HTMLElement => {
 	const titleElJsx = (
 		<div className="snw-ref-title-popover tree-item-self is-clickable">

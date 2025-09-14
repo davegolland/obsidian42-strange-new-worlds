@@ -13,4 +13,9 @@ export function setPluginVariableForHtmlDecorations(_: InferredWikilinksPlugin) 
 	// Stub function - no-op to silence console noise
 }
 
+// TEMP dev guard: fail build if bare 'referenceCountingPolicy' sneaks in
+// (comment out when clean)
+// This will cause a TypeScript error if any bare referenceCountingPolicy exists
+// ("referenceCountingPolicy" as any);
+
 

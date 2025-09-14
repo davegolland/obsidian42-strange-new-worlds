@@ -4,8 +4,6 @@ import { setIcon } from "obsidian";
 import { render } from "preact";
 import type InferredWikilinksPlugin from "src/main";
 import type { Link } from "src/types";
-import type { ReferenceCountingPolicy } from "../../policies/reference-counting";
-import type { SortOption } from "../../settings";
 import { wireHoverEvents } from "./hover-content";
 import { getUIC_Ref_Item } from "./uic-ref-item";
 import { getUIC_Ref_Title_Div } from "./uic-ref-title";
@@ -32,23 +30,7 @@ export const getUIC_Ref_Area = async (
 
 	//get title header for this reference area
 	refAreaContainerEl.append(
-		getUIC_Ref_Title_Div(refType, realLink, key, filePath, refAreaItems.refCount, lineNu, plugin, display, async () => {
-			// Callback to re-render the references area when the sort option is changed
-			const refAreaEl: HTMLElement | null = refAreaContainerEl.querySelector(".snw-ref-area");
-			if (refAreaEl) {
-				refAreaEl.style.visibility = "hidden";
-				while (refAreaEl.firstChild) {
-					refAreaEl.removeChild(refAreaEl.firstChild);
-				}
-				refAreaEl.style.visibility = "visible";
-				const refAreaItems = await getRefAreaItems(refType, realLink, key, filePath, plugin);
-				refAreaEl.prepend(refAreaItems.response);
-
-				setTimeout(async () => {
-					await wireHoverEvents(plugin, false, refAreaEl);
-				}, 500);
-			}
-		}),
+		getUIC_Ref_Title_Div(refType, realLink, key, filePath, refAreaItems.refCount, lineNu, plugin, display),
 	);
 
 	const refAreaEl = createDiv({ cls: "snw-ref-area" });
@@ -58,107 +40,95 @@ export const getUIC_Ref_Area = async (
 	return refAreaContainerEl;
 };
 
-const sortLinks = (links: Link[], option: SortOption): Link[] => {
-	return links.sort((a, b) => {
-		const fileA = a.sourceFile;
-		const fileB = b.sourceFile;
-		switch (option) {
-			case "name-asc":
-				return fileA?.basename.localeCompare(fileB?.basename);
-			case "name-desc":
-				return fileB?.basename.localeCompare(fileA?.basename);
-			case "mtime-asc":
-				return fileA?.stat.mtime - fileB?.stat.mtime;
-			case "mtime-desc":
-				return fileB?.stat.mtime - fileA?.stat.mtime;
-			default:
-				return 0;
-		}
-	});
-};
 
 // Creates a DIV for a collection of reference blocks to be displayed
 const getRefAreaItems = async (refType: string, realLink: string, key: string, filePath: string, plugin: InferredWikilinksPlugin): Promise<{ response: HTMLElement; refCount: number }> => {
 	let linksToLoop: Link[] = [];
 
-	if (refType === "File") {
-		const allLinks = plugin.referenceCountingPolicy.getIndexedReferences();
-		const incomingLinks: Link[] = [];
-		for (const items of allLinks.values()) {
-			for (const item of items) {
-				if (item?.resolvedFile && item?.resolvedFile?.path === filePath) {
-					incomingLinks.push(item);
-				}
-			}
-		}
-		linksToLoop = referenceCountingPolicy.filterReferences(incomingLinks);
-	} else {
-		// Use backend references API for implicit links
-		if (refType === 'implicit' && realLink.startsWith('keyword:')) {
-			try {
-				// Extract the term from the keyword: prefix
-				const term = realLink.replace('keyword:', '');
-				const references = await plugin.backendClient?.getReferences(term, 0);
-				
-				if (references && references.references.length > 0) {
-					// Convert backend references to Link format for compatibility
-					linksToLoop = references.references.map(ref => ({
-						link: ref.file,
-						displayText: ref.title || ref.file, // Use title if available, fallback to filename
-						position: { start: { line: ref.line, col: ref.col, offset: 0 }, end: { line: ref.line, col: ref.col, offset: 0 } },
-						sourceFile: { path: ref.file } as any,
-						resolvedFile: null,
-						reference: { link: ref.file, key: ref.file, displayText: ref.title || ref.file, position: { start: { line: ref.line, col: ref.col, offset: 0 }, end: { line: ref.line, col: ref.col, offset: 0 } } },
-					}));
-					
-					log.info("[SNW hover] backend references for term=%s → %d", term, linksToLoop.length);
-				} else {
-					// No backend references found
-					const hint = createDiv({ cls: "snw-ref-empty" });
-					hint.setText("No indexed backlinks (inferred link).");
-					const container = createDiv();
-					container.append(hint);
-					return { response: container, refCount: 0 };
-				}
-			} catch (error) {
-				log.warn("[SNW hover] backend references failed:", error);
-				// Fallback to empty state
-				const hint = createDiv({ cls: "snw-ref-empty" });
-				hint.setText("No indexed backlinks (inferred link).");
-				const container = createDiv();
-				container.append(hint);
-				return { response: container, refCount: 0 };
-			}
+	// Always use backend for all reference types - KISS principle
+	try {
+		let term: string;
+		
+		if (refType === "File") {
+			// For file references, use the file path as the term
+			term = filePath;
+		} else if (refType === 'implicit' && realLink.startsWith('keyword:')) {
+			// Extract the term from the keyword: prefix
+			term = realLink.replace('keyword:', '');
 		} else {
-			// Use local index for non-minimal mode or non-implicit links
-			const refCache = referenceCountingPolicy.getIndexedReferences().get(key) || [];
-			const sortedCache = await sortRefCache(refCache);
-			linksToLoop = referenceCountingPolicy.filterReferences(sortedCache);
-			
-			// Fallback: if nothing found and this is an implicit badge, show a friendly empty state
-			if (!linksToLoop.length && refType === 'implicit') {
-				const hint = createDiv({ cls: "snw-ref-empty" });
-				hint.setText("No indexed backlinks (inferred link).");
-				const container = createDiv();
-				container.append(hint);
-				return { response: container, refCount: 0 };
-			}
+			// Fallback to key for other types
+			term = key;
 		}
+
+		const references = await plugin.backendClient?.getReferences(term, 0);
+		
+		if (references && references.references.length > 0) {
+			// Helper to create pseudo TFile for invalid backend payloads
+			const makePseudoTFile = (p: string) => {
+				const base = (p?.split?.("/")?.pop?.() ?? p ?? "");
+				return {
+					path: p ?? "",
+					basename: base.replace(/\.md$/i, ""),
+					stat: { mtime: 0 },
+				} as any;
+			};
+
+			// Convert backend references to Link format for compatibility
+			linksToLoop = references.references.map(ref => {
+				const tf = makePseudoTFile(ref?.file ?? "");
+				return {
+					sourceFile: tf,
+					resolvedFile: null,
+					reference: {
+						link: ref?.file ?? "",
+						key: ref?.file ?? "",
+						displayText: ref?.title || tf.basename,
+						position: {
+							start: { line: ref?.line ?? 0, col: ref?.col ?? 0, offset: 0 },
+							end:   { line: ref?.line ?? 0, col: ref?.col ?? 0, offset: 0 },
+						},
+					},
+				} as Link;
+			});
+			
+			log.info("[SNW hover] backend references for term=%s → %d", term, linksToLoop.length);
+		} else {
+			// No backend references found
+			const hint = createDiv({ cls: "snw-ref-empty" });
+			hint.setText("No indexed backlinks found.");
+			const container = createDiv();
+			container.append(hint);
+			return { response: container, refCount: 0 };
+		}
+	} catch (error) {
+		log.warn("[SNW hover] backend references failed:", error);
+		// Fallback to empty state
+		const hint = createDiv({ cls: "snw-ref-empty" });
+		hint.setText("No indexed backlinks found.");
+		const container = createDiv();
+		container.append(hint);
+		return { response: container, refCount: 0 };
 	}
 
-	const countOfRefs = referenceCountingPolicy.countReferences(linksToLoop);
+	const countOfRefs = linksToLoop.length;
 	
 	// Log how many items the list will render
 	log.info("[SNW hover] items for key=%s → %d", key, linksToLoop.length);
 
-	// get the unique file names for files in thie refeernces
-	const uniqueFileKeys: Link[] = Array.from(new Set(linksToLoop.map((a: Link) => a.sourceFile?.path)))
-		.map((file_path) => {
-			return linksToLoop.find((a) => a.sourceFile?.path === file_path);
-		})
-		.filter((link): link is Link => link !== undefined);
+	// Deduplicate while preserving backend order
+	const dedupPreserveOrder = (links: Link[]) => {
+		const seen = new Set<string>();
+		const out: Link[] = [];
+		for (const l of links) {
+			const k = l?.sourceFile?.path ?? l?.reference?.key ?? "";
+			if (!k || seen.has(k)) continue;
+			seen.add(k);
+			out.push(l);
+		}
+		return out;
+	};
 
-	const sortedFileKeys = sortLinks(uniqueFileKeys, "name-asc");
+	const uniqueFileKeys = dedupPreserveOrder(linksToLoop);
 
 	const wrapperEl = createDiv();
 
@@ -174,9 +144,9 @@ const getRefAreaItems = async (refType: string, realLink: string, key: string, f
 	if (false)
 		customProperties = [].map((x) => x.trim());
 
-	for (let index = 0; index < sortedFileKeys.length; index++) {
+	for (let index = 0; index < uniqueFileKeys.length; index++) {
 		if (itemsDisplayedCounter > maxItemsToShow) continue;
-		const file_path = sortedFileKeys[index];
+		const file_path = uniqueFileKeys[index];
 		if (!file_path.sourceFile) continue;
 
 		const responseItemContainerEl = createDiv();
@@ -248,14 +218,3 @@ const getRefAreaItems = async (refType: string, realLink: string, key: string, f
 	return { response: wrapperEl, refCount: countOfRefs };
 };
 
-const sortRefCache = async (refCache: Link[]): Promise<Link[]> => {
-	return refCache.sort((a, b) => {
-		let positionA = 0; //added because of properties - need to fix later
-		if (a.reference.position !== undefined) positionA = Number(a.reference.position.start.line);
-
-		let positionB = 0; //added because of properties - need to fix later
-		if (b.reference.position !== undefined) positionB = Number(b.reference.position.start.line);
-
-		return a.sourceFile?.basename.localeCompare(b.sourceFile.basename) || Number(positionA) - Number(positionB);
-	});
-};
