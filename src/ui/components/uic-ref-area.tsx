@@ -10,6 +10,7 @@ import { wireHoverEvents } from "./hover-content";
 import { getUIC_Ref_Item } from "./uic-ref-item";
 import { getUIC_Ref_Title_Div } from "./uic-ref-title";
 import { ATTR } from "../attr";
+import { log } from "../../diag";
 
 export function setPluginVariableUIC_RefArea(inferredWikilinksPlugin: InferredWikilinksPlugin) {
 	// No longer needed - plugin is injected as parameter

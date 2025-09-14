@@ -10,7 +10,7 @@ echo "🔧 Deploying clean plugin build..."
 ROOT="${VAULT_PATH:-/Users/dave/temp/vault/techniques/techniques}"
 
 # Configuration - update these paths for your setup
-VAULT_PLUGIN_DIR="$ROOT/.obsidian/plugins/obsidian42-inferred-wikilinks"
+VAULT_PLUGIN_DIR="$ROOT/.obsidian/plugins/obsidian42-inferred-wikilinks-dev"
 BUILD_DIR="./build"
 
 # Clean and rebuild the plugin
