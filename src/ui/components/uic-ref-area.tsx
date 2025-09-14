@@ -96,21 +96,22 @@ const getRefAreaItems = async (refType: string, realLink: string, key: string, f
 		// Use backend references API for implicit links
 		if (refType === 'implicit' && realLink.startsWith('keyword:')) {
 			try {
-				const linkId = realLink; // Use the realLink as linkId for backend keywords
-				const references = await plugin.backendClient?.getReferences(linkId, 20);
+				// Extract the term from the keyword: prefix
+				const term = realLink.replace('keyword:', '');
+				const references = await plugin.backendClient?.getReferences(term, 0);
 				
 				if (references && references.references.length > 0) {
 					// Convert backend references to Link format for compatibility
 					linksToLoop = references.references.map(ref => ({
 						link: ref.file,
-						displayText: ref.title,
+						displayText: ref.title || ref.file, // Use title if available, fallback to filename
 						position: { start: { line: ref.line, col: ref.col, offset: 0 }, end: { line: ref.line, col: ref.col, offset: 0 } },
 						sourceFile: { path: ref.file } as any,
 						resolvedFile: null,
-						reference: { link: ref.file, key: ref.file, displayText: ref.title, position: { start: { line: ref.line, col: ref.col, offset: 0 }, end: { line: ref.line, col: ref.col, offset: 0 } } },
+						reference: { link: ref.file, key: ref.file, displayText: ref.title || ref.file, position: { start: { line: ref.line, col: ref.col, offset: 0 }, end: { line: ref.line, col: ref.col, offset: 0 } } },
 					}));
 					
-					log.info("[SNW hover] backend references for linkId=%s → %d", linkId, linksToLoop.length);
+					log.info("[SNW hover] backend references for term=%s → %d", term, linksToLoop.length);
 				} else {
 					// No backend references found
 					const hint = createDiv({ cls: "snw-ref-empty" });

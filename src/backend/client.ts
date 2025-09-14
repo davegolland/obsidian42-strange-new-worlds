@@ -157,10 +157,14 @@ export class BackendClient {
 		return this.getKeywordCandidates(this.vaultPath, relativeFilePath);
 	}
 
-	/** Get references for a specific link ID using the new references API */
-	async getReferences(linkId: string, limit: number = 10): Promise<ReferencesResponse> {
-		const url = `${this.baseUrl}/references?linkId=${encodeURIComponent(linkId)}&limit=${limit}`;
-		log.debug("HTTP GET", url, { linkId, limit });
+	/** Get references for a specific term using the new references API */
+	async getReferences(term: string, offset: number = 0): Promise<ReferencesResponse> {
+		if (!this.vaultPath) {
+			throw new Error("Vault not registered. Call registerVault first.");
+		}
+
+		const url = `${this.baseUrl}/references?vault_path=${encodeURIComponent(this.vaultPath)}&link_type=keyword&term=${encodeURIComponent(term)}&offset=${offset}`;
+		log.debug("HTTP GET", url, { term, offset, vaultPath: this.vaultPath });
 		log.time(`HTTP ${url}`);
 
 		try {
@@ -171,7 +175,8 @@ export class BackendClient {
 			if (response.status === 503) {
 				log.warn("service warming up (503)");
 				return {
-					linkId,
+					link_type: "keyword",
+					term,
 					references: [],
 					total: 0,
 				};
@@ -183,7 +188,7 @@ export class BackendClient {
 			}
 
 			const data: ReferencesResponse = await response.json();
-			log.debug("references response", { count: data?.references?.length, linkId: data?.linkId });
+			log.debug("references response", { count: data?.references?.length, term: data?.term });
 			return data;
 		} catch (e) {
 			log.error("HTTP error", e);

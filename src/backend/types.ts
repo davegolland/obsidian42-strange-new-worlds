@@ -51,16 +51,18 @@ export type StatusResponse = {
 
 
 // References API types
-export type Reference = {
+export type ReferenceItem = {
 	file: string;
-	title: string;
+	title?: string | null;
 	snippet: string;
 	line: number;
 	col: number;
 };
 
 export type ReferencesResponse = {
-	linkId: string;
-	references: Reference[];
+	link_type: "keyword";
+	term: string;
+	references: ReferenceItem[];
 	total: number;
+	next_offset?: number | null;
 };
