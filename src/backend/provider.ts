@@ -32,7 +32,12 @@ export function createBackendLinksProvider(api: any, client: BackendClient): () 
         const all = keywords.flatMap(kw =>
           (kw.spans ?? []).map(span => {
             const pos = offsetRangeToPos(fileContent, span);
-            return { key: `${kw.keyword}:${pos.start.line}:${pos.start.col}`, link: makeLink(`keyword:${kw.keyword}`, kw.keyword, pos) };
+            const link = makeLink(`keyword:${kw.keyword}`, kw.keyword, pos);
+            // Add badge information to the link if present
+            if (kw.badge) {
+              (link as any).badge = kw.badge;
+            }
+            return { key: `${kw.keyword}:${pos.start.line}:${pos.start.col}`, link };
           })
         );
 

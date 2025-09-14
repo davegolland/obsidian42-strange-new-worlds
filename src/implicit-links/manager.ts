@@ -156,6 +156,7 @@ async function computePhraseInfo(text: string, plugin: any): Promise<Map<string,
 				target: l.realLink,
 				count: effectiveCount,
 				key,
+				badgeText: (l as any).badge,
 			});
 		}
 	} catch (e) {

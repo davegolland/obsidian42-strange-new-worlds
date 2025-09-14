@@ -114,6 +114,10 @@ div:has(> .snw-reference),
   color: var(--text-muted);
   border: 1px solid var(--background-modifier-border);
   cursor: pointer;
+  max-width: 6ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .snw-implicit-popover { max-width: 520px; }

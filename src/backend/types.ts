@@ -37,6 +37,7 @@ export type APISpan = {
 export type KeywordResponse = {
 	keyword: string;
 	spans: APISpan[];
+	badge?: string;
 };
 
 export type CandidatesResponse = {

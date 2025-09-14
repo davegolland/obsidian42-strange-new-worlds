@@ -15,18 +15,26 @@ class CountBadge extends WidgetType {
 		private plugin: any,
 		private realLink: string,
 		private fromFilePath: string,
-		private display: string
+		private display: string,
+		private badgeText?: string
 	) {
 		super();
 	}
 	eq(other: CountBadge) {
-		return this.count === other.count && this.key === other.key;
+		return this.count === other.count && this.key === other.key && this.badgeText === other.badgeText;
 	}
 	toDOM() {
 		const el = document.createElement("span");
 		el.className = "snw-implicit-badge";
-		el.textContent = String(this.count);
-		el.title = `${this.count} reference${this.count === 1 ? "" : "s"}`;
+		
+		// Show badge text if present, otherwise show count
+		if (this.badgeText) {
+			el.textContent = this.badgeText;
+			el.title = this.badgeText;
+		} else {
+			el.textContent = String(this.count);
+			el.title = `${this.count} reference${this.count === 1 ? "" : "s"}`;
+		}
 
 		// Set all required attributes for hover functionality
 		el.setAttribute(ATTR.type, "implicit");
@@ -91,10 +99,13 @@ function addLinkDecos(add: any, from: number, to: number, text: string, info: Ph
 	// Get the current file for fromFilePath
 	const fromFile = plugin?.app?.workspace?.getActiveFile?.() ?? null;
 	
-	add(to, to, Decoration.widget({ 
-		side: 1, 
-		widget: new CountBadge(info.count, key, plugin, info.target, fromFile?.path ?? "", text) 
-	}));
+	// Create badge if badgeText exists
+	if (info.badgeText) {
+		add(to, to, Decoration.widget({ 
+			side: 1, 
+			widget: new CountBadge(info.count, key, plugin, info.target, fromFile?.path ?? "", text, info.badgeText) 
+		}));
+	}
 }
 
 /** One view plugin per regex chunk. CM6 will merge multiple decoration sources. */
