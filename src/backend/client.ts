@@ -34,32 +34,23 @@ export class BackendClient {
 		}
 	}
 
-	// TEMPORARILY DISABLED - Using new candidates endpoint instead
-	// async status(): Promise<StatusSummary> {
-	// 	const url = `${this.baseUrl}/status`;
-	// 	log.debug("HTTP GET", url);
-	// 	log.time(`HTTP ${url}`);
+	async status(): Promise<StatusResponse> {
+		const url = `${this.baseUrl}/status`;
+		log.debug("HTTP GET", url);
+		log.time(`HTTP ${url}`);
 
-	// 	try {
-	// 		const r = await fetch(url);
-	// 		log.timeEnd(`HTTP ${url}`);
-	// 		log.debug("HTTP status", r.status);
-	// 		if (!r.ok) throw new Error(`status failed: ${r.status}`);
-	// 		const response: StatusResponse = await r.json();
-			
-	// 		// Convert new API response to legacy format for compatibility
-	// 		return {
-	// 			ready: response.status === "healthy",
-	// 			vaultPath: null, // Not provided in new API
-	// 			files: undefined, // Not provided in new API
-	// 			apiVersion: undefined, // Not provided in new API
-	// 			commit: undefined, // Not provided in new API
-	// 		};
-	// 	} catch (e) {
-	// 		log.error("HTTP error", e);
-	// 		throw e;
-	// 	}
-	// }
+		try {
+			const r = await fetch(url);
+			log.timeEnd(`HTTP ${url}`);
+			log.debug("HTTP status", r.status);
+			if (!r.ok) throw new Error(`status failed: ${r.status}`);
+			const response: StatusResponse = await r.json();
+			return response;
+		} catch (e) {
+			log.error("HTTP error", e);
+			throw e;
+		}
+	}
 
 	// TEMPORARILY DISABLED - Using new candidates endpoint instead
 	// async related(filePath: string, k = 10, includeSpans = false): Promise<LinkCandidateList> {

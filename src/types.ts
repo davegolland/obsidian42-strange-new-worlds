@@ -1,5 +1,6 @@
 import type { CachedMetadata, ListItemCache, Pos, TFile } from "obsidian";
 import type SnwAPI from "./snwApi";
+import type { BlockInfo, Breadcrumbs } from "./backend/types";
 
 
 declare module "obsidian" {
@@ -30,6 +31,16 @@ export interface Link {
 	resolvedFile: TFile | null;
 	realLink: string; //the real link in the markdown
 	sourceFile: TFile | null;
+	snw?: SnwReferenceExtras;
+}
+
+export interface SnwReferenceExtras {
+	previewOneLine?: string | null;
+	snippet?: string | null;
+	block?: BlockInfo | null;
+	blockHtml?: string | null;
+	breadcrumbs?: Breadcrumbs | null;
+	highlights?: Array<[number, number]> | null;
 }
 
 export interface TransformedCachedItem {

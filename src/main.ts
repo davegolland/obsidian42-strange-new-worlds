@@ -28,8 +28,12 @@ export default class InferredWikilinksPlugin extends Plugin {
 		return this._backendClient;
 	}
 
+	private backendCapabilities: Set<string> = new Set();
+	private hasLoggedSnwAvailability = false;
 
-
+	supportsSnwSnippets(): boolean {
+		return this.backendCapabilities.has("snippets:snw-text");
+	}
 
 	async onload(): Promise<void> {
 		await this.initSettings();
@@ -130,8 +134,8 @@ export default class InferredWikilinksPlugin extends Plugin {
 
 		if (!basePath) {
 			log.warn("Cannot get vault base path for backend registration");
-			// We can still use /query/related without /register, so ensure provider is up.
 			this.refreshBackendProvider();
+			await this.refreshBackendCapabilities();
 			return;
 		}
 		
@@ -149,6 +153,7 @@ export default class InferredWikilinksPlugin extends Plugin {
 
 		// Register the virtual link provider
 		this.refreshBackendProvider();
+		await this.refreshBackendCapabilities();
 	}
 
 	/**
@@ -174,6 +179,31 @@ export default class InferredWikilinksPlugin extends Plugin {
 		log.info("backend virtual provider registered");
 	}
 
+	private async refreshBackendCapabilities(): Promise<void> {
+		if (!this._backendClient) {
+			this.backendCapabilities.clear();
+			return;
+		}
+
+		try {
+			const status = await this._backendClient.status();
+			const capabilities = new Set(status?.capabilities ?? []);
+			const hadCapability = this.backendCapabilities.has("snippets:snw-text");
+			this.backendCapabilities = capabilities;
+
+			if (capabilities.has("snippets:snw-text")) {
+				if (!this.hasLoggedSnwAvailability || !hadCapability) {
+					log.info("SNW structural snippets available.");
+					this.hasLoggedSnwAvailability = true;
+				}
+			} else {
+				this.hasLoggedSnwAvailability = false;
+			}
+		} catch (error) {
+			log.warn("backend status check failed", error);
+			this.backendCapabilities.clear();
+		}
+	}
 
 
 

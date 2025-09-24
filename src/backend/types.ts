@@ -34,6 +34,19 @@ export type APISpan = {
 	end: number;
 };
 
+export type Breadcrumbs = {
+	headings: string[];
+	list: string[];
+};
+
+export type BlockInfo = {
+	kind: "list" | "section";
+	start_offset: number;
+	end_offset: number;
+	markdown: string;
+	block_html?: string | null;
+};
+
 export type KeywordResponse = {
 	keyword: string;
 	spans: APISpan[];
@@ -48,6 +61,7 @@ export type CandidatesResponse = {
 
 export type StatusResponse = {
 	status: "healthy" | "unhealthy" | "degraded";
+	capabilities?: string[];
 };
 
 
@@ -58,6 +72,11 @@ export type ReferenceItem = {
 	snippet: string;
 	line: number;
 	col: number;
+	breadcrumbs?: Breadcrumbs | null;
+	block?: BlockInfo | null;
+	highlights?: Array<[number, number]> | null;
+	preview_one_line?: string | null;
+	block_html?: string | null;
 };
 
 export type ReferencesResponse = {

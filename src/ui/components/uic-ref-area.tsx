@@ -73,23 +73,77 @@ const getRefAreaItems = async (refType: string, realLink: string, key: string, f
 				} as any;
 			};
 
-			// Convert backend references to Link format for compatibility
-			linksToLoop = references.references.map(ref => {
+			const collapse = (value?: string | null) => (value ?? "").replace(/\s+/g, " ").trim();
+
+			const aggregated = new Map<string, Link>();
+
+			const addHighlights = (target: Link, extras?: { highlights?: Array<[number, number]> | null }) => {
+				if (!extras?.highlights?.length) return;
+				if (!target.snw) {
+					target.snw = { previewOneLine: null, snippet: null, block: null, blockHtml: null, breadcrumbs: null, highlights: [] };
+				}
+				const store = target.snw.highlights ?? [];
+				const seen = new Set(store.map(([s, e]) => `${s}:${e}`));
+				for (const [start, end] of extras.highlights) {
+					if (start >= end) continue;
+					const key = `${start}:${end}`;
+					if (seen.has(key)) continue;
+					store.push([start, end]);
+					seen.add(key);
+				}
+				target.snw.highlights = store;
+			};
+
+			for (const ref of references.references) {
 				const tf = makePseudoTFile(ref?.file ?? "");
-				return {
+				const snippetText = collapse(ref?.snippet ?? "");
+				const previewText = collapse(ref?.preview_one_line ?? "");
+				let displayText = previewText || snippetText || ref?.title || tf.basename;
+				const blockKey = `${ref?.file ?? ""}::${ref?.block?.start_offset ?? ref?.line ?? 0}`;
+				const existing = aggregated.get(blockKey);
+				if (existing) {
+					const currentPos = existing.reference.position.start.line ?? 0;
+					const refLine = ref?.line ?? currentPos;
+					existing.reference.position.start.line = Math.min(currentPos, refLine);
+					existing.reference.position.start.col = Math.min(existing.reference.position.start.col ?? 0, ref?.col ?? existing.reference.position.start.col ?? 0);
+					if (!existing.snw) {
+						existing.snw = { previewOneLine: null, snippet: null, block: null, blockHtml: null, breadcrumbs: null, highlights: [] };
+					}
+					if (!existing.snw.previewOneLine && ref?.preview_one_line) existing.snw.previewOneLine = ref.preview_one_line;
+					if (!existing.snw.snippet && ref?.snippet) existing.snw.snippet = ref.snippet;
+					if (!existing.snw.block && ref?.block) existing.snw.block = ref.block;
+					if (!existing.snw.blockHtml && ref?.block_html) existing.snw.blockHtml = ref.block_html;
+					if (!existing.snw.breadcrumbs && ref?.breadcrumbs) existing.snw.breadcrumbs = ref.breadcrumbs;
+					addHighlights(existing, { highlights: ref?.highlights ?? [] });
+					continue;
+				}
+
+				const link: Link = {
 					sourceFile: tf,
 					resolvedFile: null,
+					realLink: ref?.file ?? "",
 					reference: {
 						link: ref?.file ?? "",
 						key: ref?.file ?? "",
-						displayText: ref?.title || tf.basename,
+						displayText,
 						position: {
 							start: { line: ref?.line ?? 0, col: ref?.col ?? 0, offset: 0 },
-							end:   { line: ref?.line ?? 0, col: ref?.col ?? 0, offset: 0 },
+							end: { line: ref?.line ?? 0, col: ref?.col ?? 0, offset: 0 },
 						},
 					},
-				} as Link;
-			});
+					snw: {
+					previewOneLine: ref?.preview_one_line ?? null,
+					snippet: ref?.snippet ?? null,
+					block: ref?.block ?? null,
+					blockHtml: ref?.block_html ?? null,
+					breadcrumbs: ref?.breadcrumbs ?? null,
+					highlights: (ref?.highlights ?? []).map(([s, e]) => [s, e] as [number, number]),
+				},
+				};
+				aggregated.set(blockKey, link);
+			}
+
+			linksToLoop = Array.from(aggregated.values());
 			
 			log.info("[SNW hover] backend references for term=%s → %d", term, linksToLoop.length);
 		} else {
